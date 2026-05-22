@@ -49,11 +49,11 @@ def run_weekly_job() -> None:
         check_review_gaps(db)
 
         # Phase 4: PACER (only on 1st of month)
-        # if date.today().day == 1:
-        #     from app.services.pacer import collect_filing_snapshots
-        #     records += collect_filing_snapshots(db)
-        #     from app.services.alert_engine import check_pacer_trends
-        #     check_pacer_trends(db)
+        if date.today().day == 1:
+            from app.services.pacer import collect_filing_snapshots
+            records += collect_filing_snapshots(db)
+            from app.services.alert_engine import check_pacer_trends
+            check_pacer_trends(db)
 
         # Phase 5: Send weekly digest
         # from app.services.email_digest import build_and_send_digest

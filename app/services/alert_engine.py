@@ -328,5 +328,87 @@ def check_review_gaps(db: Session) -> None:
 
 
 def check_pacer_trends(db: Session) -> None:
-    """Phase 4: 90-day PACER filing trend alerts. Implemented in Phase 4."""
-    pass
+    """
+    Compare each competitor's last 90 days of filings to the prior 90-day
+    window. Fire a digest alert when total filings increase 20%+ sustained.
+    Deduplicates to one alert per competitor per 28-day window.
+    """
+    from app.models.competitor import Competitor
+    from app.models.filings import FilingSnapshot
+    from datetime import date, timedelta
+
+    today = date.today()
+    # Window boundaries: [prior_start, mid] and [mid, today]
+    mid = today - timedelta(days=90)
+    prior_start = mid - timedelta(days=90)
+
+    competitors = db.query(Competitor).filter(
+        Competitor.active == True, Competitor.is_own_firm == False
+    ).all()
+
+    for comp in competitors:
+        for district in ("MDNC", "WDNC"):
+            def total_for_window(start, end):
+                rows = (
+                    db.query(FilingSnapshot)
+                    .filter(
+                        FilingSnapshot.competitor_id == comp.id,
+                        FilingSnapshot.district == district,
+                        FilingSnapshot.period_start >= start,
+                        FilingSnapshot.period_start < end,
+                    )
+                    .all()
+                )
+                return sum(r.case_count for r in rows)
+
+            recent = total_for_window(mid, today)
+            prior = total_for_window(prior_start, mid)
+
+            if prior == 0 or recent < 5:
+                continue
+
+            pct_change = (recent - prior) / prior * 100
+            if pct_change < 20:
+                continue
+
+            one_month_ago = date.today() - timedelta(days=28)
+            existing = (
+                db.query(Alert)
+                .filter(
+                    Alert.alert_type == "pacer_volume_spike",
+                    Alert.competitor_id == comp.id,
+                    Alert.market == district,
+                    cast(Alert.triggered_at, Date) >= one_month_ago,
+                )
+                .first()
+            )
+            if existing:
+                continue
+
+            alert = Alert(
+                id=new_uuid(),
+                alert_type="pacer_volume_spike",
+                severity="weekly_digest",
+                competitor_id=comp.id,
+                market=district,
+                detail={
+                    "competitor_name": comp.name,
+                    "district": district,
+                    "recent_90_day_total": recent,
+                    "prior_90_day_total": prior,
+                    "pct_change": round(pct_change),
+                    "message": (
+                        f"{comp.name} filed {recent} cases in {district} over the last 90 days "
+                        f"vs. {prior} in the prior 90 days (+{round(pct_change)}%). "
+                        f"They may be growing market share in this district."
+                    ),
+                },
+                triggered_at=datetime.now(timezone.utc),
+            )
+            db.add(alert)
+            logger.warning(
+                f"PACER spike alert: {comp.name} {district} "
+                f"+{round(pct_change)}% ({prior} → {recent})"
+            )
+
+    db.commit()

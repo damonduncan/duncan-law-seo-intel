@@ -48,6 +48,28 @@ def run_reviews(
     })
 
 
+@router.post("/admin/run-pacer", response_class=HTMLResponse)
+def run_pacer(
+    request: Request,
+    user: dict = Depends(auth_required),
+    db: Session = Depends(get_db),
+):
+    """Run PACER filing collection synchronously and show a result page."""
+    records, error = 0, None
+    try:
+        from app.services.pacer import collect_filing_snapshots
+        records = collect_filing_snapshots(db)
+    except Exception as e:
+        error = str(e)
+    return templates.TemplateResponse("admin_pacer_result.html", {
+        "request": request,
+        "user": user,
+        "active_page": "filings",
+        "records": records,
+        "error": error,
+    })
+
+
 @router.post("/admin/run-job/daily")
 def trigger_daily(request: Request, user: dict = Depends(auth_required)):
     from app.jobs.daily import run_daily_job

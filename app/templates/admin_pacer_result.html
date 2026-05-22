@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}PACER Collection Result{% endblock %}
+{% block content %}
+<h1>PACER Collection Result</h1>
+<p class="page-sub">Ran synchronously — this shows exactly what was collected</p>
+
+{% if error %}
+<div class="card" style="margin-bottom:24px;border-color:rgba(239,68,68,.4);">
+  <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:10px;">Collection failed with an error</div>
+  <pre style="font-size:12px;color:var(--muted);white-space:pre-wrap;word-break:break-all;">{{ error }}</pre>
+</div>
+{% endif %}
+
+<div class="card-grid" style="margin-bottom:24px;">
+  <div class="stat-card">
+    <div class="label">Filing Snapshots Saved</div>
+    <div class="value" style="color:{% if records > 0 %}var(--green){% else %}var(--red){% endif %};">
+      {{ records }}
+    </div>
+    <div class="sub">
+      {% if records > 0 %}attorney × district × chapter records
+      {% else %}check PACER credentials and attorney names{% endif %}
+    </div>
+  </div>
+</div>
+
+{% if records == 0 and not error %}
+<div class="card" style="margin-bottom:24px;border-color:rgba(245,158,11,.4);">
+  <div style="font-size:13px;font-weight:600;color:var(--yellow);margin-bottom:8px;">0 records — possible causes</div>
+  <ul style="font-size:13px;color:var(--muted);line-height:2;padding-left:20px;">
+    <li><code>PACER_USERNAME</code> / <code>PACER_PASSWORD</code> not set in Railway env vars</li>
+    <li>PACER login failed — check credentials at pacer.gov</li>
+    <li>PCL search returned 0 results for all attorneys (possible name mismatch)</li>
+    <li>Check Railway logs for per-attorney search details</li>
+  </ul>
+</div>
+{% endif %}
+
+{% if records > 0 %}
+<div class="card" style="margin-bottom:24px;border-color:rgba(16,185,129,.3);">
+  <div style="font-size:13px;color:var(--green);">
+    Collection succeeded. The <a href="/filings" style="color:var(--accent);">Filings page</a> now shows this month's data.
+  </div>
+</div>
+{% endif %}
+
+<div style="display:flex;gap:12px;">
+  <a href="/filings" class="btn btn-primary btn-sm">Go to Filings</a>
+  <form method="post" action="/admin/run-pacer">
+    <button type="submit" class="btn btn-ghost btn-sm">Run Again</button>
+  </form>
+  <a href="/dashboard" class="btn btn-ghost btn-sm">Overview</a>
+</div>
+{% endblock %}
