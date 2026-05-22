@@ -129,17 +129,22 @@ def collect_filing_snapshots(db: Session) -> int:
 
 def _pacer_login() -> Optional[requests.Session]:
     """Log in to PACER and return an authenticated requests.Session, or None."""
+    from urllib.parse import urljoin
+
     session = requests.Session()
-    session.headers["User-Agent"] = (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-    )
+    session.headers.update({
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+    })
     try:
         resp = session.get(PACER_LOGIN_URL, timeout=30)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "lxml")
 
-        # The page has multiple forms; the login form is the one with a password input
         login_form = _find_form_with_password(soup)
         if not login_form:
             logger.error("PACER: could not locate login form on page")
@@ -147,7 +152,13 @@ def _pacer_login() -> Optional[requests.Session]:
 
         form_data = _all_inputs(login_form)
 
-        # Auto-detect the actual field names for username and password
+        # JSF form marker: the hidden input whose name == form id must have that id as its
+        # value (not empty string). Browsers send this automatically; scrapers often miss it.
+        form_id = login_form.get("id", "")
+        if form_id and form_id in form_data and not form_data[form_id]:
+            form_data[form_id] = form_id
+
+        # Auto-detect actual field names for username, password, client code
         user_field = _detect_field(login_form, ("text",), ("name", "login", "user"))
         pass_field = _detect_field(login_form, ("password",), ())
         code_field = _detect_field(login_form, ("text",), ("client", "code"))
@@ -156,24 +167,35 @@ def _pacer_login() -> Optional[requests.Session]:
             form_data[user_field] = settings.pacer_username
         if pass_field:
             form_data[pass_field] = settings.pacer_password
-        if code_field:
+        if code_field and code_field != user_field:
             form_data[code_field] = settings.pacer_client_code or ""
 
-        # Include any submit button value
         for btn in login_form.find_all(["input", "button"]):
             if btn.get("type", "").lower() == "submit" and btn.get("name"):
                 form_data[btn["name"]] = btn.get("value", "Login")
 
         logger.debug(
-            f"PACER login: form fields detected: user={user_field}, pass={pass_field}, "
-            f"code={code_field}, all_names={list(form_data.keys())}"
+            f"PACER login fields: user={user_field}, pass={pass_field}, "
+            f"form_id={form_id}, all={list(form_data.keys())}"
         )
 
-        resp = session.post(PACER_LOGIN_URL, data=form_data, timeout=30,
-                            allow_redirects=True)
+        # Use the form's own action URL; browsers follow it, scrapers often hardcode
+        form_action = login_form.get("action", "")
+        post_url = urljoin(resp.url, form_action) if form_action else resp.url
 
-        # Success check: login page title disappears after successful auth
-        if "PACER: Login" in resp.text or "pacer: login" in resp.text.lower():
+        resp = session.post(
+            post_url,
+            data=form_data,
+            timeout=30,
+            allow_redirects=True,
+            headers={
+                "Referer": PACER_LOGIN_URL,
+                "Origin": "https://pacer.login.uscourts.gov",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+        )
+
+        if "PACER: Login" in resp.text:
             logger.error(
                 "PACER login failed — response still shows login page. "
                 "Check PACER_USERNAME / PACER_PASSWORD in Railway env vars."

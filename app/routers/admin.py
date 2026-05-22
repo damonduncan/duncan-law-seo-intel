@@ -157,6 +157,13 @@ def debug_pacer(
         inputs = _all_inputs(login_form) if login_form else {}
         result["login_form_found"] = login_form is not None
         result["login_form_fields"] = list(inputs.keys())
+        result["login_form_action"] = login_form.get("action", "(no action attr)") if login_form else None
+        result["login_form_id"] = login_form.get("id", "(no id)") if login_form else None
+        # Show non-empty hidden input values (redact password)
+        result["hidden_input_values"] = {
+            k: (v[:40] if k != "loginForm:password" else "***")
+            for k, v in inputs.items() if v
+        }
 
         # Detect field names dynamically
         user_field = _detect_field(login_form, ("text",), ("name", "login", "user")) if login_form else None
@@ -164,12 +171,29 @@ def debug_pacer(
         result["detected_user_field"] = user_field
         result["detected_pass_field"] = pass_field
 
+        # Fix JSF form marker (name == value)
+        form_id = login_form.get("id", "") if login_form else ""
+        if form_id and form_id in inputs and not inputs[form_id]:
+            inputs[form_id] = form_id
+
         if user_field:
             inputs[user_field] = settings.pacer_username
         if pass_field:
             inputs[pass_field] = settings.pacer_password
 
-        resp = session.post(PACER_LOGIN_URL, data=inputs, timeout=30, allow_redirects=True)
+        from urllib.parse import urljoin as _urljoin
+        form_action = login_form.get("action", "") if login_form else ""
+        post_url = _urljoin(PACER_LOGIN_URL, form_action) if form_action else PACER_LOGIN_URL
+        result["post_url"] = post_url
+
+        resp = session.post(
+            post_url, data=inputs, timeout=30, allow_redirects=True,
+            headers={
+                "Referer": PACER_LOGIN_URL,
+                "Origin": "https://pacer.login.uscourts.gov",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+        )
         result["login_status"] = resp.status_code
         result["login_succeeded"] = "PACER: Login" not in resp.text
         result["login_response_snippet"] = resp.text[:600].replace("\n", " ")
