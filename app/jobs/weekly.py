@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 def run_weekly_job() -> None:
-    """Weekly job: competitor rankings, reviews, PACER (1st of month), trends, digest."""
+    """Weekly job: all competitor rankings, reviews, PACER (1st of month), trends, digest."""
     db = SessionLocal()
     run = JobRun(
         id=new_uuid(),
@@ -22,9 +22,23 @@ def run_weekly_job() -> None:
     try:
         records = 0
 
-        # Phase 2: Competitor rankings
-        # from app.services.dataforseo import collect_competitor_rankings
-        # records += collect_competitor_rankings(db)
+        from app.services.config_loader import get_keywords
+        from app.services.dataforseo import collect_rankings_for_keywords, build_place_maps
+
+        keywords = get_keywords()
+        own_firm_id, own_place_ids, competitor_place_map = build_place_maps(db)
+
+        if not own_firm_id:
+            logger.warning("Weekly job: own firm not found in DB")
+        else:
+            records += collect_rankings_for_keywords(
+                keywords=keywords,
+                own_place_ids=own_place_ids,
+                competitor_place_map=competitor_place_map,
+                db=db,
+                own_firm_id=own_firm_id,
+                only_own_firm=False,
+            )
 
         # Phase 3: Competitor reviews
         # from app.services.google_places import collect_competitor_reviews

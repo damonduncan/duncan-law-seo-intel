@@ -2,27 +2,155 @@
 {% block title %}Rankings{% endblock %}
 {% block content %}
 <h1>Local Pack Rankings</h1>
-<p class="page-sub">Google 3-pack positions across all 24 keyword/city combinations</p>
+<p class="page-sub">Google 3-pack positions — 24 keyword/city combinations</p>
 
+{% if not has_data %}
 <div class="card" style="margin-bottom:24px;">
-  <p style="color:var(--muted);font-size:13px;line-height:1.6;">
-    Rankings data will appear here once the daily and weekly collection jobs have run.
-    Your firm's positions are checked daily; competitor positions are checked weekly.<br><br>
-    <strong style="color:var(--text);">To start collection:</strong> Go to Overview and click "Run Daily Job Now" to fetch your current 3-pack positions.
+  <p style="color:var(--muted);font-size:13px;line-height:1.8;">
+    No rankings data yet. Click the button below to run the first collection now — it will fetch your current 3-pack positions across all 24 keyword/city combinations.<br><br>
+    <strong style="color:var(--text);">Note:</strong> Make sure your Google Place IDs are set in <code>config/competitors.yaml</code> under <code>own_firm → locations</code>.
   </p>
-</div>
-
-<div class="card">
-  <h2 style="font-size:15px;font-weight:600;margin-bottom:16px;">Keywords Tracked</h2>
-  <table>
-    <tr><th>Template</th><th>Markets</th><th>Total Combos</th></tr>
-    <tr><td>bankruptcy attorney {city}</td><td>All 6</td><td>6</td></tr>
-    <tr><td>chapter 7 attorney {city}</td><td>All 6</td><td>6</td></tr>
-    <tr><td>chapter 13 attorney {city}</td><td>All 6</td><td>6</td></tr>
-    <tr><td>bankruptcy lawyer {city}</td><td>All 6</td><td>6</td></tr>
-  </table>
-  <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);">
-    24 total keyword/city combinations tracked. Position 1–3 = in the local 3-pack. Position null = not present.
+  <div style="margin-top:16px;">
+    <form method="post" action="/admin/run-job/daily">
+      <button type="submit" class="btn btn-primary">Run Rankings Collection Now</button>
+    </form>
   </div>
 </div>
+{% else %}
+
+<!-- Summary cards -->
+<div class="card-grid" style="margin-bottom:24px;">
+  <div class="stat-card">
+    <div class="label">In 3-Pack</div>
+    <div class="value" style="color:{% if in_pack_count == total_keywords %}var(--green){% elif in_pack_count > 0 %}var(--yellow){% else %}var(--red){% endif %}">
+      {{ in_pack_count }}/{{ total_keywords }}
+    </div>
+    <div class="sub">keyword/city combos with a 3-pack position</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Keywords Tracked</div>
+    <div class="value">24</div>
+    <div class="sub">4 keywords × 6 markets</div>
+  </div>
+</div>
+
+<!-- Current position table -->
+<div class="card" style="margin-bottom:24px;">
+  <h2 style="font-size:15px;font-weight:600;margin-bottom:16px;">Current Positions — Duncan Law</h2>
+  <table>
+    <tr>
+      <th>Keyword</th>
+      <th>Market</th>
+      <th>Position</th>
+      <th>Last Checked</th>
+    </tr>
+    {% for (keyword, city), r in latest_by_keyword.items() | sort(attribute='0') %}
+    <tr>
+      <td style="font-size:12px;">{{ keyword }}</td>
+      <td>{{ city }}</td>
+      <td>
+        {% if r.in_pack %}
+        <span class="chip {% if r.rank_position == 1 %}chip-green{% elif r.rank_position == 2 %}chip-green{% else %}chip-yellow{% endif %}">
+          #{{ r.rank_position }}
+        </span>
+        {% else %}
+        <span class="chip chip-red">Not in pack</span>
+        {% endif %}
+      </td>
+      <td style="font-size:12px;color:var(--muted);">
+        {{ r.scraped_at.strftime('%b %d, %I:%M %p') if r.scraped_at else '—' }}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<!-- Trend charts per market -->
+{% if chart_data %}
+<div class="card" style="margin-bottom:24px;">
+  <h2 style="font-size:15px;font-weight:600;margin-bottom:20px;">Position Trend — Last 30 Days</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px;">
+    {% for market, data in chart_data.items() %}
+    <div>
+      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">
+        {{ market | replace('_', ' ') | title }}
+      </div>
+      <div class="chart-wrap" style="height:160px;">
+        <canvas id="chart_{{ market }}"></canvas>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+const chartDefaults = {
+  type: 'line',
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: {
+        reverse: true,
+        min: 1,
+        max: 3,
+        ticks: {
+          stepSize: 1,
+          color: '#8892a4',
+          callback: v => '#' + v,
+        },
+        grid: { color: '#2a2d3a' },
+      },
+      x: {
+        ticks: { color: '#8892a4', maxTicksLimit: 6 },
+        grid: { display: false },
+      },
+    },
+  },
+};
+
+{% for market, data in chart_data.items() %}
+new Chart(document.getElementById('chart_{{ market }}'), {
+  ...chartDefaults,
+  data: {
+    labels: {{ data.labels | tojson }},
+    datasets: [{
+      data: {{ data.data | tojson }},
+      borderColor: '#3b82f6',
+      backgroundColor: 'rgba(59,130,246,.1)',
+      tension: 0.3,
+      fill: true,
+      pointRadius: 3,
+    }],
+  },
+  options: { ...chartDefaults.options },
+});
+{% endfor %}
+</script>
+{% endif %}
+
+<!-- Today's full 3-pack occupancy -->
+{% if current_pack %}
+<div class="card">
+  <h2 style="font-size:15px;font-weight:600;margin-bottom:16px;">Today's 3-Pack — All Firms</h2>
+  <table>
+    <tr><th>Market</th><th>Keyword</th><th>Position</th><th>Firm</th></tr>
+    {% for r in current_pack %}
+    <tr {% if r.is_own_firm %}style="background:rgba(59,130,246,.05);"{% endif %}>
+      <td style="font-size:12px;">{{ r.market | replace('_', ' ') | title }}</td>
+      <td style="font-size:12px;">{{ r.keyword }}</td>
+      <td><span class="chip chip-{% if r.is_own_firm %}blue{% else %}green{% endif %}">#{{ r.rank_position }}</span></td>
+      <td style="font-size:12px;">
+        {% if r.is_own_firm %}<strong>Duncan Law</strong>
+        {% elif r.result_data %}<span>{{ r.result_data.get('title', '—') }}</span>
+        {% else %}—{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{% endif %}
 {% endblock %}

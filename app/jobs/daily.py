@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 def run_daily_job() -> None:
-    """Daily job: own rankings, own GBP snapshot, alert condition checks."""
+    """Daily job: own firm rankings across all 24 keyword/city combos + alert checks."""
     db = SessionLocal()
     run = JobRun(
         id=new_uuid(),
@@ -22,23 +22,33 @@ def run_daily_job() -> None:
     try:
         records = 0
 
-        # Phase 2: DataForSEO own-firm rankings
-        # from app.services.dataforseo import collect_own_rankings
-        # records += collect_own_rankings(db)
+        from app.services.config_loader import get_keywords
+        from app.services.dataforseo import collect_rankings_for_keywords, build_place_maps
+        from app.services.alert_engine import check_pack_alerts
 
-        # Phase 3: Own GBP snapshot
-        # from app.services.google_business import collect_own_gbp
-        # records += collect_own_gbp(db)
+        keywords = get_keywords()
+        own_firm_id, own_place_ids, competitor_place_map = build_place_maps(db)
 
-        # Phase 2: Alert checks
-        # from app.services.alert_engine import check_pack_alerts
-        # check_pack_alerts(db)
+        if not own_firm_id:
+            logger.warning("Daily job: own firm not found in DB — skipping rankings")
+        elif not own_place_ids:
+            logger.warning("Daily job: own firm has no Google Place IDs configured — add them to competitors.yaml")
+        else:
+            records = collect_rankings_for_keywords(
+                keywords=keywords,
+                own_place_ids=own_place_ids,
+                competitor_place_map=competitor_place_map,
+                db=db,
+                own_firm_id=own_firm_id,
+                only_own_firm=True,
+            )
+            check_pack_alerts(db, own_firm_id)
 
         run.status = "success"
         run.records_processed = records
         run.completed_at = datetime.now(timezone.utc)
         db.commit()
-        logger.info(f"Daily job completed: {records} records processed")
+        logger.info(f"Daily job completed: {records} ranking rows stored")
 
     except Exception as e:
         run.status = "failed"
