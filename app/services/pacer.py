@@ -81,44 +81,54 @@ def collect_filing_snapshots(db: Session) -> int:
         page.set_default_timeout(NAV_TIMEOUT)
 
         try:
-            if not _login(page):
-                return 0
-
+            # Group attorneys by district — login once per court (court-scoped session)
+            by_district: dict = {"MDNC": [], "WDNC": []}
             for comp in db.query(Competitor).filter(Competitor.active == True).all():
                 for attorney in comp.attorneys:
                     name = _parse_name(attorney.attorney_name)
                     if not name:
                         continue
                     for district in _districts_for_competitor(comp):
-                        court_code = DISTRICT_TO_COURT[district]
-                        for chapter in (7, 13):
-                            count = _search(
-                                page,
-                                last_name=name["last"],
-                                first_name=name["first"],
-                                court_code=court_code,
+                        by_district[district].append((comp, attorney, name))
+
+            for district, attorney_list in by_district.items():
+                if not attorney_list:
+                    continue
+                court_code = DISTRICT_TO_COURT[district]
+
+                if not _login(page, court_code=court_code):
+                    logger.error(f"PACER login failed for {district} — skipping district")
+                    continue
+
+                for comp, attorney, name in attorney_list:
+                    for chapter in (7, 13):
+                        count = _search(
+                            page,
+                            last_name=name["last"],
+                            first_name=name["first"],
+                            court_code=court_code,
+                            chapter=chapter,
+                            period_start=period_start,
+                            period_end=period_end,
+                        )
+                        if count is not None:
+                            _upsert_snapshot(
+                                db=db,
+                                competitor_id=comp.id,
+                                attorney_id=attorney.id,
+                                district=district,
                                 chapter=chapter,
                                 period_start=period_start,
                                 period_end=period_end,
+                                case_count=count,
                             )
-                            if count is not None:
-                                _upsert_snapshot(
-                                    db=db,
-                                    competitor_id=comp.id,
-                                    attorney_id=attorney.id,
-                                    district=district,
-                                    chapter=chapter,
-                                    period_start=period_start,
-                                    period_end=period_end,
-                                    case_count=count,
-                                )
-                                records += 1
-                                logger.info(
-                                    f"  {attorney.attorney_name} | "
-                                    f"{district} Ch.{chapter} | "
-                                    f"{period_start.strftime('%b %Y')}: {count}"
-                                )
-                            time.sleep(SEARCH_DELAY)
+                            records += 1
+                            logger.info(
+                                f"  {attorney.attorney_name} | "
+                                f"{district} Ch.{chapter} | "
+                                f"{period_start.strftime('%b %Y')}: {count}"
+                            )
+                        time.sleep(SEARCH_DELAY)
 
         except Exception as e:
             logger.error(f"PACER collection error: {e}", exc_info=True)
@@ -132,8 +142,14 @@ def collect_filing_snapshots(db: Session) -> int:
 
 # ── Login ─────────────────────────────────────────────────────────────────────
 
-def _login(page) -> bool:
-    """Navigate to PACER login, fill credentials, and verify success."""
+def _login(page, court_code: str = "") -> bool:
+    """
+    Navigate to PACER login, fill credentials, and optionally scope the
+    session to a specific court so CM/ECF queries are authorized.
+
+    court_code: e.g. "ncmb" or "ncwb". When provided, the court autocomplete
+    is filled before login so PACER scopes the session to that court.
+    """
     try:
         page.goto(PACER_LOGIN_URL, wait_until="networkidle")
 
@@ -142,16 +158,29 @@ def _login(page) -> bool:
         if settings.pacer_client_code:
             page.fill('[name="loginForm:clientCode"]', settings.pacer_client_code)
 
-        # Click the login button — PrimeFaces renders it as a <button>
+        # Fill court selector to scope session to CM/ECF (not just PCL)
+        if court_code:
+            try:
+                page.fill('[name="loginForm:courtId_input"]', court_code, timeout=3_000)
+                page.wait_for_timeout(800)  # let autocomplete populate
+                page.click('.ui-autocomplete-item', timeout=2_000)
+                logger.debug(f"Court selector filled: {court_code}")
+            except Exception as e:
+                logger.debug(f"Court autocomplete failed (non-fatal): {e}")
+
         page.click('[id$="fbtnLogin"]')
         page.wait_for_load_state("networkidle", timeout=NAV_TIMEOUT)
 
         title = page.title()
-        if "Login" in title and "Welcome" not in title:
-            logger.error(f"PACER login failed — page title: {title!r}")
+        post_url = page.url
+        logger.debug(f"Post-login title={title!r} url={post_url}")
+
+        # Success: JavaScript redirect away from the login page
+        if "Login" in title and "Welcome" not in title and "ecf." not in post_url:
+            logger.error(f"PACER login failed — title: {title!r}, url: {post_url}")
             return False
 
-        logger.info(f"PACER login OK — {title.strip()}")
+        logger.info(f"PACER login OK — {title.strip()}, url={post_url}")
         return True
 
     except Exception as e:
@@ -171,37 +200,57 @@ def _search(
     period_end: date,
 ) -> Optional[int]:
     """
-    Run one PCL party search, apply refinement filters, and return case count.
-    Returns None on error.
+    Query the court's CM/ECF iquery.pl for attorney cases in a date range.
+    This CGI interface accepts all filters directly — no JavaScript required.
+    Returns case count, or None on error.
     """
+    court_base = f"https://ecf.{court_code}.uscourts.gov"
+    iquery_url = f"{court_base}/cgi-bin/iquery.pl"
+
     try:
-        page.goto(PCL_SEARCH_URL, wait_until="networkidle")
+        page.goto(iquery_url, wait_until="networkidle")
+        title = page.title()
 
-        # Name fields
-        page.fill('[name="frmSearch:txtPartyNameLast"]',  last_name)
-        page.fill('[name="frmSearch:txtPartyNameFirst"]', first_name)
+        # If redirected to login, session didn't carry over
+        if "Login" in title and "Database" not in title:
+            logger.warning(f"CM/ECF session invalid for {court_code} — got {title!r}")
+            return None
 
-        # Party role — PrimeFaces SelectOneMenu has an underlying <select>
-        _select_option(page, '[name="frmSearch:scmPartyRole"]', label="Attorney")
+        # Fill attorney name fields (try common CM/ECF field names)
+        _fill_first_match(page, ["lastAnameField", "LastName", "last_name"], last_name)
+        _fill_first_match(page, ["firstAnameField", "FirstName", "first_name"], first_name)
+
+        # Date range
+        date_from = period_start.strftime("%m/%d/%Y")
+        date_to   = period_end.strftime("%m/%d/%Y")
+        _fill_first_match(page, ["Sdate", "DateFiled_from", "date_filed_from", "filed_from"], date_from)
+        _fill_first_match(page, ["Edate", "DateFiled_to",   "date_filed_to",   "filed_to"],   date_to)
+
+        # Chapter
+        _fill_first_match(page, ["chapter", "Chapter"], str(chapter))
 
         # Submit
-        page.click('[id$="btnSearch"]')
+        page.click('input[type="submit"], button[type="submit"]', timeout=ACTION_TIMEOUT)
         page.wait_for_load_state("networkidle", timeout=NAV_TIMEOUT)
 
-        if "Results" not in page.title():
-            logger.warning(f"No results page for {last_name}/{first_name} — {page.title()!r}")
-            return 0
-
-        # Apply filters via frmRefineSearch (now JavaScript-rendered)
-        _apply_refinements(page, court_code, chapter, period_start, period_end)
-
-        return _extract_count(page)
+        count = _extract_count(page)
+        logger.debug(f"CM/ECF {last_name}/{court_code}/Ch{chapter}: {count}")
+        return count
 
     except Exception as e:
-        logger.error(
-            f"PACER search error ({last_name}, {court_code}, Ch.{chapter}): {e}"
-        )
+        logger.error(f"CM/ECF search error ({last_name}, {court_code}, Ch.{chapter}): {e}")
         return None
+
+
+def _fill_first_match(page, field_names: list, value: str) -> bool:
+    """Try each field name in order; fill the first one found. Returns True if filled."""
+    for name in field_names:
+        try:
+            page.fill(f'[name="{name}"]', value, timeout=1_500)
+            return True
+        except Exception:
+            pass
+    return False
 
 
 def _select_option(page, selector: str, label: str) -> None:

@@ -101,13 +101,23 @@ def debug_cmecf(
             page = browser.new_page()
             page.set_default_timeout(45_000)
 
-            # Login via PACER central
+            # Login via PACER central — fill court selector so session
+            # is scoped to this court's CM/ECF, not just PCL
             page.goto("https://pacer.login.uscourts.gov/csologin/login.jsf", wait_until="networkidle")
             page.fill('[name="loginForm:loginName"]', settings.pacer_username)
             page.fill('[name="loginForm:password"]',  settings.pacer_password)
+            # Type court code into autocomplete to scope the session
+            try:
+                page.fill('[name="loginForm:courtId_input"]', court_code, timeout=3_000)
+                page.wait_for_timeout(1_000)  # let autocomplete populate
+                # Try to click the first autocomplete suggestion
+                page.click('.ui-autocomplete-item', timeout=3_000)
+            except Exception:
+                pass  # court selector is optional
             page.click('[id$="fbtnLogin"]')
             page.wait_for_load_state("networkidle")
             result["login_title"] = page.title()
+            result["post_login_url"] = page.url
 
             # Navigate to CM/ECF court homepage
             page.goto(court_base, wait_until="networkidle")
