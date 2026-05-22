@@ -1,8 +1,12 @@
-"""add review_snapshots table
+"""add market column to review_snapshots
 
 Revision ID: 0003
 Revises: 0002
 Create Date: 2026-05-22
+
+review_snapshots was created in 0001 without a market column.
+This migration adds it. The table, indexes, and all other columns
+already exist from the initial schema migration.
 
 """
 from typing import Sequence, Union
@@ -16,23 +20,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.create_table(
+    op.add_column(
         "review_snapshots",
-        sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("competitor_id", sa.String(36), nullable=False),
         sa.Column("market", sa.String(50), nullable=True),
-        sa.Column("source", sa.String(50), nullable=False),
-        sa.Column("rating", sa.Numeric(3, 2), nullable=True),
-        sa.Column("review_count", sa.Integer, nullable=True),
-        sa.Column("snapshot_data", sa.JSON, nullable=True),
-        sa.Column("snapped_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["competitor_id"], ["competitors.id"], ondelete="CASCADE"),
     )
-    op.create_index("ix_review_snapshots_competitor_id", "review_snapshots", ["competitor_id"])
-    op.create_index("ix_review_snapshots_snapped_at", "review_snapshots", ["snapped_at"])
 
 
 def downgrade() -> None:
-    op.drop_index("ix_review_snapshots_snapped_at", table_name="review_snapshots")
-    op.drop_index("ix_review_snapshots_competitor_id", table_name="review_snapshots")
-    op.drop_table("review_snapshots")
+    op.drop_column("review_snapshots", "market")
