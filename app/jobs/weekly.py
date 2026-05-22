@@ -45,6 +45,8 @@ def run_weekly_job() -> None:
         records += collect_competitor_reviews(db)
         from app.services.bbb import collect_bbb_reviews
         records += collect_bbb_reviews(db)
+        from app.services.alert_engine import check_review_gaps
+        check_review_gaps(db)
 
         # Phase 4: PACER (only on 1st of month)
         # if date.today().day == 1:

@@ -216,6 +216,117 @@ def _send_immediate_alert_email(alert: Alert, db: Session) -> None:
         logger.error(f"Failed to send immediate alert email: {e}")
 
 
+def check_review_gaps(db: Session) -> None:
+    """
+    Weekly: for each Duncan Law market, check if any competitor operating in
+    that market has 2x+ more reviews. Fires a digest-level alert once per month
+    per market so it surfaces in the weekly digest without spamming.
+    """
+    from app.models.competitor import Competitor, CompetitorLocation
+    from app.models.reviews import ReviewSnapshot
+    from datetime import date, timedelta
+    from sqlalchemy import cast, Date
+
+    own_firm = db.query(Competitor).filter(Competitor.is_own_firm == True).first()
+    if not own_firm:
+        return
+
+    # Latest own-firm review count per market
+    own_snaps = (
+        db.query(ReviewSnapshot)
+        .filter(
+            ReviewSnapshot.competitor_id == own_firm.id,
+            ReviewSnapshot.source == "google",
+            ReviewSnapshot.market != None,
+        )
+        .order_by(ReviewSnapshot.snapped_at.desc())
+        .all()
+    )
+    own_by_market: dict = {}
+    for s in own_snaps:
+        if s.market not in own_by_market:
+            own_by_market[s.market] = s.review_count or 0
+
+    # Latest competitor review counts
+    comp_snaps = (
+        db.query(ReviewSnapshot)
+        .filter(
+            ReviewSnapshot.source == "google",
+            ReviewSnapshot.market == None,
+        )
+        .order_by(ReviewSnapshot.snapped_at.desc())
+        .all()
+    )
+    comp_count_by_id: dict = {}
+    for s in comp_snaps:
+        if s.competitor_id not in comp_count_by_id:
+            comp_count_by_id[s.competitor_id] = s.review_count or 0
+
+    # Check each market
+    one_month_ago = date.today() - timedelta(days=28)
+
+    for market, own_count in own_by_market.items():
+        if own_count == 0:
+            continue
+
+        # Find competitors active in this market
+        locs = (
+            db.query(CompetitorLocation)
+            .filter(CompetitorLocation.market == market)
+            .all()
+        )
+        for loc in locs:
+            comp_count = comp_count_by_id.get(loc.competitor_id, 0)
+            if comp_count < own_count * 2:
+                continue
+
+            comp = db.query(Competitor).filter(Competitor.id == loc.competitor_id).first()
+            if not comp:
+                continue
+
+            # Only fire once per market per competitor per month
+            existing = (
+                db.query(Alert)
+                .filter(
+                    Alert.alert_type == "review_gap",
+                    Alert.competitor_id == loc.competitor_id,
+                    Alert.market == market,
+                    cast(Alert.triggered_at, Date) >= one_month_ago,
+                )
+                .first()
+            )
+            if existing:
+                continue
+
+            alert = Alert(
+                id=new_uuid(),
+                alert_type="review_gap",
+                severity="weekly_digest",
+                competitor_id=loc.competitor_id,
+                market=market,
+                detail={
+                    "market": market,
+                    "competitor_name": comp.name,
+                    "competitor_reviews": comp_count,
+                    "duncan_law_reviews": own_count,
+                    "ratio": round(comp_count / own_count, 1),
+                    "message": (
+                        f"{comp.name} has {comp_count} reviews in {market.replace('_', ' ').title()} "
+                        f"vs. Duncan Law's {own_count} ({round(comp_count / own_count, 1)}×). "
+                        f"Prioritize review building for this market."
+                    ),
+                },
+                triggered_at=datetime.now(timezone.utc),
+            )
+            db.add(alert)
+            logger.info(
+                f"Review gap alert: {comp.name} has {comp_count} reviews vs "
+                f"Duncan Law's {own_count} in {market}"
+            )
+
+    db.commit()
+
+
 def check_pacer_trends(db: Session) -> None:
     """Phase 4: 90-day PACER filing trend alerts. Implemented in Phase 4."""
     pass

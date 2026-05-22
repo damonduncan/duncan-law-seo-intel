@@ -77,6 +77,21 @@
   </div>
 </div>
 
+{# ── Recommendations ────────────────────────────────────────────────────── #}
+{% if recommendations %}
+<div class="card" style="margin-bottom:24px;">
+  <h2 style="font-size:15px;font-weight:600;margin-bottom:14px;">Recommended Actions</h2>
+  {% for r in recommendations %}
+  <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+    <span class="chip {% if r.priority == 'high' %}chip-red{% else %}chip-yellow{% endif %}" style="flex-shrink:0;align-self:flex-start;margin-top:1px;">
+      {{ 'High' if r.priority == 'high' else 'Medium' }}
+    </span>
+    <span style="font-size:13px;line-height:1.6;">{{ r.text }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 {# ── Own firm by market ──────────────────────────────────────────────────── #}
 {% if own_google_snaps %}
 <div class="card" style="margin-bottom:24px;">

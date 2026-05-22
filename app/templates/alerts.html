@@ -36,6 +36,7 @@
       <td style="font-size:12px;">
         {% if alert.alert_type == 'pack_drop' %}Own firm dropped from 3-pack
         {% elif alert.alert_type == 'competitor_pack_entry' %}Competitor entered 3-pack
+        {% elif alert.alert_type == 'review_gap' %}Competitor review gap
         {% elif alert.alert_type == 'pacer_volume_spike' %}PACER volume trend spike
         {% else %}{{ alert.alert_type }}{% endif %}
       </td>

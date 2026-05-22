@@ -41,6 +41,39 @@
   </div>
 </div>
 
+<!-- Market scorecard -->
+{% if scorecard %}
+<div class="card" style="margin-bottom:24px;">
+  <h2 style="font-size:15px;font-weight:600;margin-bottom:16px;">Market Health — Duncan Law</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
+    {% for m in scorecard %}
+    {% set color = 'var(--green)' if m.status == 'strong' else ('var(--yellow)' if m.status == 'ok' else ('var(--muted)' if m.status == 'no_data' else 'var(--red)')) %}
+    {% set bg = 'rgba(16,185,129,.06)' if m.status == 'strong' else ('rgba(245,158,11,.06)' if m.status == 'ok' else ('transparent' if m.status == 'no_data' else 'rgba(239,68,68,.06)')) %}
+    <div style="background:{{ bg }};border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;">
+        {{ m.display }}
+      </div>
+      {% if m.status == 'no_data' %}
+      <div style="font-size:12px;color:var(--muted);">No data yet</div>
+      {% else %}
+      <div style="font-size:13px;font-weight:600;color:{{ color }};margin-bottom:4px;">
+        {{ m.in_pack }}/{{ m.total }} in pack
+      </div>
+      <div style="font-size:12px;color:var(--muted);">
+        {{ m.reviews if m.reviews is not none else '—' }} Google reviews
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  <div style="margin-top:12px;font-size:11px;color:var(--muted);">
+    <span style="color:var(--green);">&#9632;</span> Strong &nbsp;
+    <span style="color:var(--yellow);">&#9632;</span> Competitive &nbsp;
+    <span style="color:var(--red);">&#9632;</span> Needs attention
+  </div>
+</div>
+{% endif %}
+
 <!-- Own firm status -->
 <div class="card" style="margin-bottom:24px;">
   <h2 style="font-size:15px;font-weight:600;margin-bottom:16px;">Your Firm — Duncan Law</h2>

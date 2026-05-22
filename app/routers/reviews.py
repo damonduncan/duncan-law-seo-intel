@@ -105,6 +105,8 @@ def reviews(
 
     comp_rows.sort(key=lambda r: r["google_count"] or 0, reverse=True)
 
+    recommendations = _build_recommendations(own_google_snaps, comp_rows)
+
     return templates.TemplateResponse("reviews.html", {
         "request": request,
         "user": user,
@@ -116,4 +118,40 @@ def reviews(
         "own_total_reviews": own_total_reviews,
         "comp_rows": comp_rows,
         "competitor_count": len(comp_rows),
+        "recommendations": recommendations,
     })
+
+
+def _build_recommendations(own_snaps: list, comp_rows: list) -> list:
+    recs = []
+    top_comp_count = comp_rows[0]["google_count"] if comp_rows else 0
+
+    for s in own_snaps:
+        market = (s.market or "").replace("_", " ").title()
+        count = s.review_count or 0
+
+        if count < 5:
+            recs.append({
+                "priority": "high",
+                "text": f"{market}: Only {count} review{'s' if count != 1 else ''} on this listing. "
+                        f"This is well below competitors and directly limits pack visibility for neutral searchers. "
+                        f"Launch a review request campaign for {market} clients immediately.",
+            })
+        elif count < 20:
+            recs.append({
+                "priority": "medium",
+                "text": f"{market}: {count} reviews. Building this toward 30+ will strengthen pack ranking stability.",
+            })
+
+    # Flag largest review gap vs top competitor
+    if own_snaps and top_comp_count:
+        own_total = sum(s.review_count or 0 for s in own_snaps)
+        if top_comp_count > own_total * 1.5:
+            top_name = comp_rows[0]["name"]
+            recs.append({
+                "priority": "medium",
+                "text": f"{top_name} leads the market with {top_comp_count:,} reviews vs. your combined "
+                        f"{own_total:,}. Consistent firm-wide review requests across all 6 markets close this gap over time.",
+            })
+
+    return recs
