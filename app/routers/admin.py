@@ -61,6 +61,104 @@ def run_reviews(
     })
 
 
+@router.get("/admin/discover/ednc-filers")
+def discover_ednc_filers(
+    request: Request,
+    user: dict = Depends(auth_required),
+    year: int = 2026,
+    month: int = 4,
+):
+    """
+    Pull the NCEB (Eastern District NC Bankruptcy) Filed Cases report
+    for a given month and return a ranked list of attorneys by case count.
+    Use this to discover who the major EDNC bankruptcy filers are so
+    they can be added to competitors.yaml.
+    """
+    from playwright.sync_api import sync_playwright
+    from datetime import date
+    import calendar
+    import re as _re
+    from collections import Counter
+
+    period_start = date(year, month, 1)
+    period_end   = date(year, month, calendar.monthrange(year, month)[1])
+    court_base   = "https://ecf.nceb.uscourts.gov"
+
+    result: dict = {
+        "period": f"{period_start.strftime('%B %Y')}",
+        "login_ok": False,
+        "court_ok": False,
+        "report_title": None,
+        "top_filers": [],
+        "total_cases_scanned": 0,
+        "error": None,
+    }
+
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"])
+            page = browser.new_page()
+            page.set_default_timeout(45_000)
+
+            # Central login
+            page.goto("https://pacer.login.uscourts.gov/csologin/login.jsf", wait_until="domcontentloaded")
+            page.fill('[name="loginForm:loginName"]', settings.pacer_username)
+            page.fill('[name="loginForm:password"]',  settings.pacer_password)
+            page.click('[id$="fbtnLogin"]')
+            page.wait_for_timeout(4_000)
+            result["login_ok"] = True
+
+            # NCEB court handoff
+            page.goto(f"{court_base}/cgi-bin/login.pl", wait_until="domcontentloaded")
+            court_title = page.title()
+            result["court_ok"] = "Login" not in court_title and bool(court_title)
+            if not result["court_ok"]:
+                result["error"] = f"NCEB auth failed — title: {court_title!r}"
+                browser.close()
+                return JSONResponse(result)
+
+            # Filed Cases report (rptyy.pl) — all BK cases by date filed
+            report_url = (
+                f"{court_base}/cgi-bin/rptyy.pl"
+                f"?ptype=date"
+                f"&date_type=filed"
+                f"&date_from={period_start.strftime('%m/%d/%Y')}"
+                f"&date_to={period_end.strftime('%m/%d/%Y')}"
+                f"&case_type=bk"
+            )
+            page.goto(report_url, wait_until="domcontentloaded")
+            result["report_title"] = page.title()
+
+            # If the report shows a form (needs submission), submit it
+            try:
+                page.click('input[type="submit"], input[name="button1"]', timeout=3_000)
+                page.wait_for_load_state("domcontentloaded")
+            except Exception:
+                pass  # Report may auto-display without a submit
+
+            body = page.inner_text("body")
+            result["report_title"] = page.title()
+
+            # Count attorney occurrences — attorneys appear as "(aty)" in results
+            # Pattern: "LastName, FirstName (aty)"
+            atty_pattern = _re.compile(r'([A-Z][A-Za-z\-\']+,\s+[A-Za-z][A-Za-z\s\.]+)\s*\(aty\)')
+            names = atty_pattern.findall(body)
+            result["total_cases_scanned"] = len(names)
+
+            counter = Counter(names)
+            result["top_filers"] = [
+                {"attorney": name.strip(), "cases": count}
+                for name, count in counter.most_common(30)
+            ]
+
+            browser.close()
+
+    except Exception as e:
+        result["error"] = str(e)
+
+    return JSONResponse(result)
+
+
 @router.get("/admin/debug/cmecf")
 def debug_cmecf(
     request: Request,

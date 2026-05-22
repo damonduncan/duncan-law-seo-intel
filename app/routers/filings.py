@@ -150,6 +150,7 @@ def filings(
 
     mdnc_rows = make_firm_groups("MDNC")
     wdnc_rows = make_firm_groups("WDNC")
+    ednc_rows = make_firm_groups("EDNC")
 
     return templates.TemplateResponse("filings.html", {
         "request": request,
@@ -160,4 +161,5 @@ def filings(
         "prior_period": prior_period,
         "mdnc_rows": mdnc_rows,
         "wdnc_rows": wdnc_rows,
+        "ednc_rows": ednc_rows,
     })

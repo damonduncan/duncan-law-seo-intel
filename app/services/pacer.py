@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 PACER_LOGIN_URL = "https://pacer.login.uscourts.gov/csologin/login.jsf"
 PCL_SEARCH_URL  = "https://pcl.uscourts.gov/pcl/pages/search/findParty.jsf"
 
-DISTRICT_TO_COURT = {"MDNC": "ncmb", "WDNC": "ncwb"}
+DISTRICT_TO_COURT = {"MDNC": "ncmb", "WDNC": "ncwb", "EDNC": "nceb"}
 
 MARKET_TO_DISTRICT = {
     "greensboro":    "MDNC",
@@ -40,6 +40,8 @@ MARKET_TO_DISTRICT = {
     "salisbury":     "MDNC",
     "charlotte":     "WDNC",
     "asheville":     "WDNC",
+    # Eastern NC market tag — used for competitors with EDNC presence
+    "ednc":          "EDNC",
 }
 
 NAV_TIMEOUT    = 45_000   # ms — per navigation
@@ -82,7 +84,7 @@ def collect_filing_snapshots(db: Session) -> int:
 
         try:
             # Group attorneys by district
-            by_district: dict = {"MDNC": [], "WDNC": []}
+            by_district: dict = {"MDNC": [], "WDNC": [], "EDNC": []}
             for comp in db.query(Competitor).filter(Competitor.active == True).all():
                 for attorney in comp.attorneys:
                     name = _parse_name(attorney.attorney_name)
