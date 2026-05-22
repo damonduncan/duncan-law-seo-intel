@@ -117,71 +117,64 @@ def discover_ednc_filers(
                 browser.close()
                 return JSONResponse(result)
 
-            # Step 1: find what reports are available at this court
-            reports_url = f"{court_base}/cgi-bin/DisplayMenu.pl?Reports&id=-1"
-            page.goto(reports_url, wait_until="domcontentloaded")
-            report_links = page.eval_on_selector_all(
-                "a[href]",
-                "els => els.map(e => ({text: e.innerText.trim(), href: e.href})).filter(e => e.text)"
+            # CaseFiled-Rpt.pl is NCEB's "Cases Filed" report (confirmed from Reports menu)
+            report_url = f"{court_base}/cgi-bin/CaseFiled-Rpt.pl"
+            page.goto(report_url, wait_until="domcontentloaded")
+            result["report_title"] = page.title()
+            result["report_url_used"] = report_url
+
+            # Capture form fields so we know what parameters to use
+            form_fields = page.eval_on_selector_all(
+                "input, select",
+                "els => els.map(e => ({name: e.name, id: e.id, type: e.type}))"
             )
-            result["available_reports"] = [l for l in report_links if l["text"]][:30]
+            result["report_form_fields"] = form_fields[:20]
 
-            # Step 2: try known report URLs for filing activity
-            report_found = False
-            for report_path in [
-                "/cgi-bin/rpty.pl",          # newer CM/ECF
-                "/cgi-bin/rptyy.pl",         # older CM/ECF
-                "/cgi-bin/FilingActivity.pl",
-                "/cgi-bin/CaseFiled.pl",
-            ]:
-                page.goto(f"{court_base}{report_path}", wait_until="domcontentloaded")
-                t = page.title()
-                if "not found" not in t.lower() and "error" not in t.lower() and "login" not in t.lower():
-                    result["report_title"] = t
-                    result["report_url_used"] = f"{court_base}{report_path}"
-                    report_found = True
-                    break
-
-            if report_found:
-                # Fill date range if there's a form
+            # Fill date range — try common field names used in CM/ECF report forms
+            date_from_str = period_start.strftime("%m/%d/%Y")
+            date_to_str   = period_end.strftime("%m/%d/%Y")
+            for fname in ["date_from", "filed_from", "Sdate", "DateFiled_from", "start_date"]:
                 try:
-                    page.fill('[name="date_from"], [name="Sdate"], [name="filed_from"]',
-                              period_start.strftime("%m/%d/%Y"), timeout=2_000)
-                    page.fill('[name="date_to"], [name="Edate"], [name="filed_to"]',
-                              period_end.strftime("%m/%d/%Y"), timeout=2_000)
-                    page.click('input[type="submit"], input[name="button1"]', timeout=3_000)
-                    page.wait_for_load_state("domcontentloaded")
+                    page.fill(f'[name="{fname}"]', date_from_str, timeout=1_500)
+                    break
+                except Exception:
+                    pass
+            for fname in ["date_to", "filed_to", "Edate", "DateFiled_to", "end_date"]:
+                try:
+                    page.fill(f'[name="{fname}"]', date_to_str, timeout=1_500)
+                    break
                 except Exception:
                     pass
 
-                body = page.inner_text("body")
-                atty_pattern = _re.compile(r'([A-Z][A-Za-z\-\']+,\s+[A-Za-z][A-Za-z\s\.]+)\s*\(aty\)')
-                names = atty_pattern.findall(body)
-                result["total_cases_scanned"] = len(names)
-                counter = Counter(names)
-                result["top_filers"] = [
-                    {"attorney": name.strip(), "cases": count}
-                    for name, count in counter.most_common(30)
-                ]
-            else:
-                # Step 3 fallback: iquery.pl with no last name — some CM/ECF versions
-                # return all cases when name is blank
-                result["report_title"] = "Trying iquery fallback (no name filter)"
-                page.goto(f"{court_base}/cgi-bin/iquery.pl", wait_until="domcontentloaded")
+            # Select bankruptcy case type if available
+            for sel_name in ["case_type", "caseType", "type"]:
                 try:
-                    # Leave last_name blank, just set dates and attorney type
-                    page.fill('[name="filed_from"]', period_start.strftime("%m/%d/%Y"))
-                    page.fill('[name="filed_to"]',   period_end.strftime("%m/%d/%Y"))
-                    page.select_option('[name="person_type"]', value="aty", timeout=3_000)
-                    for cb in ["open_cases", "closed_cases"]:
-                        page.check(f'[id="{cb}"]', timeout=1_000)
-                    page.click('[name="button1"]', timeout=5_000)
-                    page.wait_for_load_state("domcontentloaded")
-                    body = page.inner_text("body")
-                    result["iquery_title"]   = page.title()
-                    result["iquery_snippet"] = body[:2000]
-                except Exception as e:
-                    result["iquery_error"] = str(e)
+                    page.select_option(f'[name="{sel_name}"]', value="bk", timeout=1_500)
+                    break
+                except Exception:
+                    pass
+
+            # Submit
+            try:
+                page.click('input[type="submit"], input[name="button1"], button[type="submit"]',
+                           timeout=5_000)
+                page.wait_for_load_state("domcontentloaded")
+            except Exception:
+                pass
+
+            result["result_title"]   = page.title()
+            body = page.inner_text("body")
+            result["result_snippet"] = body[:3000]
+
+            # Extract attorney names — CM/ECF marks attorneys as "(aty)" after their name
+            atty_pattern = _re.compile(r'([A-Z][A-Za-z\-\'\.]+,\s+[A-Za-z][A-Za-z\s\.]+)\s*\(aty\)')
+            names = atty_pattern.findall(body)
+            result["total_cases_scanned"] = len(names)
+            counter = Counter(n.strip() for n in names)
+            result["top_filers"] = [
+                {"attorney": name, "cases": count}
+                for name, count in counter.most_common(30)
+            ]
 
             browser.close()
 
