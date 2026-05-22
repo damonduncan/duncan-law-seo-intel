@@ -79,8 +79,11 @@ def debug_cmecf(
 
     result: dict = {
         "login_title": None,
+        "post_login_url": None,
         "cmecf_title": None,
         "cmecf_url": None,
+        "loginpl_title": None,
+        "loginpl_url": None,
         "nav_links": None,
         "iquery_title": None,
         "iquery_form_fields": None,
@@ -101,41 +104,41 @@ def debug_cmecf(
             page = browser.new_page()
             page.set_default_timeout(45_000)
 
-            # Login via PACER central — fill court selector so session
-            # is scoped to this court's CM/ECF, not just PCL
-            page.goto("https://pacer.login.uscourts.gov/csologin/login.jsf", wait_until="networkidle")
+            # Step 1: Central PACER login (plain — no court selector, less fragile)
+            page.goto("https://pacer.login.uscourts.gov/csologin/login.jsf",
+                      wait_until="domcontentloaded")
             page.fill('[name="loginForm:loginName"]', settings.pacer_username)
             page.fill('[name="loginForm:password"]',  settings.pacer_password)
-            # Type court code into autocomplete to scope the session
-            try:
-                page.fill('[name="loginForm:courtId_input"]', court_code, timeout=3_000)
-                page.wait_for_timeout(1_000)  # let autocomplete populate
-                # Try to click the first autocomplete suggestion
-                page.click('.ui-autocomplete-item', timeout=3_000)
-            except Exception:
-                pass  # court selector is optional
             page.click('[id$="fbtnLogin"]')
-            page.wait_for_load_state("networkidle")
-            result["login_title"] = page.title()
+            page.wait_for_timeout(4_000)   # wait for AJAX redirect cycle
+            result["login_title"]    = page.title()
             result["post_login_url"] = page.url
 
-            # Navigate to CM/ECF court homepage
-            page.goto(court_base, wait_until="networkidle")
-            result["cmecf_title"] = page.title()
-            result["cmecf_url"]   = page.url
+            # Step 2: Navigate to CM/ECF court homepage (use domcontentloaded —
+            # networkidle fails because CM/ECF does protocol-level redirects)
+            try:
+                page.goto(court_base, wait_until="domcontentloaded", timeout=30_000)
+                result["cmecf_title"] = page.title()
+                result["cmecf_url"]   = page.url
+            except Exception as nav_err:
+                result["cmecf_title"] = f"nav error: {nav_err}"
 
-            # Capture navigation links (to find Query section)
-            links = page.eval_on_selector_all(
-                "a[href]",
-                "els => els.map(e => ({text: e.innerText.trim(), href: e.href})).filter(e => e.text)"
-            )
-            result["nav_links"] = [l for l in links if any(
-                kw in l["text"].lower() for kw in ["query", "report", "attorney", "case"]
-            )][:20]
+            # Step 3: CM/ECF login.pl handoff — this endpoint exchanges PACER
+            # central auth cookies for a court-specific session token
+            login_pl = f"{court_base}/cgi-bin/login.pl"
+            try:
+                page.goto(login_pl, wait_until="domcontentloaded", timeout=30_000)
+                result["loginpl_title"] = page.title()
+                result["loginpl_url"]   = page.url
+            except Exception as lp_err:
+                result["loginpl_title"] = f"nav error: {lp_err}"
 
-            # Try iquery.pl directly
+            # Step 4: Now try iquery.pl
             iquery_url = f"{court_base}/cgi-bin/iquery.pl"
-            page.goto(iquery_url, wait_until="networkidle")
+            try:
+                page.goto(iquery_url, wait_until="domcontentloaded", timeout=30_000)
+            except Exception as iq_err:
+                result["iquery_nav_error"] = str(iq_err)
             result["iquery_title"] = page.title()
 
             # Capture form fields

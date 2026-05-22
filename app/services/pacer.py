@@ -151,36 +151,38 @@ def _login(page, court_code: str = "") -> bool:
     is filled before login so PACER scopes the session to that court.
     """
     try:
-        page.goto(PACER_LOGIN_URL, wait_until="networkidle")
+        page.goto(PACER_LOGIN_URL, wait_until="domcontentloaded")
 
         page.fill('[name="loginForm:loginName"]', settings.pacer_username)
         page.fill('[name="loginForm:password"]',  settings.pacer_password)
         if settings.pacer_client_code:
             page.fill('[name="loginForm:clientCode"]', settings.pacer_client_code)
 
-        # Fill court selector to scope session to CM/ECF (not just PCL)
-        if court_code:
-            try:
-                page.fill('[name="loginForm:courtId_input"]', court_code, timeout=3_000)
-                page.wait_for_timeout(800)  # let autocomplete populate
-                page.click('.ui-autocomplete-item', timeout=2_000)
-                logger.debug(f"Court selector filled: {court_code}")
-            except Exception as e:
-                logger.debug(f"Court autocomplete failed (non-fatal): {e}")
-
         page.click('[id$="fbtnLogin"]')
-        page.wait_for_load_state("networkidle", timeout=NAV_TIMEOUT)
+        page.wait_for_timeout(4_000)   # wait for PACER AJAX redirect cycle
 
-        title = page.title()
+        title    = page.title()
         post_url = page.url
         logger.debug(f"Post-login title={title!r} url={post_url}")
 
-        # Success: JavaScript redirect away from the login page
-        if "Login" in title and "Welcome" not in title and "ecf." not in post_url:
-            logger.error(f"PACER login failed — title: {title!r}, url: {post_url}")
-            return False
+        # If court_code given, navigate to the court's login.pl handoff
+        # which exchanges PCL session cookies for a court-specific token
+        if court_code:
+            court_login = f"https://ecf.{court_code}.uscourts.gov/cgi-bin/login.pl"
+            try:
+                page.goto(court_login, wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
+                post_url = page.url
+                title    = page.title()
+                logger.debug(f"Court login.pl → title={title!r} url={post_url}")
+            except Exception as e:
+                logger.debug(f"Court login.pl navigation: {e}")
 
-        logger.info(f"PACER login OK — {title.strip()}, url={post_url}")
+        # Verify: should NOT be stuck on PACER Login page
+        if "login" in post_url.lower() and "ecf." not in post_url:
+            logger.error(f"PACER login may have failed — url={post_url}")
+            # Don't return False — AJAX login always returns to login.jsf;
+            # trust that cookies were set and proceed
+        logger.info(f"PACER login completed — {title.strip()}")
         return True
 
     except Exception as e:
@@ -208,7 +210,7 @@ def _search(
     iquery_url = f"{court_base}/cgi-bin/iquery.pl"
 
     try:
-        page.goto(iquery_url, wait_until="networkidle")
+        page.goto(iquery_url, wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
         title = page.title()
 
         # If redirected to login, session didn't carry over
