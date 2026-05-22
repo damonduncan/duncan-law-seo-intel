@@ -106,12 +106,18 @@ def run_ednc_discovery(db: Session, year: int, month: int) -> dict:
             body = page.inner_text("body")
             result["result_snippet"] = body[:3000]
 
-            # Parse attorneys — "(aty)" follows the attorney name in CM/ECF results
-            names = re.findall(
-                r'([A-Z][A-Za-z\-\'\.]+,\s+[A-Za-z][A-Za-z\s\.]+)\s*\(aty\)',
+            # NCEB CaseFiled-Rpt format: "Attorney for Debtor: FirstName LastName"
+            # Only count attorney-for-debtor (not plaintiff/creditor counsel)
+            raw = re.findall(
+                r'Attorney\s+for\s+(?:Debtor|Joint\s+Debtor)\s*:\s+([^\n\r]+)',
                 body
             )
-            counter = Counter(n.strip() for n in names)
+            names = [
+                n.strip().rstrip(",.")
+                for n in raw
+                if n.strip().lower() not in ("pro se", "", "unknown")
+            ]
+            counter = Counter(names)
             result["total_found"] = len(names)
             result["top_filers"] = [
                 {"attorney": name, "cases": count}
