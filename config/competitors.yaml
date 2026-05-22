@@ -51,7 +51,14 @@ competitors:
       - salisbury
       - asheville
     attorneys:
-      - name: "Matthew T. McKee"
+      - name: "John T. Orcutt"
+        aliases:
+          - "John Orcutt"
+          - "J Orcutt"
+      - name: "Edward C. Boltz"
+        aliases:
+          - "E Boltz"
+          - "Edward Boltz"
       - name: "Erica Capron NeSmith"
         aliases:
           - "Erica NeSmith"
@@ -59,10 +66,43 @@ competitors:
       - name: "Koury Lee Hicks"
         aliases:
           - "K Hicks"
-      - name: "Edward C. Boltz"
+          - "Koury Hicks"
+      - name: "Shawn Orcutt"
         aliases:
-          - "E Boltz"
-          - "Edward Boltz"
+          - "S Orcutt"
+      - name: "Josh Hillin"
+        aliases:
+          - "Joshua Hillin"
+          - "J Hillin"
+      - name: "Jason Watson"
+        aliases:
+          - "J Watson"
+      - name: "Jeremy Harn"
+        aliases:
+          - "J Harn"
+      - name: "Matthew A. Schmidt"
+        aliases:
+          - "Matthew Schmidt"
+          - "M Schmidt"
+      - name: "Ray DiGuiseppe"
+        aliases:
+          - "Raymond DiGuiseppe"
+          - "R DiGuiseppe"
+          - "Ray Diguiseppe"
+      - name: "Erik A. Martin"
+        aliases:
+          - "Erik Martin"
+          - "E Martin"
+      - name: "Melissa Betron"
+        aliases:
+          - "M Betron"
+      - name: "Ryan Srnik"
+        aliases:
+          - "R Srnik"
+      - name: "Matthew T. McKee"   # may have left firm but still has active cases in PACER
+        aliases:
+          - "Matthew McKee"
+          - "M McKee"
 
   # ── GREENSBORO / TRIAD AREA ───────────────────────────────────────────────
 
