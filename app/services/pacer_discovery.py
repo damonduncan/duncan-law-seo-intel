@@ -77,47 +77,65 @@ def run_ednc_discovery(db: Session, year: int, month: int) -> dict:
                 "els => els.map(e => ({name: e.name, id: e.id, type: e.type, value: e.value}))"
             )[:20]
 
-            # Fill date fields — try every naming convention CM/ECF uses
+            # Capture form fields to identify correct date field names
+            result["form_fields"] = page.eval_on_selector_all(
+                "input, select",
+                "els => els.map(e => ({name: e.name, id: e.id, type: e.type, value: e.value}))"
+            )[:25]
+            logger.info(f"EDNC report form fields: {result['form_fields']}")
+
+            # Fill date fields using every naming convention seen in CM/ECF
             date_from_str = period_start.strftime("%m/%d/%Y")
             date_to_str   = period_end.strftime("%m/%d/%Y")
-            for fname in ["filed_start_dt", "filed_end_dt_start", "date_from", "Sdate",
-                          "start_date", "filed_from", "DateFiled_from"]:
+            filled_from = False
+            for fname in ["filed_start_dt", "date_from", "Sdate", "start_date",
+                          "filed_from", "DateFiled_from", "start_dt"]:
                 try:
                     page.fill(f'[name="{fname}"]', date_from_str, timeout=1_000)
+                    filled_from = True
+                    logger.info(f"Filled date_from via [{fname}]")
                     break
                 except Exception:
                     pass
+            filled_to = False
             for fname in ["filed_end_dt", "date_to", "Edate", "end_date",
-                          "filed_to", "DateFiled_to"]:
+                          "filed_to", "DateFiled_to", "end_dt"]:
                 try:
                     page.fill(f'[name="{fname}"]', date_to_str, timeout=1_000)
+                    filled_to = True
+                    logger.info(f"Filled date_to via [{fname}]")
                     break
                 except Exception:
                     pass
+            result["date_filter_applied"] = filled_from and filled_to
 
-            # Submit
-            try:
-                page.click('input[type="submit"], input[name="button1"], button[type="submit"]',
-                           timeout=5_000)
-                page.wait_for_load_state("domcontentloaded")
-            except Exception:
-                pass
+            # Submit — try all common submit patterns
+            for submit_sel in ['input[type="submit"]', '[name="button1"]',
+                               'button[type="submit"]', 'input[value="Run Report"]',
+                               'input[value="Submit"]']:
+                try:
+                    page.click(submit_sel, timeout=3_000)
+                    page.wait_for_load_state("domcontentloaded")
+                    break
+                except Exception:
+                    pass
 
             body = page.inner_text("body")
             result["result_snippet"] = body[:3000]
 
-            # NCEB CaseFiled-Rpt format: "Attorney for Debtor: FirstName LastName"
-            # Only count attorney-for-debtor (not plaintiff/creditor counsel)
-            raw = re.findall(
-                r'Attorney\s+for\s+(?:Debtor|Joint\s+Debtor)\s*:\s+([^\n\r]+)',
-                body
-            )
-            names = [
-                n.strip().rstrip(",.")
-                for n in raw
-                if n.strip().lower() not in ("pro se", "", "unknown")
-            ]
+            # Line-by-line extraction — more robust than regex across whitespace formats
+            names = []
+            for line in body.replace('\r', '\n').split('\n'):
+                stripped = line.strip()
+                for prefix in ("Attorney for Debtor:", "Attorney for Joint Debtor:"):
+                    if stripped.startswith(prefix):
+                        # Name is everything after the colon, up to the first tab
+                        raw_name = stripped[len(prefix):].split('\t')[0].strip().rstrip(",.")
+                        if raw_name and raw_name.lower() not in ("pro se", "unknown", ""):
+                            names.append(raw_name)
+                        break
             counter = Counter(names)
+            logger.info(f"EDNC: {len(names)} attorney-for-debtor lines found")
             result["total_found"] = len(names)
             result["top_filers"] = [
                 {"attorney": name, "cases": count}

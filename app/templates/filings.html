@@ -172,8 +172,12 @@
   {% else %}
   <p style="font-size:13px;color:var(--muted);">
     No attorney data found yet.
+    {% if ednc_discovery.form_fields %}
+    <br><br><strong>Report form fields (for debugging):</strong>
+    <pre style="font-size:11px;color:var(--muted);white-space:pre-wrap;">{{ ednc_discovery.form_fields }}</pre>
+    {% endif %}
     {% if ednc_discovery.result_snippet %}
-    <br><br><strong>Response preview:</strong>
+    <br><strong>Response preview:</strong>
     <pre style="font-size:11px;color:var(--muted);white-space:pre-wrap;max-height:200px;overflow:auto;">{{ ednc_discovery.result_snippet[:800] }}</pre>
     {% endif %}
   </p>
