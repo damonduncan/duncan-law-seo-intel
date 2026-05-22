@@ -36,8 +36,7 @@ MARKET_ORDER = list(MARKET_DISPLAY.keys())
 def build_and_send_digest(db: Session) -> None:
     """Build the weekly digest and send via Resend. Logs result to digest_log."""
     if not settings.resend_api_key:
-        logger.warning("RESEND_API_KEY not set — skipping weekly digest")
-        return
+        raise ValueError("RESEND_API_KEY not configured — add it to Railway environment variables")
 
     today    = date.today()
     week_str = today.strftime("%B %d, %Y")
