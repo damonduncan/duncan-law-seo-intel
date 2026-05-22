@@ -229,36 +229,65 @@ def _apply_refinements(
 ) -> None:
     """
     Apply court / date / chapter filters on the results page via frmRefineSearch.
+    Logs the rendered form structure on first call so we can inspect selectors.
     Fails silently — if filters aren't available the raw count is used.
     """
+    # Inspect the rendered refinement form on the first call — logged to Railway
+    try:
+        rendered = page.evaluate("""() => {
+            const form = document.getElementById('frmRefineSearch');
+            if (!form) return {found: false, html: null, inputs: []};
+            return {
+                found: true,
+                html: form.innerHTML.substring(0, 2000),
+                inputs: Array.from(form.querySelectorAll('input,select,button,textarea'))
+                    .map(el => ({
+                        tag: el.tagName, name: el.name, id: el.id,
+                        type: el.type || null,
+                        visible: el.offsetParent !== null,
+                        value: el.value || null
+                    }))
+            };
+        }""")
+        if rendered.get("found"):
+            logger.info(f"frmRefineSearch inputs: {rendered.get('inputs')}")
+            logger.info(f"frmRefineSearch html[:500]: {(rendered.get('html') or '')[:500]}")
+        else:
+            logger.warning("frmRefineSearch not found on results page — no filters applied")
+    except Exception as e:
+        logger.debug(f"Refinement form inspection failed: {e}")
+
     date_from = period_start.strftime("%m/%d/%Y")
     date_to   = period_end.strftime("%m/%d/%Y")
 
-    filters = [
-        # (CSS selector fragment, fill_value or None, select_label or None)
-        ("court",   court_code,  None),
-        ("From",    date_from,   None),
-        ("To",      date_to,     None),
-        ("chapter", None,        str(chapter)),
+    # Try both specific and broad selectors for each filter
+    filter_attempts = [
+        # (selector, value, use_select)
+        ('[id*="RefineSearch"][id*="court"],[name*="RefineSearch"][name*="court"]', court_code, False),
+        ('[id*="RefineSearch"][id*="Court"],[name*="RefineSearch"][name*="Court"]', court_code, False),
+        ('[id*="RefineSearch"][id*="From"],[name*="RefineSearch"][name*="From"]',   date_from,  False),
+        ('[id*="RefineSearch"][id*="from"],[name*="RefineSearch"][name*="from"]',   date_from,  False),
+        ('[id*="RefineSearch"][id*="To"],[name*="RefineSearch"][name*="To"]',       date_to,    False),
+        ('[id*="RefineSearch"][id*="to"],[name*="RefineSearch"][name*="to"]',       date_to,    False),
+        ('[id*="RefineSearch"][id*="chapter"],[name*="RefineSearch"][name*="chapter"]', str(chapter), True),
+        ('[id*="RefineSearch"][id*="Chapter"],[name*="RefineSearch"][name*="Chapter"]', str(chapter), True),
     ]
 
     refine_submitted = False
-    for frag, fill_val, sel_label in filters:
+    for selector, value, use_select in filter_attempts:
         try:
-            locator = page.locator(
-                f'[id*="frmRefineSearch"][id*="{frag}"], '
-                f'[name*="frmRefineSearch"][name*="{frag}"]'
-            ).first
-            if not locator.is_visible(timeout=2_000):
+            loc = page.locator(selector).first
+            if not loc.is_visible(timeout=1_500):
                 continue
-            if fill_val:
-                locator.fill(fill_val)
-            elif sel_label:
+            if use_select:
                 try:
-                    locator.select_option(value=sel_label, timeout=ACTION_TIMEOUT)
+                    loc.select_option(value=value, timeout=3_000)
                 except Exception:
-                    locator.fill(sel_label)
+                    loc.fill(value)
+            else:
+                loc.fill(value)
             refine_submitted = True
+            logger.debug(f"Applied filter via '{selector}' = {value}")
         except Exception:
             pass
 
