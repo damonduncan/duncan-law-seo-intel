@@ -27,9 +27,10 @@ def upgrade() -> None:
         sa.Column("snapshot_data", sa.JSON, nullable=True),
         sa.Column("snapped_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["competitor_id"], ["competitors.id"], ondelete="CASCADE"),
+        if_not_exists=True,
     )
-    op.create_index("ix_review_snapshots_competitor_id", "review_snapshots", ["competitor_id"])
-    op.create_index("ix_review_snapshots_snapped_at", "review_snapshots", ["snapped_at"])
+    op.create_index("ix_review_snapshots_competitor_id", "review_snapshots", ["competitor_id"], if_not_exists=True)
+    op.create_index("ix_review_snapshots_snapped_at", "review_snapshots", ["snapped_at"], if_not_exists=True)
 
 
 def downgrade() -> None:
