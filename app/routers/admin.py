@@ -48,6 +48,88 @@ def run_reviews(
     })
 
 
+@router.get("/admin/debug/pacer-playwright")
+def debug_pacer_playwright(
+    request: Request,
+    last_name: str = "Duncan",
+    first_name: str = "Damon",
+    user: dict = Depends(auth_required),
+):
+    """
+    Run a full Playwright PACER session and return the rendered HTML of
+    the search results page and refinement form — shows exactly what
+    JavaScript renders so we can write the right selectors.
+    """
+    from playwright.sync_api import sync_playwright
+    from app.config import settings
+
+    result: dict = {
+        "login_title": None,
+        "search_title": None,
+        "refine_form_html": None,
+        "refine_form_inputs": None,
+        "results_page_text_snippet": None,
+        "error": None,
+    }
+
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-dev-shm-usage"],
+            )
+            page = browser.new_page()
+            page.set_default_timeout(45_000)
+
+            # Login
+            page.goto("https://pacer.login.uscourts.gov/csologin/login.jsf",
+                      wait_until="networkidle")
+            page.fill('[name="loginForm:loginName"]', settings.pacer_username)
+            page.fill('[name="loginForm:password"]',  settings.pacer_password)
+            page.click('[id$="fbtnLogin"]')
+            page.wait_for_load_state("networkidle")
+            result["login_title"] = page.title()
+
+            # Search
+            page.goto("https://pcl.uscourts.gov/pcl/pages/search/findParty.jsf",
+                      wait_until="networkidle")
+            page.fill('[name="frmSearch:txtPartyNameLast"]',  last_name)
+            page.fill('[name="frmSearch:txtPartyNameFirst"]', first_name)
+            try:
+                page.select_option('[name="frmSearch:scmPartyRole"]',
+                                   label="Attorney", timeout=5_000)
+            except Exception:
+                pass
+            page.click('[id$="btnSearch"]')
+            page.wait_for_load_state("networkidle")
+            result["search_title"] = page.title()
+
+            # Capture body text (first 2000 chars) for count pattern analysis
+            result["results_page_text_snippet"] = page.inner_text("body")[:2000]
+
+            # Capture the rendered refinement form HTML
+            refine = page.locator("form#frmRefineSearch")
+            if refine.count() > 0:
+                result["refine_form_html"] = refine.inner_html()[:4000]
+                # Also capture all input/select names + types
+                inputs = page.eval_on_selector(
+                    "form#frmRefineSearch",
+                    """el => Array.from(el.querySelectorAll('input,select,button'))
+                        .map(e => ({tag: e.tagName, name: e.name, id: e.id,
+                                    type: e.type, visible: e.offsetParent !== null}))""",
+                )
+                result["refine_form_inputs"] = inputs
+            else:
+                result["refine_form_html"] = "(frmRefineSearch not found on page)"
+
+            browser.close()
+
+    except Exception as e:
+        result["error"] = str(e)
+
+    return JSONResponse(result)
+
+
 @router.post("/admin/run-pacer", response_class=HTMLResponse)
 def run_pacer(
     request: Request,

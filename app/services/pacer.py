@@ -275,37 +275,44 @@ def _apply_refinements(
             logger.debug(f"Refine submit failed: {e}")
 
 
-def _extract_count(page) -> int:
-    """Extract the total result count from a PCL results page."""
+def _extract_count(page) -> Optional[int]:
+    """
+    Extract the total result count from a PCL results page.
+    Returns None when the 108,000 batch-limit is hit (meaning filters
+    weren't applied — the count is meaningless for our purposes).
+    Returns 0 when the search genuinely found no results.
+    """
     try:
         text = page.inner_text("body")
 
-        # "Showing 1 to 25 of 47 results" / "1 to 25 of 47"
+        # Detect the batch-limit message — filters not applied, count invalid
+        if "108,000" in text and "batch" in text.lower():
+            logger.warning("PCL batch limit hit — refinement filters not applied; skipping count")
+            return None
+
+        # "Showing 1 to 25 of 47" pagination
         m = re.search(r"\d[\d,]*\s+to\s+\d[\d,]*\s+of\s+(\d[\d,]*)", text)
         if m:
-            n = int(m.group(1).replace(",", ""))
-            # Ignore the "108,000 batch limit" message
-            if n < 108_000:
-                return n
+            return int(m.group(1).replace(",", ""))
 
         # "47 results" / "47 cases found"
         m = re.search(r"(\d[\d,]*)\s+(?:result|case)", text, re.IGNORECASE)
         if m:
-            n = int(m.group(1).replace(",", ""))
-            if n < 108_000:
-                return n
+            return int(m.group(1).replace(",", ""))
 
-        # No results
+        # Explicit "no results" message
         if re.search(r"no (?:result|case|match)", text, re.IGNORECASE):
             return 0
 
-        # Count data rows as fallback
-        rows = page.locator("table.pcl-results-table tbody tr, table[id*='result'] tbody tr").count()
-        return max(0, rows)
+        # Count table rows as last resort
+        rows = page.locator(
+            "table.pcl-results-table tbody tr, table[id*='result'] tbody tr"
+        ).count()
+        return rows if rows > 0 else None
 
     except Exception as e:
         logger.error(f"Count extraction failed: {e}")
-        return 0
+        return None
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
