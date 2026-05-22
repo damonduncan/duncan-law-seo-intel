@@ -123,19 +123,30 @@ def run_ednc_discovery(db: Session, year: int, month: int) -> dict:
             body = page.inner_text("body")
             result["result_snippet"] = body[:3000]
 
-            # Line-by-line extraction — more robust than regex across whitespace formats
+            # NCEB judge last names — stripped from end of attorney names
+            # (judge name appears in the same text node when table cells merge)
+            NCEB_JUDGES = {"Warren", "McAfee", "Callaway", "Flanagan", "Travis"}
+
+            # Line-by-line extraction
             names = []
             for line in body.replace('\r', '\n').split('\n'):
                 stripped = line.strip()
                 for prefix in ("Attorney for Debtor:", "Attorney for Joint Debtor:"):
                     if stripped.startswith(prefix):
-                        # Name is everything after the colon, up to the first tab
-                        raw_name = stripped[len(prefix):].split('\t')[0].strip().rstrip(",.")
-                        if raw_name and raw_name.lower() not in ("pro se", "unknown", ""):
-                            names.append(raw_name)
+                        # Take everything after colon, stop at first tab
+                        raw = stripped[len(prefix):].split('\t')[0].strip().rstrip(",.")
+                        if not raw or raw.lower() in ("pro se", "unknown"):
+                            break
+                        # Strip trailing judge name if present
+                        parts = raw.split()
+                        if parts and parts[-1] in NCEB_JUDGES:
+                            parts = parts[:-1]
+                        name = " ".join(parts).strip().rstrip(",.")
+                        if name:
+                            names.append(name)
                         break
             counter = Counter(names)
-            logger.info(f"EDNC: {len(names)} attorney-for-debtor lines found")
+            logger.info(f"EDNC: {len(names)} attorney-for-debtor lines → {len(counter)} unique attorneys")
             result["total_found"] = len(names)
             result["top_filers"] = [
                 {"attorney": name, "cases": count}
