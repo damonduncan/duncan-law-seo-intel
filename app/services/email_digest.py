@@ -103,10 +103,14 @@ def _gather_data(db: Session) -> dict:
             .all()
         )
         for r in rows:
-            m = rankings_by_market.setdefault(r.market, {"in_pack": 0, "total": 0, "gaps": []})
+            m = rankings_by_market.setdefault(
+                r.market, {"in_pack": 0, "total": 0, "gaps": [], "positions": []}
+            )
             m["total"] += 1
             if r.in_pack:
                 m["in_pack"] += 1
+                if r.rank_position:
+                    m["positions"].append(r.rank_position)
             else:
                 m["gaps"].append(r.keyword)
 
@@ -139,12 +143,77 @@ def _gather_data(db: Session) -> dict:
         .all()
     )
 
+    priority_action = _generate_priority(rankings_by_market, reviews_by_market)
+
     return {
         "rankings_by_market":  rankings_by_market,
         "reviews_by_market":   reviews_by_market,
         "open_alerts":         open_alerts,
         "rankings_as_of":      latest_date,
         "base_url":            settings.app_base_url,
+        "priority_action":     priority_action,
+    }
+
+
+def _generate_priority(rankings: dict, reviews: dict) -> dict:
+    """Synthesise rankings and review data into a single priority recommendation."""
+    # Critical: listings with fewer than 5 reviews — directly limits neutral search rankings
+    thin = [
+        (MARKET_DISPLAY.get(m, m), d["review_count"])
+        for m, d in reviews.items()
+        if d["review_count"] < 5
+    ]
+    if thin:
+        markets = ", ".join(f"{name} ({count})" for name, count in thin)
+        return {
+            "level": "high",
+            "headline": "Review building — immediate priority",
+            "body": (
+                f"{markets} {'review' if sum(c for _, c in thin) == 1 else 'reviews'} on "
+                f"{'that listing' if len(thin) == 1 else 'those listings'}. "
+                "Competitors in those markets have 37–60 reviews. Ask every satisfied client "
+                "from those offices to leave a Google review this week."
+            ),
+        }
+
+    # Pack gaps — not in 3-pack for a keyword
+    gaps = [
+        (MARKET_DISPLAY.get(m, m), d["gaps"][0])
+        for m, d in rankings.items()
+        if d["gaps"]
+    ]
+    if gaps:
+        market_name, kw = gaps[0]
+        return {
+            "level": "medium",
+            "headline": f"Pack gap in {market_name}",
+            "body": (
+                f'Duncan Law is not in the 3-pack for "{kw}". '
+                "Compare your GBP listing categories and review count against the two firms "
+                "holding the top spots — review count is the most likely lever."
+            ),
+        }
+
+    # Review count below 20 — yellow flag
+    low = [
+        (MARKET_DISPLAY.get(m, m), d["review_count"])
+        for m, d in reviews.items()
+        if d["review_count"] < 20
+    ]
+    if low:
+        markets = ", ".join(f"{name} ({count})" for name, count in low)
+        return {
+            "level": "medium",
+            "headline": "Build review volume in smaller markets",
+            "body": (
+                f"{markets}. Aim for 30+ in each market to strengthen ranking stability."
+            ),
+        }
+
+    return {
+        "level": "good",
+        "headline": "Strong week across all markets",
+        "body": "Duncan Law is in the 3-pack for all tracked keywords. Maintain review request cadence to protect your positions.",
     }
 
 
@@ -154,6 +223,22 @@ def _build_html(ctx: dict, week_str: str) -> str:
     base_url = ctx["base_url"].rstrip("/")
     sections = []
 
+    # ── Priority card ─────────────────────────────────────────────────────────
+    pa = ctx.get("priority_action", {})
+    level_colors = {
+        "high":   ("#fee2e2", "#991b1b", "#dc2626"),
+        "medium": ("#fef3c7", "#92400e", "#d97706"),
+        "good":   ("#d1fae5", "#065f46", "#059669"),
+    }
+    bg, fg, accent = level_colors.get(pa.get("level", "good"), level_colors["good"])
+    sections.append(f"""<tr><td style="padding:20px 24px;border-bottom:1px solid #e5e7eb;background:{bg};">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:{accent};margin-bottom:6px;">
+        This Week's Priority
+      </div>
+      <div style="font-size:14px;font-weight:600;color:{fg};margin-bottom:6px;">{pa.get("headline", "")}</div>
+      <div style="font-size:13px;color:{fg};opacity:.85;line-height:1.6;">{pa.get("body", "")}</div>
+    </td></tr>""")
+
     # ── Rankings section ──────────────────────────────────────────────────────
     rank_rows = ""
     as_of = ctx["rankings_as_of"]
@@ -161,27 +246,38 @@ def _build_html(ctx: dict, week_str: str) -> str:
         label = MARKET_DISPLAY.get(market, market)
         data  = ctx["rankings_by_market"].get(market)
         if not data:
-            rank_rows += _tr(label, "—", "—", "")
+            rank_rows += _tr(label, "—", "—")
             continue
-        in_pack = data["in_pack"]
-        total   = data["total"]
-        gaps    = data["gaps"]
+        in_pack   = data["in_pack"]
+        total     = data["total"]
+        gaps      = data["gaps"]
+        positions = sorted(data.get("positions", []))
+
+        # Position display e.g. "#1 #1 #3"
+        pos_str = " ".join(f"#{p}" for p in positions) if positions else "—"
+
         if in_pack == total and total > 0:
             badge = _badge("green", f"{in_pack}/{total} in pack")
         elif in_pack > 0:
             badge = _badge("yellow", f"{in_pack}/{total} in pack")
         else:
             badge = _badge("red", "Not in pack")
+
         gap_text = ""
         if gaps:
-            gap_text = f'<div style="font-size:11px;color:#dc2626;margin-top:3px;">Gap: {gaps[0][:50]}</div>'
-        rank_rows += _tr(label, badge, gap_text, "")
+            short_kw = gaps[0].replace(" Greensboro", "").replace(" Winston-Salem", "") \
+                               .replace(" High Point", "").replace(" Charlotte", "") \
+                               .replace(" Salisbury", "").replace(" Asheville", "")
+            gap_label = f"{len(gaps)} gap{'s' if len(gaps) > 1 else ''}: {short_kw}"
+            gap_text = f'<div style="font-size:11px;color:#dc2626;margin-top:2px;">{gap_label}</div>'
+        rank_rows += _tr(label, pos_str, badge, gap_text)
 
     sections.append(_section(
         f'3-Pack Positions' + (f' — as of {as_of.strftime("%b %d")}' if as_of else ''),
         f'''<table width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse;">
           <tr>
             <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Market</th>
+            <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Positions</th>
             <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Status</th>
             <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Note</th>
           </tr>
