@@ -91,20 +91,19 @@ def collect_filing_snapshots(db: Session) -> int:
                     for district in _districts_for_competitor(comp):
                         by_district[district].append((comp, attorney, name))
 
-            # Login to PACER central ONCE — no court selector, avoids rate limiting
+            # Login to PACER central ONCE
             if not _login(page):
                 logger.error("PACER central login failed — aborting collection")
                 return 0
 
+            # Establish all court sessions NOW while the PACER session is fresh —
+            # doing this before any searches avoids the session expiring mid-run
+            court_auth: dict = {}
             for district, attorney_list in by_district.items():
                 if not attorney_list:
                     continue
-
                 court_code = DISTRICT_TO_COURT[district]
                 court_base = f"https://ecf.{court_code}.uscourts.gov"
-
-                # Court-specific auth handoff — reuses existing PACER session,
-                # no second login to PACER central needed
                 try:
                     page.goto(
                         f"{court_base}/cgi-bin/login.pl",
@@ -112,13 +111,20 @@ def collect_filing_snapshots(db: Session) -> int:
                         timeout=NAV_TIMEOUT,
                     )
                     court_title = page.title()
-                    logger.info(f"Court handoff {court_code}: {court_title!r}")
-                    if "Database" not in court_title and "Bankruptcy" not in court_title:
-                        logger.error(f"Court auth failed for {court_code} — skipping district")
-                        continue
+                    ok = "Database" in court_title or "Bankruptcy" in court_title
+                    court_auth[district] = ok
+                    logger.info(f"Court handoff {court_code}: {court_title!r} — {'OK' if ok else 'FAILED'}")
                 except Exception as e:
-                    logger.error(f"Court handoff error for {court_code}: {e}")
+                    court_auth[district] = False
+                    logger.error(f"Court handoff error {court_code}: {e}")
+
+            for district, attorney_list in by_district.items():
+                if not attorney_list:
                     continue
+                if not court_auth.get(district):
+                    logger.error(f"Skipping {district} — court auth failed")
+                    continue
+                court_code = DISTRICT_TO_COURT[district]
 
                 for comp, attorney, name in attorney_list:
                     # One search per attorney — chapter counts parsed from results

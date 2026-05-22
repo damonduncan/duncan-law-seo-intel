@@ -314,26 +314,22 @@ def send_digest(
     })
 
 
-@router.post("/admin/run-pacer", response_class=HTMLResponse)
-def run_pacer(
-    request: Request,
-    user: dict = Depends(auth_required),
-    db: Session = Depends(get_db),
-):
-    """Run PACER filing collection synchronously and show a result page."""
-    records, error = 0, None
-    try:
-        from app.services.pacer import collect_filing_snapshots
-        records = collect_filing_snapshots(db)
-    except Exception as e:
-        error = str(e)
-    return templates.TemplateResponse("admin_pacer_result.html", {
-        "request": request,
-        "user": user,
-        "active_page": "filings",
-        "records": records,
-        "error": error,
-    })
+@router.post("/admin/run-pacer")
+def run_pacer(request: Request, user: dict = Depends(auth_required)):
+    """Start PACER collection in a background thread — returns immediately."""
+    from app.database import SessionLocal
+    from app.services.pacer import collect_filing_snapshots
+
+    def _run():
+        db = SessionLocal()
+        try:
+            collect_filing_snapshots(db)
+        finally:
+            db.close()
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+    return RedirectResponse(url="/filings?msg=pacer_running", status_code=303)
 
 
 @router.post("/admin/run-job/daily")

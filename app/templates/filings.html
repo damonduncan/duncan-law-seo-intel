@@ -4,6 +4,13 @@
 <h1>PACER Filing Volume</h1>
 <p class="page-sub">Monthly Chapter 7 and Chapter 13 case counts — MDNC and WDNC districts</p>
 
+{% if request.query_params.get('msg') == 'pacer_running' %}
+<div style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:6px;padding:14px 18px;margin-bottom:24px;color:var(--accent);">
+  <strong>PACER collection is running in the background.</strong>
+  This takes 3–5 minutes for both districts. Refresh this page when it's done — data will appear automatically.
+</div>
+{% endif %}
+
 {% if not has_data %}
 {# ── No data yet ─────────────────────────────────────────────────────────── #}
 <div class="card-grid" style="margin-bottom:24px;">
@@ -38,8 +45,11 @@
     <code>PACER_USERNAME</code> and <code>PACER_PASSWORD</code> in Railway environment variables.
   </p>
   <div style="margin-top:16px;">
-    <form method="post" action="/admin/run-pacer">
-      <button type="submit" class="btn btn-primary btn-sm">Collect PACER Data Now</button>
+    <form method="post" action="/admin/run-pacer" id="pacerForm">
+      <button type="submit" class="btn btn-primary btn-sm" id="pacerBtn"
+              onclick="this.disabled=true;this.textContent='Starting…';this.form.submit();">
+        Collect PACER Data Now
+      </button>
     </form>
   </div>
 </div>
@@ -107,6 +117,16 @@
 
 {{ district_table(mdnc_rows, "MDNC — Middle District of NC") }}
 {{ district_table(wdnc_rows, "WDNC — Western District of NC") }}
+
+<div style="margin-top:8px;">
+  <form method="post" action="/admin/run-pacer" style="display:inline;">
+    <button type="submit" class="btn btn-ghost btn-sm"
+            onclick="this.disabled=true;this.textContent='Starting…';this.form.submit();">
+      Collect PACER Data Now
+    </button>
+  </form>
+  <span style="font-size:12px;color:var(--muted);margin-left:10px;">Runs in background — refresh page in 5 minutes</span>
+</div>
 
 {% endif %}
 {% endblock %}
