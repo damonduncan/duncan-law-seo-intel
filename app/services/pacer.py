@@ -101,17 +101,17 @@ def collect_filing_snapshots(db: Session) -> int:
                     continue
 
                 for comp, attorney, name in attorney_list:
-                    for chapter in (7, 13):
-                        count = _search(
-                            page,
-                            last_name=name["last"],
-                            first_name=name["first"],
-                            court_code=court_code,
-                            chapter=chapter,
-                            period_start=period_start,
-                            period_end=period_end,
-                        )
-                        if count is not None:
+                    # One search per attorney — chapter counts parsed from results
+                    chapter_counts = _search(
+                        page,
+                        last_name=name["last"],
+                        first_name=name["first"],
+                        court_code=court_code,
+                        period_start=period_start,
+                        period_end=period_end,
+                    )
+                    if chapter_counts is not None:
+                        for chapter, count in chapter_counts.items():
                             _upsert_snapshot(
                                 db=db,
                                 competitor_id=comp.id,
@@ -123,12 +123,12 @@ def collect_filing_snapshots(db: Session) -> int:
                                 case_count=count,
                             )
                             records += 1
-                            logger.info(
-                                f"  {attorney.attorney_name} | "
-                                f"{district} Ch.{chapter} | "
-                                f"{period_start.strftime('%b %Y')}: {count}"
-                            )
-                        time.sleep(SEARCH_DELAY)
+                        logger.info(
+                            f"  {attorney.attorney_name} | {district} | "
+                            f"{period_start.strftime('%b %Y')}: "
+                            f"Ch7={chapter_counts[7]} Ch13={chapter_counts[13]}"
+                        )
+                    time.sleep(SEARCH_DELAY)
 
         except Exception as e:
             logger.error(f"PACER collection error: {e}", exc_info=True)
@@ -197,14 +197,17 @@ def _search(
     last_name: str,
     first_name: str,
     court_code: str,
-    chapter: int,
     period_start: date,
     period_end: date,
-) -> Optional[int]:
+) -> Optional[dict]:
     """
-    Query the court's CM/ECF iquery.pl for attorney cases in a date range.
-    This CGI interface accepts all filters directly — no JavaScript required.
-    Returns case count, or None on error.
+    Query CM/ECF iquery.pl for an attorney's cases in a date range.
+    Does ONE search and counts Chapter 7 and 13 from the results text.
+    Returns {7: count, 13: count} or None on error.
+
+    Field names confirmed from debug: last_name, first_name, filed_from,
+    filed_to, person_type (select: "aty"), button1 (type=button).
+    nature_suit is adversary proceeding types — not used for chapter filtering.
     """
     court_base = f"https://ecf.{court_code}.uscourts.gov"
     iquery_url = f"{court_base}/cgi-bin/iquery.pl"
@@ -213,18 +216,16 @@ def _search(
         page.goto(iquery_url, wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
         title = page.title()
 
-        # If redirected to login, session didn't carry over
         if "Login" in title and "Database" not in title:
-            logger.warning(f"CM/ECF session invalid for {court_code} — got {title!r}")
+            logger.warning(f"CM/ECF session invalid for {court_code} — {title!r}")
             return None
 
-        # NCMB/NCWB iquery.pl exact field names (confirmed from debug)
         page.fill('[name="last_name"]',  last_name)
         page.fill('[name="first_name"]', first_name)
         page.fill('[name="filed_from"]', period_start.strftime("%m/%d/%Y"))
         page.fill('[name="filed_to"]',   period_end.strftime("%m/%d/%Y"))
 
-        # Person type = Attorney
+        # Attorney party type
         try:
             page.select_option('[name="person_type"]', value="aty", timeout=ACTION_TIMEOUT)
         except Exception:
@@ -233,15 +234,7 @@ def _search(
             except Exception as e:
                 logger.debug(f"person_type select: {e}")
 
-        # Chapter via nature_suit select-multiple
-        for val in [str(chapter), f"bk{chapter}", f"0{chapter}"]:
-            try:
-                page.select_option('[name="nature_suit"]', value=val, timeout=1_500)
-                break
-            except Exception:
-                pass
-
-        # Include both open and closed cases in the date range
+        # Include both open and closed cases
         for cb in ["open_cases", "closed_cases"]:
             try:
                 if not page.is_checked(f'[id="{cb}"]'):
@@ -249,28 +242,32 @@ def _search(
             except Exception:
                 pass
 
-        # Submit — button is type="button" named "button1" (not type="submit")
+        # Submit — button1 is type="button", not type="submit"
         page.click('[name="button1"]', timeout=ACTION_TIMEOUT)
         page.wait_for_load_state("domcontentloaded", timeout=NAV_TIMEOUT)
 
-        count = _extract_count(page)
-        logger.debug(f"CM/ECF {last_name}/{court_code}/Ch{chapter}: {count}")
-        return count
+        text = page.inner_text("body")
+        counts = _parse_chapter_counts(text)
+        logger.debug(
+            f"CM/ECF {last_name}/{court_code}: "
+            f"Ch7={counts[7]} Ch13={counts[13]}"
+        )
+        return counts
 
     except Exception as e:
-        logger.error(f"CM/ECF search error ({last_name}, {court_code}, Ch.{chapter}): {e}")
+        logger.error(f"CM/ECF search error ({last_name}, {court_code}): {e}")
         return None
 
 
-def _fill_first_match(page, field_names: list, value: str) -> bool:
-    """Try each field name in order; fill the first one found. Returns True if filled."""
-    for name in field_names:
-        try:
-            page.fill(f'[name="{name}"]', value, timeout=1_500)
-            return True
-        except Exception:
-            pass
-    return False
+def _parse_chapter_counts(text: str) -> dict:
+    """
+    Count Chapter 7 and Chapter 13 cases from CM/ECF results text.
+    Each result row has tab-delimited columns; chapter appears as \\t7\\t or \\t13\\t.
+    Verified against Damon Duncan / MDNC / April 2026 results.
+    """
+    ch7  = text.count("\t7\t")
+    ch13 = text.count("\t13\t")
+    return {7: ch7, 13: ch13}
 
 
 def _select_option(page, selector: str, label: str) -> None:
