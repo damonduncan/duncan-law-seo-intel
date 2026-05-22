@@ -23,31 +23,312 @@ own_firm:
   # One entry per office — each market has its own Google reviews and local pack ranking
   locations:
     - market: greensboro
-      google_place_id: ""       # Find at: maps.google.com → search "Duncan Law Greensboro" → Share → copy Place ID
+      google_place_id: "ChIJ6TGEjFQZU4gRAVYkI36sFnQ"
     - market: winston_salem
-      google_place_id: ""
+      google_place_id: "ChIJwR4hkZyxU4gRkCuse5xaTPA"
     - market: high_point
-      google_place_id: ""
+      google_place_id: "ChIJX4d6PrEFU4gRYksE_51ePX4"
     - market: salisbury
-      google_place_id: ""
+      google_place_id: "ChIJ_wky1yDzU4gRzbTWKFm0oNI"
     - market: charlotte
-      google_place_id: ""
+      google_place_id: "ChIJOwBJi8ohVIgRF0jUR8NHgio"
     - market: asheville
-      google_place_id: ""
+      google_place_id: "ChIJp-EWBb71WYgRckLbbTs_D5o"
 
 competitors:
-  # ── EXAMPLE ENTRY (replace with real competitors) ──────────────────────────
-  # - id: comp_001                          # Unique ID — never change this once set
-  #   name: "Firm Display Name"
-  #   google_place_id: ""                   # Required for review tracking
-  #   bbb_url: ""                           # Optional
-  #   markets:                              # Markets where this firm operates
-  #     - greensboro
-  #   attorneys:
-  #     - name: "Attorney Full Name"        # Exactly as in PACER
-  #       aliases:
-  #         - "A Name"
-  # ───────────────────────────────────────────────────────────────────────────
+
+  # ── STATEWIDE / MULTI-MARKET ───────────────────────────────────────────────
+
+  - id: comp_001
+    name: "Law Offices of John T. Orcutt"
+    google_place_id: "ChIJJTUCiP0bU4gRamiZpP1Sl_Q"
+    bbb_url: "https://www.bbb.org/us/nc/greensboro/profile/bankruptcy-attorney/law-offices-of-john-t-orcutt-pc-0503-33061541"
+    markets:
+      - greensboro
+      - winston_salem
+      - high_point
+      - charlotte
+      - salisbury
+      - asheville
+    attorneys:
+      - name: "Matthew T. McKee"
+      - name: "Erica Capron NeSmith"
+        aliases:
+          - "Erica NeSmith"
+          - "Erica Capron"
+      - name: "Koury Lee Hicks"
+        aliases:
+          - "K Hicks"
+      - name: "Edward C. Boltz"
+        aliases:
+          - "E Boltz"
+          - "Edward Boltz"
+
+  # ── GREENSBORO / TRIAD AREA ───────────────────────────────────────────────
+
+  - id: comp_002
+    name: "Blalock Law Offices, P.A."
+    google_place_id: "ChIJa3Je9f0bU4gROlp-AzyDLRA"
+    bbb_url: "https://www.bbb.org/us/nc/greensboro/profile/lawyers/wall-blalock-0503-33002057"
+    markets:
+      - greensboro
+      - winston_salem
+      - high_point
+    attorneys:
+      - name: "Tommy S. Blalock, III"
+        aliases:
+          - "Tommy Blalock"
+          - "T Blalock"
+
+  - id: comp_003
+    name: "Ivey, McClellan, Siegmund, Brumbaugh & McDonough, LLP"
+    google_place_id: "ChIJi34AIyQZU4gRYXAr_awFjOg"
+    bbb_url: ""
+    markets:
+      - greensboro
+      - winston_salem
+      - high_point
+    attorneys:
+      - name: "Samantha K Brumbaugh"
+        aliases:
+          - "Samantha Brumbaugh"
+          - "S Brumbaugh"
+
+  - id: comp_004
+    name: "Tennant & Jarvis, P.C."
+    google_place_id: "ChIJeWe36TUMU4gRvCyJ6jAi3do"
+    bbb_url: "https://www.bbb.org/us/nc/archdale/profile/lawyers/tennant-jarvis-pc-0503-4008114"
+    markets:
+      - greensboro
+      - winston_salem
+      - high_point
+    attorneys:
+      - name: "Bradley Peter Jarvis"
+        aliases:
+          - "Bradley Jarvis"
+          - "B Jarvis"
+
+  - id: comp_005
+    name: "Anderson Law Office"
+    google_place_id: "ChIJeWe36TUMU4gRJIRMt0Fa_pg"
+    bbb_url: ""
+    markets:
+      - greensboro
+      - high_point
+    attorneys:
+      - name: "Ron A. Anderson"
+        aliases:
+          - "Ron Anderson"
+          - "R Anderson"
+
+  - id: comp_006
+    name: "Schollander Law Offices"
+    google_place_id: "ChIJM33lkyeuU4gR42Cp0c05w5U"
+    bbb_url: "https://www.bbb.org/us/nc/winston-salem/profile/lawyers/schollander-law-offices-0503-192032393"
+    markets:
+      - greensboro
+      - winston_salem
+      - high_point
+    attorneys:
+      - name: "Wendell Wes Schollander, III"
+        aliases:
+          - "Wendell Schollander"
+          - "W Schollander"
+
+  - id: comp_007
+    name: "Bennett Guthrie PLLC"
+    google_place_id: "ChIJw3B9PFywU4gR1RNkS9gKroE"
+    bbb_url: "https://www.bbb.org/us/nc/winston-salem/profile/probate-attorney/bennett-guthrie-pllc-0503-1000038238"
+    markets:
+      - greensboro
+      - winston_salem
+      - high_point
+    attorneys:
+      - name: "Elizabeth Fowlkes Lawson"
+        aliases:
+          - "Elizabeth Lawson"
+          - "E Lawson"
+
+  - id: comp_008
+    name: "Craige Jenkins Liipfert & Walker LLP"
+    google_place_id: "ChIJzUUJ_9OxU4gRQqS8610QAvo"
+    bbb_url: "https://www.bbb.org/us/nc/winston-salem/profile/lawyers/craige-jenkins-liipfert-walker-llp-0503-1243"
+    markets:
+      - greensboro
+      - winston_salem
+      - high_point
+    attorneys:
+      - name: "Clyde R. Cash"
+        aliases:
+          - "Clyde Cash"
+          - "C Cash"
+
+  - id: comp_009
+    name: "Law Office of Cathy R. Stroupe, P.A."
+    google_place_id: "ChIJydxF2cgAU4gRcoOwhN6g5-Y"
+    bbb_url: "https://www.bbb.org/us/nc/kernersville/profile/lawyers/law-office-of-cathy-r-stroupe-pa-0503-235990155"
+    markets:
+      - greensboro
+      - winston_salem
+      - high_point
+    attorneys:
+      - name: "Cathy Robinson Stroupe"
+        aliases:
+          - "Cathy Stroupe"
+          - "C Stroupe"
+
+  # ── HIGH POINT ────────────────────────────────────────────────────────────
+
+  - id: comp_010
+    name: "The Law Office of Stan H. Dick"
+    google_place_id: "ChIJvWDWo0cPU4gRqXgomGckZ4E"
+    bbb_url: ""
+    markets:
+      - greensboro
+      - high_point
+    attorneys:
+      - name: "Stan H. Dick"
+        aliases:
+          - "Stan Dick"
+          - "S Dick"
+
+  # ── CHARLOTTE ─────────────────────────────────────────────────────────────
+
+  - id: comp_011
+    name: "Law Office of Jack G. Lezman"
+    google_place_id: "ChIJ4Rfst7sdVIgRiV4EIKHs1Uo"
+    bbb_url: "https://www.bbb.org/us/nc/charlotte/profile/bankruptcy-attorney/law-office-of-jack-g-lezman-pllc-0473-92027497"
+    markets:
+      - charlotte
+    attorneys:
+      - name: "Jack G. Lezman"
+        aliases:
+          - "Jack Lezman"
+          - "J Lezman"
+
+  - id: comp_012
+    name: "Law Office of Kimberly A. Sheek"
+    google_place_id: "ChIJXVxHAQGnVogRXfDcYrSjmfU"
+    bbb_url: "https://www.bbb.org/us/nc/charlotte/profile/bankruptcy-attorney/law-office-of-kimberly-a-sheek-0473-494406/addressId/79046"
+    markets:
+      - charlotte
+    attorneys:
+      - name: "Kimberly A. Sheek"
+        aliases:
+          - "Kimberly Sheek"
+          - "K Sheek"
+
+  - id: comp_013
+    name: "Hands Law Office, PLLC"
+    google_place_id: "ChIJp5JTxs8fVIgRVs5vF9AqeDc"
+    bbb_url: "https://www.bbb.org/us/nc/charlotte/profile/bankruptcy-attorney/hands-law-office-0473-239577"
+    markets:
+      - charlotte
+    attorneys:
+      - name: "David William Hands"
+        aliases:
+          - "David Hands"
+          - "D Hands"
+
+  - id: comp_014
+    name: "Dove Law Firm"
+    google_place_id: "ChIJbx0YcNK9VogRfZ-7A0A_i8A"
+    bbb_url: ""
+    markets:
+      - charlotte
+    attorneys:
+      - name: "Sharon Schwartz Dove"
+        aliases:
+          - "Sharon Dove"
+          - "S Dove"
+
+  - id: comp_015
+    name: "Jeffrey G. Dalrymple, P.A."
+    google_place_id: "ChIJYV68BYYmVIgRyRhS4tS1Ye0"
+    bbb_url: "https://www.bbb.org/us/nc/matthews/profile/bankruptcy-attorney/jeffrey-g-dalrymple-pa-0473-212863"
+    markets:
+      - charlotte
+    attorneys:
+      - name: "Jeffrey G. Dalrymple"
+        aliases:
+          - "Jeffrey Dalrymple"
+          - "J Dalrymple"
+
+  - id: comp_016
+    name: "The Crow Law Firm"
+    google_place_id: "ChIJh0W4u9YwVIgRu331NfxlvJY"
+    bbb_url: ""
+    markets:
+      - charlotte
+    attorneys:
+      - name: "Matthew H. Crow"
+        aliases:
+          - "Matthew Crow"
+          - "M Crow"
+      - name: "Marcus D Crow"
+        aliases:
+          - "Marcus Crow"
+
+  # ── ASHEVILLE ─────────────────────────────────────────────────────────────
+
+  - id: comp_017
+    name: "Matney Mosley, P.C."
+    google_place_id: "ChIJ9cng0lnzWYgRMUAlqFJoV2w"
+    bbb_url: "https://www.bbb.org/us/nc/asheville/profile/debt-relief-services/mosley-law-firm-pc-0473-92031590"
+    markets:
+      - asheville
+    attorneys:
+      - name: "R. Todd Mosley"
+        aliases:
+          - "Todd Mosley"
+          - "R Mosley"
+
+  - id: comp_018
+    name: "Pitts, Hay & Hugenschmidt, P.A."
+    google_place_id: "ChIJMwAfaab0WYgR7Bvpt7d8Jvo"
+    bbb_url: ""
+    markets:
+      - asheville
+    attorneys:
+      - name: "Benson T. Pitts"
+        aliases:
+          - "Benson Pitts"
+          - "B Pitts"
+
+  - id: comp_019
+    name: "Leonard & Moore PLLC"
+    google_place_id: "ChIJbSljJa70WYgRZNyZlRk_KpE"
+    bbb_url: "https://www.bbb.org/us/nc/asheville/profile/legal-forms/leonard-moore-pllc-0473-92001122"
+    markets:
+      - asheville
+    attorneys:
+      - name: "Stephen Christopher Moore"
+        aliases:
+          - "Stephen Moore"
+          - "S Moore"
+
+  - id: comp_020
+    name: "Fitzgerald Law Firm"
+    google_place_id: ""   # No verified Google Business Profile found — not a local pack threat; PACER tracking only
+    bbb_url: ""
+    markets:
+      - asheville
+    attorneys:
+      - name: "Michael Scott"
+        aliases:
+          - "M Scott"
+
+  - id: comp_021
+    name: "Lutz Law Firm, PLLC"
+    google_place_id: "ChIJydWVDhUgV4gRXAXQGUD62WM"
+    bbb_url: "https://www.bbb.org/us/nc/shelby/profile/lawyers/lutz-law-firm-0473-292619"
+    markets:
+      - asheville
+    attorneys:
+      - name: "Robert H. Lutz"
+        aliases:
+          - "Robert Lutz"
+          - "R Lutz"
 
 markets:
   greensboro:
