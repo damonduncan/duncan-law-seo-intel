@@ -149,41 +149,53 @@ def debug_cmecf(
             result["iquery_form_fields"] = form_fields[:30]
             result["iquery_html_snippet"] = page.content()[:3000]
 
-            # Try submitting a test attorney search
+            # Capture select options for person_type and nature_suit
+            result["person_type_options"] = page.eval_on_selector_all(
+                '[name="person_type"] option',
+                "els => els.map(e => ({value: e.value, text: e.innerText.trim()}))"
+            )
+            result["nature_suit_options"] = page.eval_on_selector_all(
+                '[name="nature_suit"] option',
+                "els => els.map(e => ({value: e.value, text: e.innerText.trim()}))"
+            )
+
+            # Test attorney search using correct field names
             try:
-                # Fill what we can find
-                for field_name in ["lastAnameField", "LastName", "last_name", "lname"]:
+                page.fill('[name="last_name"]',  last_name)
+                page.fill('[name="first_name"]', first_name)
+                page.fill('[name="filed_from"]', period_start.strftime("%m/%d/%Y"))
+                page.fill('[name="filed_to"]',   period_end.strftime("%m/%d/%Y"))
+
+                # Select Attorney in person_type
+                try:
+                    page.select_option('[name="person_type"]', value="aty", timeout=2_000)
+                except Exception:
                     try:
-                        page.fill(f'[name="{field_name}"]', last_name, timeout=2_000)
-                        break
+                        page.select_option('[name="person_type"]', label="Attorney", timeout=2_000)
                     except Exception:
                         pass
-                for field_name in ["firstAnameField", "FirstName", "first_name", "fname"]:
+
+                # Select chapter in nature_suit
+                for val in ([str(chapter), f"bk{chapter}", f"0{chapter}" if chapter < 10 else str(chapter)]):
                     try:
-                        page.fill(f'[name="{field_name}"]', first_name, timeout=2_000)
+                        page.select_option('[name="nature_suit"]', value=val, timeout=1_000)
                         break
                     except Exception:
                         pass
 
-                # Date range
-                for field_name in ["Sdate", "DateFiled_from", "date_filed_from", "filed_from"]:
+                # Check both open and closed cases
+                for cb in ["open_cases", "closed_cases"]:
                     try:
-                        page.fill(f'[name="{field_name}"]', period_start.strftime("%m/%d/%Y"), timeout=2_000)
-                        break
-                    except Exception:
-                        pass
-                for field_name in ["Edate", "DateFiled_to", "date_filed_to", "filed_to"]:
-                    try:
-                        page.fill(f'[name="{field_name}"]', period_end.strftime("%m/%d/%Y"), timeout=2_000)
-                        break
+                        if not page.is_checked(f'#{cb}'):
+                            page.check(f'#{cb}', timeout=1_000)
                     except Exception:
                         pass
 
-                # Submit
-                page.click('input[type="submit"], button[type="submit"]', timeout=5_000)
-                page.wait_for_load_state("networkidle")
+                # Submit — the button is type="button" named "button1"
+                page.click('[name="button1"]', timeout=5_000)
+                page.wait_for_load_state("domcontentloaded")
                 result["search_result_title"]   = page.title()
-                result["search_result_snippet"] = page.inner_text("body")[:2000]
+                result["search_result_snippet"] = page.inner_text("body")[:3000]
             except Exception as e:
                 result["search_result_title"] = f"Search attempt failed: {e}"
 

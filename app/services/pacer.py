@@ -218,22 +218,40 @@ def _search(
             logger.warning(f"CM/ECF session invalid for {court_code} — got {title!r}")
             return None
 
-        # Fill attorney name fields (try common CM/ECF field names)
-        _fill_first_match(page, ["lastAnameField", "LastName", "last_name"], last_name)
-        _fill_first_match(page, ["firstAnameField", "FirstName", "first_name"], first_name)
+        # NCMB/NCWB iquery.pl exact field names (confirmed from debug)
+        page.fill('[name="last_name"]',  last_name)
+        page.fill('[name="first_name"]', first_name)
+        page.fill('[name="filed_from"]', period_start.strftime("%m/%d/%Y"))
+        page.fill('[name="filed_to"]',   period_end.strftime("%m/%d/%Y"))
 
-        # Date range
-        date_from = period_start.strftime("%m/%d/%Y")
-        date_to   = period_end.strftime("%m/%d/%Y")
-        _fill_first_match(page, ["Sdate", "DateFiled_from", "date_filed_from", "filed_from"], date_from)
-        _fill_first_match(page, ["Edate", "DateFiled_to",   "date_filed_to",   "filed_to"],   date_to)
+        # Person type = Attorney
+        try:
+            page.select_option('[name="person_type"]', value="aty", timeout=ACTION_TIMEOUT)
+        except Exception:
+            try:
+                page.select_option('[name="person_type"]', label="Attorney", timeout=ACTION_TIMEOUT)
+            except Exception as e:
+                logger.debug(f"person_type select: {e}")
 
-        # Chapter
-        _fill_first_match(page, ["chapter", "Chapter"], str(chapter))
+        # Chapter via nature_suit select-multiple
+        for val in [str(chapter), f"bk{chapter}", f"0{chapter}"]:
+            try:
+                page.select_option('[name="nature_suit"]', value=val, timeout=1_500)
+                break
+            except Exception:
+                pass
 
-        # Submit
-        page.click('input[type="submit"], button[type="submit"]', timeout=ACTION_TIMEOUT)
-        page.wait_for_load_state("networkidle", timeout=NAV_TIMEOUT)
+        # Include both open and closed cases in the date range
+        for cb in ["open_cases", "closed_cases"]:
+            try:
+                if not page.is_checked(f'[id="{cb}"]'):
+                    page.check(f'[id="{cb}"]', timeout=1_500)
+            except Exception:
+                pass
+
+        # Submit — button is type="button" named "button1" (not type="submit")
+        page.click('[name="button1"]', timeout=ACTION_TIMEOUT)
+        page.wait_for_load_state("domcontentloaded", timeout=NAV_TIMEOUT)
 
         count = _extract_count(page)
         logger.debug(f"CM/ECF {last_name}/{court_code}/Ch{chapter}: {count}")
