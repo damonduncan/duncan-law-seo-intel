@@ -111,7 +111,7 @@ def collect_filing_snapshots(db: Session) -> int:
                         timeout=NAV_TIMEOUT,
                     )
                     court_title = page.title()
-                    ok = "Database" in court_title or "Bankruptcy" in court_title
+                    ok = "Login" not in court_title and bool(court_title)
                     court_auth[district] = ok
                     logger.info(f"Court handoff {court_code}: {court_title!r} — {'OK' if ok else 'FAILED'}")
                 except Exception as e:
