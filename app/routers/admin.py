@@ -45,7 +45,7 @@ def debug_pack(
     payload = [{"keyword": keyword, "location_name": location_name, "language_name": "English"}]
 
     resp = requests.post(
-        "https://api.dataforseo.com/v3/serp/google/local_pack/live/regular",
+        "https://api.dataforseo.com/v3/serp/google/maps/live/advanced",
         headers=headers, json=payload, timeout=30,
     )
     raw = resp.json()

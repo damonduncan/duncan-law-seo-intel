@@ -58,7 +58,7 @@ def fetch_local_pack(keyword: str, city: str) -> List[Dict[str, Any]]:
 
     try:
         response = requests.post(
-            f"{DATAFORSEO_BASE}/serp/google/local_pack/live/regular",
+            f"{DATAFORSEO_BASE}/serp/google/maps/live/advanced",
             headers=_auth_header(),
             json=payload,
             timeout=30,
@@ -88,14 +88,20 @@ def fetch_local_pack(keyword: str, city: str) -> List[Dict[str, Any]]:
         ) if task.get("result") else []
 
         for item in items:
-            if item.get("type") != "local_pack":
+            item_type = item.get("type", "")
+            # Google Maps endpoint returns "maps_search" items for business listings
+            if item_type not in ("maps_search", "local_pack"):
                 continue
+            place_id = (
+                item.get("place_id")
+                or item.get("cid", "")
+            )
             results.append({
-                "rank_position": item.get("rank_absolute"),
+                "rank_position": item.get("rank_group") or item.get("rank_absolute"),
                 "title": item.get("title", ""),
-                "place_id": item.get("place_id", ""),
-                "rating": item.get("rating", {}).get("value"),
-                "rating_count": item.get("rating", {}).get("votes_count"),
+                "place_id": place_id,
+                "rating": item.get("rating", {}).get("value") if isinstance(item.get("rating"), dict) else None,
+                "rating_count": item.get("rating", {}).get("votes_count") if isinstance(item.get("rating"), dict) else None,
                 "address": item.get("address", ""),
                 "raw": item,
             })
