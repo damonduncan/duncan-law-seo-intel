@@ -211,22 +211,25 @@ def _pacer_login() -> Optional[requests.Session]:
             },
         )
 
-        # JSF AJAX response is XML — parse it for a redirect URL
-        redirect_url = _parse_jsf_ajax_redirect(resp.text)
-        if redirect_url:
-            redirect_url = urljoin(post_url, redirect_url)
-            logger.debug(f"PACER: following AJAX redirect to {redirect_url}")
-            resp = session.get(redirect_url, timeout=30,
-                               headers={"Referer": post_url})
+        # The AJAX response always redirects to /csologin/login.jsf — this is normal.
+        # Session cookies are already established at this point. Verify authentication
+        # by checking the PCL welcome page rather than following that redirect.
+        pcl_check = session.get(
+            "https://pcl.uscourts.gov/pcl/index.jsf",
+            timeout=30,
+            headers={"Referer": post_url},
+        )
+        pcl_title = BeautifulSoup(pcl_check.text, "lxml").title
+        pcl_title_text = pcl_title.string if pcl_title else ""
 
-        if "PACER: Login" in resp.text:
+        if "Login" in pcl_title_text and "Welcome" not in pcl_title_text:
             logger.error(
-                "PACER login failed — response still shows login page. "
-                "Credentials may be wrong or PACER changed their login flow."
+                f"PACER login failed — PCL shows '{pcl_title_text.strip()}'. "
+                "Check PACER_USERNAME / PACER_PASSWORD in Railway env vars."
             )
             return None
 
-        logger.info("PACER login successful")
+        logger.info(f"PACER login successful — PCL: {pcl_title_text.strip()}")
         return session
 
     except Exception as e:
@@ -250,38 +253,49 @@ def _search_pcl(
     Returns the total case count, or None on error.
     """
     try:
-        # GET search page; use the content form (not the nav form)
-        resp = session.get(PCL_SEARCH_PAGE, timeout=30)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "lxml")
-        search_form = _find_content_form(soup)
+        from urllib.parse import urljoin as _urljoin
+
+        # GET the PCL welcome/search page
+        get_resp = session.get(PCL_SEARCH_PAGE, timeout=30)
+        get_resp.raise_for_status()
+        soup = BeautifulSoup(get_resp.text, "lxml")
+
+        # frmSearch is the authenticated search form on the PCL welcome page.
+        # Fall back to content-form heuristic if not found by ID.
+        search_form = soup.find("form", id="frmSearch") or _find_content_form(soup)
+        form_id = search_form.get("id", "frmSearch") if search_form else "frmSearch"
         form_data = _all_inputs(search_form) if search_form else {}
+
+        # Fix JSF form marker
+        if form_id in form_data and not form_data[form_id]:
+            form_data[form_id] = form_id
 
         date_range = (
             f"{period_start.strftime('%m/%d/%Y')} "
             f"to {period_end.strftime('%m/%d/%Y')}"
         )
 
-        # Overlay search parameters using the expected JSF field names.
-        # These match the PACER PCL's findPartyForm component structure.
+        # Field names follow the form's JSF component ID prefix (frmSearch:*)
         form_data.update({
-            "findPartyForm:partyType": "at",   # attorney
-            "findPartyForm:lastName":  last_name,
-            "findPartyForm:firstName": first_name,
-            "findPartyForm:courtType": "bk",
-            "findPartyForm:courtId":   court_code,
-            "findPartyForm:dateFiled": date_range,
-            "findPartyForm:chapter":   str(chapter),
-            "findPartyForm:btnSearch": "Search",
+            f"{form_id}:partyType": "at",    # attorney
+            f"{form_id}:lastName":  last_name,
+            f"{form_id}:firstName": first_name,
+            f"{form_id}:courtType": "bk",
+            f"{form_id}:courtId":   court_code,
+            f"{form_id}:dateFiled": date_range,
+            f"{form_id}:chapter":   str(chapter),
+            f"{form_id}:btnSearch": "Search",
         })
 
-        resp = session.post(PCL_SEARCH_PAGE, data=form_data, timeout=30)
-        resp.raise_for_status()
+        form_action = search_form.get("action", "") if search_form else ""
+        post_url = _urljoin(get_resp.url, form_action) if form_action else get_resp.url
 
-        count = _parse_result_count(resp.text)
-        logger.debug(
-            f"PCL {last_name}/{court_code}/Ch{chapter}: {count} cases"
-        )
+        post_resp = session.post(post_url, data=form_data, timeout=30,
+                                 headers={"Referer": get_resp.url})
+        post_resp.raise_for_status()
+
+        count = _parse_result_count(post_resp.text)
+        logger.debug(f"PCL {last_name}/{court_code}/Ch{chapter}: {count} cases")
         return count
 
     except Exception as e:

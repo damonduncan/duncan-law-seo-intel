@@ -212,20 +212,17 @@ def debug_pacer(
         result["login_content_type"] = resp.headers.get("Content-Type", "")
         result["login_raw_response"] = resp.text[:800].replace("\n", " ")
 
-        # Parse JSF AJAX redirect
         from app.services.pacer import _parse_jsf_ajax_redirect
-        redirect_url = _parse_jsf_ajax_redirect(resp.text)
-        result["ajax_redirect_url"] = redirect_url
-        if redirect_url:
-            from urllib.parse import urljoin as _uj
-            redirect_url = _uj(post_url, redirect_url)
-            resp2 = session.get(redirect_url, timeout=30, headers={"Referer": post_url})
-            result["after_redirect_title"] = BeautifulSoup(resp2.text, "lxml").title.string if BeautifulSoup(resp2.text, "lxml").title else "(no title)"
-            result["login_succeeded"] = "PACER: Login" not in resp2.text
-            result["login_response_snippet"] = resp2.text[:400].replace("\n", " ")
-        else:
-            result["login_succeeded"] = "PACER: Login" not in resp.text
-            result["login_response_snippet"] = resp.text[:400].replace("\n", " ")
+        result["ajax_redirect_url"] = _parse_jsf_ajax_redirect(resp.text)
+
+        # Verify authentication via PCL (not the login.jsf redirect)
+        pcl_check = session.get("https://pcl.uscourts.gov/pcl/index.jsf",
+                                 timeout=30, headers={"Referer": post_url})
+        pcl_soup = BeautifulSoup(pcl_check.text, "lxml")
+        pcl_title = pcl_soup.title.string if pcl_soup.title else ""
+        result["pcl_verify_title"] = pcl_title.strip()
+        result["login_succeeded"] = "Welcome" in pcl_title or "PACER: Login" not in pcl_title
+        result["login_response_snippet"] = pcl_check.text[:400].replace("\n", " ")
 
         # Step 2: GET PCL search page
         resp2 = session.get(PCL_SEARCH_PAGE, timeout=30)
@@ -236,9 +233,11 @@ def debug_pacer(
             for f in soup2.find_all("form")
         ]
 
-        content_form = _find_content_form(soup2)
+        frm_search = soup2.find("form", id="frmSearch")
+        content_form = frm_search or _find_content_form(soup2)
         pcl_inputs = _all_inputs(content_form) if content_form else {}
-        result["pcl_content_form_found"] = content_form is not None
+        result["pcl_frm_search_found"] = frm_search is not None
+        result["pcl_form_id_used"] = content_form.get("id") if content_form else None
         result["pcl_form_fields"] = list(pcl_inputs.keys())
 
         # Step 3: POST search
