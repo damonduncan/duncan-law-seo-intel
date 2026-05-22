@@ -7,6 +7,18 @@ router = APIRouter()
 auth_required = RedirectIfNotAuthenticated()
 
 
+@router.post("/admin/sync-config")
+def sync_config(request: Request, user: dict = Depends(auth_required)):
+    from app.database import SessionLocal
+    from app.services.config_loader import sync_competitors
+    db = SessionLocal()
+    try:
+        sync_competitors(db)
+    finally:
+        db.close()
+    return RedirectResponse(url="/dashboard?msg=Config+synced+%E2%80%94+competitor+list+updated", status_code=303)
+
+
 @router.post("/admin/run-job/daily")
 def trigger_daily(request: Request, user: dict = Depends(auth_required)):
     from app.jobs.daily import run_daily_job
