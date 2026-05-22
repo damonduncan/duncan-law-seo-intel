@@ -81,7 +81,7 @@ def collect_filing_snapshots(db: Session) -> int:
         page.set_default_timeout(NAV_TIMEOUT)
 
         try:
-            # Group attorneys by district — login once per court (court-scoped session)
+            # Group attorneys by district
             by_district: dict = {"MDNC": [], "WDNC": []}
             for comp in db.query(Competitor).filter(Competitor.active == True).all():
                 for attorney in comp.attorneys:
@@ -91,18 +91,33 @@ def collect_filing_snapshots(db: Session) -> int:
                     for district in _districts_for_competitor(comp):
                         by_district[district].append((comp, attorney, name))
 
-            for i, (district, attorney_list) in enumerate(by_district.items()):
+            # Login to PACER central ONCE — no court selector, avoids rate limiting
+            if not _login(page):
+                logger.error("PACER central login failed — aborting collection")
+                return 0
+
+            for district, attorney_list in by_district.items():
                 if not attorney_list:
                     continue
 
-                # Brief pause between districts so PACER doesn't rate-limit the second login
-                if i > 0:
-                    logger.info("Pausing 30s between districts to avoid rate limiting")
-                    time.sleep(30)
-
                 court_code = DISTRICT_TO_COURT[district]
-                if not _login(page, court_code=court_code):
-                    logger.error(f"PACER login failed for {district} — skipping district")
+                court_base = f"https://ecf.{court_code}.uscourts.gov"
+
+                # Court-specific auth handoff — reuses existing PACER session,
+                # no second login to PACER central needed
+                try:
+                    page.goto(
+                        f"{court_base}/cgi-bin/login.pl",
+                        wait_until="domcontentloaded",
+                        timeout=NAV_TIMEOUT,
+                    )
+                    court_title = page.title()
+                    logger.info(f"Court handoff {court_code}: {court_title!r}")
+                    if "Database" not in court_title and "Bankruptcy" not in court_title:
+                        logger.error(f"Court auth failed for {court_code} — skipping district")
+                        continue
+                except Exception as e:
+                    logger.error(f"Court handoff error for {court_code}: {e}")
                     continue
 
                 for comp, attorney, name in attorney_list:
@@ -147,13 +162,11 @@ def collect_filing_snapshots(db: Session) -> int:
 
 # ── Login ─────────────────────────────────────────────────────────────────────
 
-def _login(page, court_code: str = "") -> bool:
+def _login(page) -> bool:
     """
-    Navigate to PACER login, fill credentials, and optionally scope the
-    session to a specific court so CM/ECF queries are authorized.
-
-    court_code: e.g. "ncmb" or "ncwb". When provided, the court autocomplete
-    is filled before login so PACER scopes the session to that court.
+    Login to PACER central. Called once per collection run.
+    Court-specific auth handoffs (login.pl) are handled separately in
+    the collection loop so we never hit PACER central twice in one run.
     """
     try:
         page.goto(PACER_LOGIN_URL, wait_until="domcontentloaded")
@@ -166,28 +179,13 @@ def _login(page, court_code: str = "") -> bool:
         page.click('[id$="fbtnLogin"]')
         page.wait_for_timeout(4_000)   # wait for PACER AJAX redirect cycle
 
-        title    = page.title()
         post_url = page.url
-        logger.debug(f"Post-login title={title!r} url={post_url}")
+        logger.debug(f"Post-login url={post_url}")
 
-        # If court_code given, navigate to the court's login.pl handoff
-        # which exchanges PCL session cookies for a court-specific token
-        if court_code:
-            court_login = f"https://ecf.{court_code}.uscourts.gov/cgi-bin/login.pl"
-            try:
-                page.goto(court_login, wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
-                post_url = page.url
-                title    = page.title()
-                logger.debug(f"Court login.pl → title={title!r} url={post_url}")
-            except Exception as e:
-                logger.debug(f"Court login.pl navigation: {e}")
-
-        # Verify: should NOT be stuck on PACER Login page
-        if "login" in post_url.lower() and "ecf." not in post_url:
-            logger.error(f"PACER login may have failed — url={post_url}")
-            # Don't return False — AJAX login always returns to login.jsf;
-            # trust that cookies were set and proceed
-        logger.info(f"PACER login completed — {title.strip()}")
+        # PACER AJAX always returns to login.jsf even on success —
+        # session cookies are set regardless. We treat this as success
+        # and verify per-court access via login.pl handoffs.
+        logger.info("PACER central login completed — will verify via court login.pl")
         return True
 
     except Exception as e:
