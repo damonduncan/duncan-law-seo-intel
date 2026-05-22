@@ -139,20 +139,45 @@ def _pacer_login() -> Optional[requests.Session]:
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "lxml")
 
-        form_data = _extract_hidden_inputs(soup)
-        form_data.update({
-            "loginForm:loginName": settings.pacer_username,
-            "loginForm:password": settings.pacer_password,
-            "loginForm:clientCode": settings.pacer_client_code or "",
-            "loginForm:fbtnLogin": "Login",
-        })
+        # The page has multiple forms; the login form is the one with a password input
+        login_form = _find_form_with_password(soup)
+        if not login_form:
+            logger.error("PACER: could not locate login form on page")
+            return None
+
+        form_data = _all_inputs(login_form)
+
+        # Auto-detect the actual field names for username and password
+        user_field = _detect_field(login_form, ("text",), ("name", "login", "user"))
+        pass_field = _detect_field(login_form, ("password",), ())
+        code_field = _detect_field(login_form, ("text",), ("client", "code"))
+
+        if user_field:
+            form_data[user_field] = settings.pacer_username
+        if pass_field:
+            form_data[pass_field] = settings.pacer_password
+        if code_field:
+            form_data[code_field] = settings.pacer_client_code or ""
+
+        # Include any submit button value
+        for btn in login_form.find_all(["input", "button"]):
+            if btn.get("type", "").lower() == "submit" and btn.get("name"):
+                form_data[btn["name"]] = btn.get("value", "Login")
+
+        logger.debug(
+            f"PACER login: form fields detected: user={user_field}, pass={pass_field}, "
+            f"code={code_field}, all_names={list(form_data.keys())}"
+        )
 
         resp = session.post(PACER_LOGIN_URL, data=form_data, timeout=30,
                             allow_redirects=True)
 
-        page_text = resp.text.lower()
-        if any(w in page_text for w in ("invalid", "incorrect", "failed", "error")):
-            logger.error("PACER login failed — check PACER_USERNAME / PACER_PASSWORD")
+        # Success check: login page title disappears after successful auth
+        if "PACER: Login" in resp.text or "pacer: login" in resp.text.lower():
+            logger.error(
+                "PACER login failed — response still shows login page. "
+                "Check PACER_USERNAME / PACER_PASSWORD in Railway env vars."
+            )
             return None
 
         logger.info("PACER login successful")
@@ -179,36 +204,39 @@ def _search_pcl(
     Returns the total case count, or None on error.
     """
     try:
-        # GET the search page for a fresh ViewState
+        # GET search page; use the content form (not the nav form)
         resp = session.get(PCL_SEARCH_PAGE, timeout=30)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "lxml")
-        form_data = _extract_hidden_inputs(soup)
+        search_form = _find_content_form(soup)
+        form_data = _all_inputs(search_form) if search_form else {}
 
         date_range = (
             f"{period_start.strftime('%m/%d/%Y')} "
             f"to {period_end.strftime('%m/%d/%Y')}"
         )
 
+        # Overlay search parameters using the expected JSF field names.
+        # These match the PACER PCL's findPartyForm component structure.
         form_data.update({
-            # Party type = attorney
-            "findPartyForm:partyType":     "at",
-            "findPartyForm:lastName":      last_name,
-            "findPartyForm:firstName":     first_name,
-            # Court filters
-            "findPartyForm:courtType":     "bk",
-            "findPartyForm:courtId":       court_code,
-            # Date and chapter
-            "findPartyForm:dateFiled":     date_range,
-            "findPartyForm:chapter":       str(chapter),
-            # Submit
-            "findPartyForm:btnSearch":     "Search",
+            "findPartyForm:partyType": "at",   # attorney
+            "findPartyForm:lastName":  last_name,
+            "findPartyForm:firstName": first_name,
+            "findPartyForm:courtType": "bk",
+            "findPartyForm:courtId":   court_code,
+            "findPartyForm:dateFiled": date_range,
+            "findPartyForm:chapter":   str(chapter),
+            "findPartyForm:btnSearch": "Search",
         })
 
         resp = session.post(PCL_SEARCH_PAGE, data=form_data, timeout=30)
         resp.raise_for_status()
 
-        return _parse_result_count(resp.text)
+        count = _parse_result_count(resp.text)
+        logger.debug(
+            f"PCL {last_name}/{court_code}/Ch{chapter}: {count} cases"
+        )
+        return count
 
     except Exception as e:
         logger.error(
@@ -262,16 +290,55 @@ def _parse_result_count(html: str) -> int:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _extract_hidden_inputs(soup: BeautifulSoup) -> dict:
-    """Return all hidden inputs from the first form on the page."""
+def _all_inputs(form) -> dict:
+    """Return name→value for every input/select in a form element."""
     data = {}
-    form = soup.find("form")
-    if form:
-        for inp in form.find_all("input"):
-            name = inp.get("name")
-            if name:
-                data[name] = inp.get("value", "")
+    if not form:
+        return data
+    for inp in form.find_all(["input", "select"]):
+        name = inp.get("name")
+        if name:
+            data[name] = inp.get("value", "")
     return data
+
+
+def _find_form_with_password(soup: BeautifulSoup):
+    """Return the first form that contains a password-type input."""
+    for form in soup.find_all("form"):
+        if form.find("input", {"type": "password"}):
+            return form
+    return None
+
+
+def _find_content_form(soup: BeautifulSoup):
+    """
+    Return the main content form — i.e., not the navbar form.
+    PACER pages have a cbMenuForm nav form first; skip it.
+    """
+    forms = soup.find_all("form")
+    # Skip any form whose id/name contains "menu" or "nav"
+    for form in forms:
+        form_id = (form.get("id") or form.get("name") or "").lower()
+        if "menu" not in form_id and "nav" not in form_id:
+            return form
+    return forms[-1] if forms else None
+
+
+def _detect_field(form, input_types: tuple, name_hints: tuple) -> Optional[str]:
+    """
+    Find an input field in a form by type and/or name keyword hints.
+    Returns the field's name attribute, or None.
+    """
+    for inp in form.find_all("input"):
+        inp_type = (inp.get("type") or "text").lower()
+        inp_name = (inp.get("name") or "").lower()
+        if input_types and inp_type not in input_types:
+            continue
+        if not name_hints:
+            return inp.get("name")
+        if any(h in inp_name for h in name_hints):
+            return inp.get("name")
+    return None
 
 
 def _parse_name(full_name: str) -> Optional[dict]:

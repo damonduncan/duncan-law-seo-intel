@@ -138,85 +138,76 @@ def debug_pacer(
     )
 
     try:
+        from app.services.pacer import (
+            _find_form_with_password, _find_content_form,
+            _all_inputs, _detect_field, _parse_result_count,
+        )
+
         # Step 1: GET login page
         resp = session.get(PACER_LOGIN_URL, timeout=30)
         soup = BeautifulSoup(resp.text, "lxml")
         result["login_page_title"] = soup.title.string if soup.title else "(no title)"
+        result["all_form_ids"] = [
+            f.get("id") or f.get("name") or "(no id)"
+            for f in soup.find_all("form")
+        ]
 
-        # Collect all form inputs
-        form = soup.find("form")
-        inputs = {}
-        if form:
-            for inp in form.find_all("input"):
-                if inp.get("name"):
-                    inputs[inp["name"]] = inp.get("value", "")[:60]
+        # Find the correct login form
+        login_form = _find_form_with_password(soup)
+        inputs = _all_inputs(login_form) if login_form else {}
+        result["login_form_found"] = login_form is not None
         result["login_form_fields"] = list(inputs.keys())
 
-        # Step 2: POST login
-        inputs.update({
-            "loginForm:loginName": settings.pacer_username,
-            "loginForm:password": "***",
-            "loginForm:clientCode": settings.pacer_client_code or "",
-            "loginForm:fbtnLogin": "Login",
-        })
-        inputs_actual = dict(inputs)
-        inputs_actual["loginForm:password"] = settings.pacer_password
+        # Detect field names dynamically
+        user_field = _detect_field(login_form, ("text",), ("name", "login", "user")) if login_form else None
+        pass_field = _detect_field(login_form, ("password",), ()) if login_form else None
+        result["detected_user_field"] = user_field
+        result["detected_pass_field"] = pass_field
 
-        resp = session.post(PACER_LOGIN_URL, data=inputs_actual, timeout=30,
-                            allow_redirects=True)
+        if user_field:
+            inputs[user_field] = settings.pacer_username
+        if pass_field:
+            inputs[pass_field] = settings.pacer_password
+
+        resp = session.post(PACER_LOGIN_URL, data=inputs, timeout=30, allow_redirects=True)
         result["login_status"] = resp.status_code
-        result["login_response_snippet"] = resp.text[:800].replace("\n", " ")
+        result["login_succeeded"] = "PACER: Login" not in resp.text
+        result["login_response_snippet"] = resp.text[:600].replace("\n", " ")
 
-        # Step 3: GET PCL search page
+        # Step 2: GET PCL search page
         resp2 = session.get(PCL_SEARCH_PAGE, timeout=30)
         soup2 = BeautifulSoup(resp2.text, "lxml")
         result["pcl_page_title"] = soup2.title.string if soup2.title else "(no title)"
+        result["pcl_all_form_ids"] = [
+            f.get("id") or f.get("name") or "(no id)"
+            for f in soup2.find_all("form")
+        ]
 
-        form2 = soup2.find("form")
-        pcl_inputs = {}
-        if form2:
-            for inp in form2.find_all("input"):
-                if inp.get("name"):
-                    pcl_inputs[inp["name"]] = inp.get("value", "")[:60]
+        content_form = _find_content_form(soup2)
+        pcl_inputs = _all_inputs(content_form) if content_form else {}
+        result["pcl_content_form_found"] = content_form is not None
         result["pcl_form_fields"] = list(pcl_inputs.keys())
 
-        # Step 4: POST search
+        # Step 3: POST search
         today = date.today()
         period_end = date(today.year, today.month, 1) - timedelta(days=1)
         period_start = date(period_end.year, period_end.month, 1)
-
         pcl_inputs.update({
             "findPartyForm:partyType": "at",
-            "findPartyForm:lastName": last_name,
+            "findPartyForm:lastName":  last_name,
             "findPartyForm:firstName": first_name,
             "findPartyForm:courtType": "bk",
-            "findPartyForm:courtId": court_code,
+            "findPartyForm:courtId":   court_code,
             "findPartyForm:dateFiled": (
                 f"{period_start.strftime('%m/%d/%Y')} "
                 f"to {period_end.strftime('%m/%d/%Y')}"
             ),
-            "findPartyForm:chapter": str(chapter),
+            "findPartyForm:chapter":   str(chapter),
             "findPartyForm:btnSearch": "Search",
         })
-
         resp3 = session.post(PCL_SEARCH_PAGE, data=pcl_inputs, timeout=30)
-        result["search_response_snippet"] = resp3.text[:1500].replace("\n", " ")
-
-        # Try to parse count
-        import re as re_mod
-        from bs4 import BeautifulSoup as BS
-        soup3 = BS(resp3.text, "lxml")
-        paging = soup3.find(string=re_mod.compile(r"\d+\s+to\s+\d+\s+of\s+\d+", re_mod.IGNORECASE))
-        if paging:
-            m = re_mod.search(r"of\s+(\d[\d,]*)", paging)
-            if m:
-                result["parsed_count"] = int(m.group(1).replace(",", ""))
-        if result["parsed_count"] is None:
-            cnt = soup3.find(string=re_mod.compile(r"\d+\s+(result|case)", re_mod.IGNORECASE))
-            if cnt:
-                m = re_mod.search(r"(\d[\d,]*)", cnt)
-                if m:
-                    result["parsed_count"] = int(m.group(1).replace(",", ""))
+        result["search_response_snippet"] = resp3.text[:1200].replace("\n", " ")
+        result["parsed_count"] = _parse_result_count(resp3.text)
 
     except Exception as e:
         result["error"] = str(e)
