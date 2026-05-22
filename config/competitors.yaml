@@ -284,8 +284,8 @@ competitors:
   # ── ASHEVILLE ─────────────────────────────────────────────────────────────
 
   - id: comp_017
-    name: "Matney Mosley, P.C."
-    google_place_id: "ChIJ9cng0lnzWYgRMUAlqFJoV2w"
+    name: "Mosley Law Firm, P.C."
+    google_place_id: "ChIJOxwaRqb0WYgRvdF0ENnhULU"
     bbb_url: "https://www.bbb.org/us/nc/asheville/profile/debt-relief-services/mosley-law-firm-pc-0473-92031590"
     markets:
       - asheville
