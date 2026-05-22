@@ -52,8 +52,11 @@
     <tr>
       <td><strong>{{ own_firm.name }}</strong></td>
       <td>
-        {% if own_firm.google_place_id %}
-        <span class="chip chip-green">Configured</span>
+        {% set configured_locations = own_firm.locations | selectattr('google_place_id') | list %}
+        {% if configured_locations | length == 6 %}
+        <span class="chip chip-green">{{ configured_locations | length }}/6 offices configured</span>
+        {% elif configured_locations | length > 0 %}
+        <span class="chip chip-yellow">{{ configured_locations | length }}/6 offices configured</span>
         {% else %}
         <span class="chip chip-yellow">Missing — add to competitors.yaml</span>
         {% endif %}
