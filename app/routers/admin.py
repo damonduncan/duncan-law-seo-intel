@@ -99,6 +99,7 @@ def debug_pacer(
     Test PACER login and run one PCL search. Shows raw HTML excerpts so
     we can see exactly what PACER returns and fix the parser if needed.
     """
+    import re as _re
     from app.config import settings
     import requests as req
     from bs4 import BeautifulSoup
@@ -281,17 +282,31 @@ def debug_pacer(
         ]
         # Find any text nodes containing "of" + number (to see raw count text)
         count_texts = []
-        for el in resp3_soup.find_all(string=re.compile(r"\d+\s+to\s+\d+\s+of\s+\d+|\d+\s+result|\d+\s+case", re.I)):
-            count_texts.append(el.strip()[:100])
+        for el in resp3_soup.find_all(string=_re.compile(r"\d+\s+to\s+\d+\s+of\s+\d+|\d+\s+result|\d+\s+case", _re.I)):
+            count_texts.append(el.strip()[:120])
         result["count_text_found"] = count_texts[:5]
-        # Show all select/option values in the search form to find correct party role codes
+        # Show party role options from the search form to find correct attorney code
         role_options = []
         if frm_search:
-            role_sel = frm_search.find(attrs={"name": re.compile("scmPartyRole$")})
+            role_sel = frm_search.find(attrs={"name": _re.compile("scmPartyRole$")})
             if role_sel:
                 for opt in role_sel.find_all("option"):
                     role_options.append({"value": opt.get("value"), "text": opt.text.strip()})
         result["party_role_options"] = role_options[:20]
+        # Inspect frmRefineSearch on the results page — this is how we filter by court/date/chapter
+        refine_form = resp3_soup.find("form", id="frmRefineSearch")
+        if refine_form:
+            result["frmRefineSearch_fields"] = list(_all_inputs(refine_form).keys())
+            result["frmRefineSearch_action"] = refine_form.get("action", "(none)")
+            # Show select options in refine form
+            refine_selects = {}
+            for sel in refine_form.find_all("select"):
+                name = sel.get("name", "")
+                opts = [{"value": o.get("value"), "text": o.text.strip()[:40]} for o in sel.find_all("option")]
+                refine_selects[name] = opts[:15]
+            result["frmRefineSearch_select_options"] = refine_selects
+        else:
+            result["frmRefineSearch_fields"] = None
 
     except Exception as e:
         result["error"] = str(e)
