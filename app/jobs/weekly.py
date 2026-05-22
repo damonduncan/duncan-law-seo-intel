@@ -56,8 +56,8 @@ def run_weekly_job() -> None:
             check_pacer_trends(db)
 
         # Phase 5: Send weekly digest
-        # from app.services.email_digest import build_and_send_digest
-        # build_and_send_digest(db)
+        from app.services.email_digest import build_and_send_digest
+        build_and_send_digest(db)
 
         run.status = "success"
         run.records_processed = records

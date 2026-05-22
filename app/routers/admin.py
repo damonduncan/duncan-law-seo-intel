@@ -5,6 +5,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.dependencies import RedirectIfNotAuthenticated
 from app.database import get_db
+from app.config import settings
 
 router = APIRouter()
 auth_required = RedirectIfNotAuthenticated()
@@ -140,6 +141,31 @@ def debug_pacer_playwright(
         result["error"] = str(e)
 
     return JSONResponse(result)
+
+
+@router.post("/admin/send-digest", response_class=HTMLResponse)
+def send_digest(
+    request: Request,
+    user: dict = Depends(auth_required),
+    db: Session = Depends(get_db),
+):
+    """Send the weekly digest email immediately."""
+    error = None
+    sent  = False
+    try:
+        from app.services.email_digest import build_and_send_digest
+        build_and_send_digest(db)
+        sent = True
+    except Exception as e:
+        error = str(e)
+    return templates.TemplateResponse("admin_digest_result.html", {
+        "request": request,
+        "user":    user,
+        "active_page": "dashboard",
+        "sent":  sent,
+        "error": error,
+        "recipient": settings.digest_recipient,
+    })
 
 
 @router.post("/admin/run-pacer", response_class=HTMLResponse)

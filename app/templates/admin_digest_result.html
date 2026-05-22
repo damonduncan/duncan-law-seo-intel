@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Digest Result{% endblock %}
+{% block content %}
+<h1>Weekly Digest</h1>
+<p class="page-sub">Sent to {{ recipient }}</p>
+
+{% if error %}
+<div class="card" style="margin-bottom:24px;border-color:rgba(239,68,68,.4);">
+  <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:10px;">Send failed</div>
+  <pre style="font-size:12px;color:var(--muted);white-space:pre-wrap;">{{ error }}</pre>
+  {% if "RESEND_API_KEY" in error or not recipient %}
+  <p style="font-size:12px;color:var(--muted);margin-top:10px;">
+    Make sure <code>RESEND_API_KEY</code> is set in Railway environment variables
+    and the <code>duncanlawonline.com</code> domain is verified in Resend.
+  </p>
+  {% endif %}
+</div>
+{% elif sent %}
+<div class="card" style="margin-bottom:24px;border-color:rgba(16,185,129,.3);">
+  <div style="font-size:13px;color:var(--green);">
+    Digest sent successfully to <strong>{{ recipient }}</strong>.
+    Check your inbox — it may take a minute to arrive.
+  </div>
+</div>
+{% endif %}
+
+<div style="display:flex;gap:12px;">
+  <a href="/dashboard" class="btn btn-primary btn-sm">Back to Overview</a>
+  <form method="post" action="/admin/send-digest">
+    <button type="submit" class="btn btn-ghost btn-sm">Send Again</button>
+  </form>
+</div>
+{% endblock %}
