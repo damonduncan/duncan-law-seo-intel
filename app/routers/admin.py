@@ -11,6 +11,18 @@ auth_required = RedirectIfNotAuthenticated()
 templates = Jinja2Templates(directory="app/templates")
 
 
+@router.post("/admin/clear-filings")
+def clear_filings(request: Request, user: dict = Depends(auth_required), db: Session = Depends(get_db)):
+    """Delete all filing snapshots so bad data doesn't persist on the Filings page."""
+    from app.models.filings import FilingSnapshot
+    deleted = db.query(FilingSnapshot).delete()
+    db.commit()
+    return RedirectResponse(
+        url="/dashboard?msg=Cleared+{d}+filing+snapshots".format(d=deleted),
+        status_code=303,
+    )
+
+
 @router.post("/admin/sync-config")
 def sync_config(request: Request, user: dict = Depends(auth_required)):
     from app.database import SessionLocal
