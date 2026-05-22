@@ -1,4 +1,7 @@
-"""Google Places API (New) client — Phase 3.
+"""Google Places Details API client — Phase 3.
+
+Uses the standard Places Details endpoint (maps.googleapis.com) which works
+with a plain "Places API" key from Google Cloud Console — no "New" API needed.
 
 Fetches rating and review count for every tracked firm.
 Own firm: iterates per-market Place IDs (one listing per city).
@@ -19,9 +22,10 @@ from app.models.reviews import ReviewSnapshot
 
 logger = logging.getLogger(__name__)
 
-PLACES_BASE = "https://places.googleapis.com/v1/places"
-FIELD_MASK = "displayName,rating,userRatingCount"
-REQUEST_DELAY = 0.25  # seconds between API calls — well under rate limits
+PLACES_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
+# name + rating + user_ratings_total are "Basic" fields — cheapest tier ($0.017/call)
+FIELDS = "name,rating,user_ratings_total"
+REQUEST_DELAY = 0.25  # seconds between API calls
 
 
 def collect_competitor_reviews(db: Session) -> int:
@@ -73,19 +77,24 @@ def collect_competitor_reviews(db: Session) -> int:
 
 
 def _fetch_place(place_id: str) -> Optional[dict]:
-    """Call the Places API (New) for a single Place ID. Returns raw JSON or None on error."""
-    url = f"{PLACES_BASE}/{place_id}"
-    headers = {
-        "X-Goog-Api-Key": settings.google_places_api_key,
-        "X-Goog-FieldMask": FIELD_MASK,
+    """Call Places Details API for a single Place ID. Returns the result dict or None."""
+    params = {
+        "place_id": place_id,
+        "fields": FIELDS,
+        "key": settings.google_places_api_key,
     }
     try:
-        resp = requests.get(url, headers=headers, timeout=10)
-        if resp.status_code == 404:
+        resp = requests.get(PLACES_DETAILS_URL, params=params, timeout=10)
+        resp.raise_for_status()
+        body = resp.json()
+        status = body.get("status")
+        if status == "OK":
+            return body.get("result", {})
+        if status == "NOT_FOUND":
             logger.warning(f"Places API: place_id not found: {place_id}")
             return None
-        resp.raise_for_status()
-        return resp.json()
+        logger.error(f"Places API unexpected status '{status}' for {place_id}")
+        return None
     except Exception as e:
         logger.error(f"Places API error for {place_id}: {e}")
         return None
@@ -94,8 +103,9 @@ def _fetch_place(place_id: str) -> Optional[dict]:
 def _make_snapshot(
     competitor_id: str, source: str, data: dict, market: Optional[str]
 ) -> ReviewSnapshot:
+    # Standard Places Details response uses 'rating' and 'user_ratings_total'
     rating_val = data.get("rating")
-    count_val = data.get("userRatingCount")
+    count_val = data.get("user_ratings_total")
     return ReviewSnapshot(
         id=new_uuid(),
         competitor_id=competitor_id,
