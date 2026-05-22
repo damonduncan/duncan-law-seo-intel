@@ -1,16 +1,17 @@
-"""PACER Case Locator scraper — Phase 4.
+"""PACER Case Locator scraper using Playwright — Phase 4.
 
-For each tracked attorney, queries the PACER Case Locator (PCL) to count
-Chapter 7 and Chapter 13 bankruptcy filings in MDNC (ncmb) and WDNC (ncwb)
-for a given monthly period.
+Playwright runs headless Chromium so all PrimeFaces JavaScript executes
+normally. Login, party search, and result refinement work exactly as they
+would in a real browser — no more fighting with JSF AJAX and hidden fields.
 
-PACER charges $0.10/page of results. Estimated cost: ~$1–5/month for the
-full 25-attorney roster across both districts and both chapters.
-
-Authentication flow:
-  1. GET pacer.login.uscourts.gov/csologin/login.jsf → extract JSF ViewState
-  2. POST login form with credentials → authenticated session cookies
-  3. GET/POST pcl.uscourts.gov attorney search → parse result count
+Flow per attorney × district × chapter:
+  1. Login once per collection run (session persists in browser context)
+  2. Navigate to PCL party search
+  3. Fill name + select "Attorney" from the role dropdown
+  4. Submit → results page
+  5. Use frmRefineSearch to apply court / date / chapter filters
+  6. Parse the result count
+  7. Store as FilingSnapshot
 """
 import logging
 import re
@@ -18,8 +19,6 @@ import time
 from datetime import date, timedelta, datetime, timezone
 from typing import Optional
 
-import requests
-from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -30,13 +29,9 @@ from app.models.filings import FilingSnapshot
 logger = logging.getLogger(__name__)
 
 PACER_LOGIN_URL = "https://pacer.login.uscourts.gov/csologin/login.jsf"
-PCL_SEARCH_PAGE = "https://pcl.uscourts.gov/pcl/pages/search/findParty.jsf"
+PCL_SEARCH_URL  = "https://pcl.uscourts.gov/pcl/pages/search/findParty.jsf"
 
-# PACER court codes for NC bankruptcy courts
-DISTRICT_TO_COURT = {
-    "MDNC": "ncmb",
-    "WDNC": "ncwb",
-}
+DISTRICT_TO_COURT = {"MDNC": "ncmb", "WDNC": "ncwb"}
 
 MARKET_TO_DISTRICT = {
     "greensboro":    "MDNC",
@@ -47,11 +42,13 @@ MARKET_TO_DISTRICT = {
     "asheville":     "WDNC",
 }
 
-# Suffixes to strip before parsing first/last name
+NAV_TIMEOUT    = 45_000   # ms — per navigation
+ACTION_TIMEOUT = 10_000   # ms — per element action
+SEARCH_DELAY   = 3.0      # seconds between searches (polite + avoids rate limits)
+
 _SUFFIX_RE = re.compile(
     r",?\s*(Jr\.?|Sr\.?|II|III|IV|V|Esq\.?|P\.A\.?)$", re.IGNORECASE
 )
-REQUEST_DELAY = 2.0
 
 
 # ── Public entry point ────────────────────────────────────────────────────────
@@ -59,7 +56,7 @@ REQUEST_DELAY = 2.0
 def collect_filing_snapshots(db: Session) -> int:
     """
     Collect last month's PACER filing counts for all tracked attorneys.
-    Call on the 1st of each month (gated in weekly.py).
+    Called on the 1st of each month (gated in weekly.py).
     Returns number of FilingSnapshot rows saved/updated.
     """
     if not settings.pacer_username or not settings.pacer_password:
@@ -67,180 +64,105 @@ def collect_filing_snapshots(db: Session) -> int:
         return 0
 
     today = date.today()
-    period_end = date(today.year, today.month, 1) - timedelta(days=1)
+    period_end   = date(today.year, today.month, 1) - timedelta(days=1)
     period_start = date(period_end.year, period_end.month, 1)
     logger.info(f"PACER collection period: {period_start} → {period_end}")
 
-    session = _pacer_login()
-    if not session:
-        return 0
+    from playwright.sync_api import sync_playwright
 
     records = 0
-    competitors = db.query(Competitor).filter(Competitor.active == True).all()
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-dev-shm-usage"],
+        )
+        ctx  = browser.new_context()
+        page = ctx.new_page()
+        page.set_default_timeout(NAV_TIMEOUT)
 
-    for comp in competitors:
-        comp_districts = _districts_for_competitor(comp)
-        for attorney in comp.attorneys:
-            name = _parse_name(attorney.attorney_name)
-            if not name:
-                continue
-            for district in comp_districts:
-                court_code = DISTRICT_TO_COURT[district]
-                for chapter in (7, 13):
-                    count = _search_pcl(
-                        session=session,
-                        last_name=name["last"],
-                        first_name=name["first"],
-                        court_code=court_code,
-                        chapter=chapter,
-                        period_start=period_start,
-                        period_end=period_end,
-                    )
-                    if count is None:
-                        logger.warning(
-                            f"PCL search failed: {attorney.attorney_name} "
-                            f"Ch.{chapter} {district}"
-                        )
+        try:
+            if not _login(page):
+                return 0
+
+            for comp in db.query(Competitor).filter(Competitor.active == True).all():
+                for attorney in comp.attorneys:
+                    name = _parse_name(attorney.attorney_name)
+                    if not name:
                         continue
+                    for district in _districts_for_competitor(comp):
+                        court_code = DISTRICT_TO_COURT[district]
+                        for chapter in (7, 13):
+                            count = _search(
+                                page,
+                                last_name=name["last"],
+                                first_name=name["first"],
+                                court_code=court_code,
+                                chapter=chapter,
+                                period_start=period_start,
+                                period_end=period_end,
+                            )
+                            if count is not None:
+                                _upsert_snapshot(
+                                    db=db,
+                                    competitor_id=comp.id,
+                                    attorney_id=attorney.id,
+                                    district=district,
+                                    chapter=chapter,
+                                    period_start=period_start,
+                                    period_end=period_end,
+                                    case_count=count,
+                                )
+                                records += 1
+                                logger.info(
+                                    f"  {attorney.attorney_name} | "
+                                    f"{district} Ch.{chapter} | "
+                                    f"{period_start.strftime('%b %Y')}: {count}"
+                                )
+                            time.sleep(SEARCH_DELAY)
 
-                    _upsert_snapshot(
-                        db=db,
-                        competitor_id=comp.id,
-                        attorney_id=attorney.id,
-                        district=district,
-                        chapter=chapter,
-                        period_start=period_start,
-                        period_end=period_end,
-                        case_count=count,
-                    )
-                    records += 1
-                    logger.info(
-                        f"  {attorney.attorney_name} | {district} Ch.{chapter} | "
-                        f"{period_start.strftime('%b %Y')}: {count} cases"
-                    )
-                    time.sleep(REQUEST_DELAY)
+        except Exception as e:
+            logger.error(f"PACER collection error: {e}", exc_info=True)
+        finally:
+            browser.close()
 
     db.commit()
     logger.info(f"PACER: saved {records} filing snapshots")
     return records
 
 
-# ── PACER authentication ──────────────────────────────────────────────────────
+# ── Login ─────────────────────────────────────────────────────────────────────
 
-def _pacer_login() -> Optional[requests.Session]:
-    """Log in to PACER and return an authenticated requests.Session, or None."""
-    from urllib.parse import urljoin
-
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": (
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-        ),
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-    })
+def _login(page) -> bool:
+    """Navigate to PACER login, fill credentials, and verify success."""
     try:
-        resp = session.get(PACER_LOGIN_URL, timeout=30)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "lxml")
+        page.goto(PACER_LOGIN_URL, wait_until="networkidle")
 
-        login_form = _find_form_with_password(soup)
-        if not login_form:
-            logger.error("PACER: could not locate login form on page")
-            return None
+        page.fill('[name="loginForm:loginName"]', settings.pacer_username)
+        page.fill('[name="loginForm:password"]',  settings.pacer_password)
+        if settings.pacer_client_code:
+            page.fill('[name="loginForm:clientCode"]', settings.pacer_client_code)
 
-        form_data = _all_inputs(login_form)
+        # Click the login button — PrimeFaces renders it as a <button>
+        page.click('[id$="fbtnLogin"]')
+        page.wait_for_load_state("networkidle", timeout=NAV_TIMEOUT)
 
-        # JSF form marker: the hidden input whose name == form id must have that id as its
-        # value (not empty string). Browsers send this automatically; scrapers often miss it.
-        form_id = login_form.get("id", "")
-        if form_id and form_id in form_data and not form_data[form_id]:
-            form_data[form_id] = form_id
+        title = page.title()
+        if "Login" in title and "Welcome" not in title:
+            logger.error(f"PACER login failed — page title: {title!r}")
+            return False
 
-        # Auto-detect actual field names for username, password, client code
-        user_field = _detect_field(login_form, ("text",), ("name", "login", "user"))
-        pass_field = _detect_field(login_form, ("password",), ())
-        code_field = _detect_field(login_form, ("text",), ("client", "code"))
-
-        if user_field:
-            form_data[user_field] = settings.pacer_username
-        if pass_field:
-            form_data[pass_field] = settings.pacer_password
-        if code_field and code_field != user_field:
-            form_data[code_field] = settings.pacer_client_code or ""
-
-        for btn in login_form.find_all(["input", "button"]):
-            if btn.get("type", "").lower() == "submit" and btn.get("name"):
-                form_data[btn["name"]] = btn.get("value", "Login")
-
-        # PrimeFaces p:commandButton submits via AJAX by default.
-        # Without these fields the server treats it as a malformed request
-        # and re-renders the login page without processing credentials.
-        btn_id = f"{form_id}:fbtnLogin" if form_id else "loginForm:fbtnLogin"
-        form_data.update({
-            "jakarta.faces.partial.ajax":   "true",
-            "jakarta.faces.source":         btn_id,
-            "jakarta.faces.partial.execute": "@all",
-            "jakarta.faces.partial.render":  "@all",
-            "jakarta.faces.behavior.event":  "action",
-            "jakarta.faces.partial.event":   "click",
-            btn_id:                          btn_id,
-        })
-
-        logger.debug(
-            f"PACER login: user={user_field}, btn={btn_id}, "
-            f"all_fields={list(form_data.keys())}"
-        )
-
-        form_action = login_form.get("action", "")
-        post_url = urljoin(resp.url, form_action) if form_action else resp.url
-
-        resp = session.post(
-            post_url,
-            data=form_data,
-            timeout=30,
-            allow_redirects=True,
-            headers={
-                "Referer": PACER_LOGIN_URL,
-                "Origin": "https://pacer.login.uscourts.gov",
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Faces-Request": "partial/ajax",
-                "X-Requested-With": "XMLHttpRequest",
-                "Accept": "application/xml, text/xml, */*; q=0.01",
-            },
-        )
-
-        # The AJAX response always redirects to /csologin/login.jsf — this is normal.
-        # Session cookies are already established at this point. Verify authentication
-        # by checking the PCL welcome page rather than following that redirect.
-        pcl_check = session.get(
-            "https://pcl.uscourts.gov/pcl/index.jsf",
-            timeout=30,
-            headers={"Referer": post_url},
-        )
-        pcl_title = BeautifulSoup(pcl_check.text, "lxml").title
-        pcl_title_text = pcl_title.string if pcl_title else ""
-
-        if "Login" in pcl_title_text and "Welcome" not in pcl_title_text:
-            logger.error(
-                f"PACER login failed — PCL shows '{pcl_title_text.strip()}'. "
-                "Check PACER_USERNAME / PACER_PASSWORD in Railway env vars."
-            )
-            return None
-
-        logger.info(f"PACER login successful — PCL: {pcl_title_text.strip()}")
-        return session
+        logger.info(f"PACER login OK — {title.strip()}")
+        return True
 
     except Exception as e:
         logger.error(f"PACER login error: {e}")
-        return None
+        return False
 
 
-# ── PCL search ────────────────────────────────────────────────────────────────
+# ── Search ────────────────────────────────────────────────────────────────────
 
-def _search_pcl(
-    session: requests.Session,
+def _search(
+    page,
     last_name: str,
     first_name: str,
     court_code: str,
@@ -249,197 +171,146 @@ def _search_pcl(
     period_end: date,
 ) -> Optional[int]:
     """
-    Search the PACER Case Locator for matching cases.
-    Returns the total case count, or None on error.
+    Run one PCL party search, apply refinement filters, and return case count.
+    Returns None on error.
     """
     try:
-        from urllib.parse import urljoin as _urljoin
+        page.goto(PCL_SEARCH_URL, wait_until="networkidle")
 
-        # GET the PCL welcome/search page
-        get_resp = session.get(PCL_SEARCH_PAGE, timeout=30)
-        get_resp.raise_for_status()
-        soup = BeautifulSoup(get_resp.text, "lxml")
+        # Name fields
+        page.fill('[name="frmSearch:txtPartyNameLast"]',  last_name)
+        page.fill('[name="frmSearch:txtPartyNameFirst"]', first_name)
 
-        # frmSearch is the authenticated search form on the PCL welcome page.
-        # Fall back to content-form heuristic if not found by ID.
-        search_form = soup.find("form", id="frmSearch") or _find_content_form(soup)
-        form_id = search_form.get("id", "frmSearch") if search_form else "frmSearch"
-        form_data = _all_inputs(search_form) if search_form else {}
+        # Party role — PrimeFaces SelectOneMenu has an underlying <select>
+        _select_option(page, '[name="frmSearch:scmPartyRole"]', label="Attorney")
 
-        # Fix JSF form marker
-        if form_id in form_data and not form_data[form_id]:
-            form_data[form_id] = form_id
+        # Submit
+        page.click('[id$="btnSearch"]')
+        page.wait_for_load_state("networkidle", timeout=NAV_TIMEOUT)
 
-        date_from = period_start.strftime("%m/%d/%Y")
-        date_to   = period_end.strftime("%m/%d/%Y")
+        if "Results" not in page.title():
+            logger.warning(f"No results page for {last_name}/{first_name} — {page.title()!r}")
+            return 0
 
-        # Actual PCL frmSearch field names (discovered from form introspection).
-        # scmPartyRole = SelectOneMenu; "at" = Attorney.
-        # ddCaseTypeBasic_input = Dropdown display text; "bk" = Bankruptcy.
-        # Court and chapter are submitted as hidden fields discovered on some
-        # PCL page variants; included here in case they exist in the form.
-        form_data.update({
-            f"{form_id}:txtPartyNameLast":      last_name,
-            f"{form_id}:txtPartyNameFirst":     first_name,
-            f"{form_id}:txtPartyNameMiddle":    "",
-            f"{form_id}:scmPartyRole":          "at",
-            f"{form_id}:scmPartyRole_focus":    "",
-            f"{form_id}:scmPartyRole_filter":   "",
-            f"{form_id}:ddCaseTypeBasic_input": "bk",
-            f"{form_id}:cbExactMatches_input":  "false",
-            f"{form_id}:cbEmptyMatches_input":  "false",
-            # Court and date range — included if the form exposes them
-            f"{form_id}:courtId":               court_code,
-            f"{form_id}:dateFiledFrom":         date_from,
-            f"{form_id}:dateFiledTo":           date_to,
-            f"{form_id}:chapter":               str(chapter),
-            # Submit button
-            f"{form_id}:btnSearch":             "Search",
-        })
+        # Apply filters via frmRefineSearch (now JavaScript-rendered)
+        _apply_refinements(page, court_code, chapter, period_start, period_end)
 
-        form_action = search_form.get("action", "") if search_form else ""
-        post_url = _urljoin(get_resp.url, form_action) if form_action else get_resp.url
-
-        post_resp = session.post(post_url, data=form_data, timeout=30,
-                                 headers={"Referer": get_resp.url})
-        post_resp.raise_for_status()
-
-        count = _parse_result_count(post_resp.text)
-        logger.debug(f"PCL {last_name}/{court_code}/Ch{chapter}: {count} cases")
-        return count
+        return _extract_count(page)
 
     except Exception as e:
         logger.error(
-            f"PCL search error ({last_name}, {court_code}, Ch.{chapter}): {e}"
+            f"PACER search error ({last_name}, {court_code}, Ch.{chapter}): {e}"
         )
         return None
 
 
-def _parse_result_count(html: str) -> int:
+def _select_option(page, selector: str, label: str) -> None:
     """
-    Extract total result count from PCL results page.
-    Looks for patterns like:
-      "Showing 1 to 10 of 47 results"
-      "47 cases found"
-      A results table row count
-    Returns 0 if no results are found or pattern is not recognized.
+    Select an option by visible label from a PrimeFaces SelectOneMenu.
+    Falls back to clicking if select_option doesn't work.
     """
-    soup = BeautifulSoup(html, "lxml")
+    try:
+        page.select_option(selector, label=label, timeout=ACTION_TIMEOUT)
+    except Exception:
+        try:
+            # Click the dropdown trigger, then the option
+            page.click(selector)
+            page.click(f'li[data-label="{label}"]', timeout=ACTION_TIMEOUT)
+        except Exception as e2:
+            logger.debug(f"Could not select '{label}' on {selector}: {e2}")
 
-    # Pattern 1: "X to Y of Z" paging text
-    paging = soup.find(string=re.compile(r"\d+\s+to\s+\d+\s+of\s+\d+", re.IGNORECASE))
-    if paging:
-        m = re.search(r"of\s+(\d[\d,]*)", paging, re.IGNORECASE)
+
+def _apply_refinements(
+    page,
+    court_code: str,
+    chapter: int,
+    period_start: date,
+    period_end: date,
+) -> None:
+    """
+    Apply court / date / chapter filters on the results page via frmRefineSearch.
+    Fails silently — if filters aren't available the raw count is used.
+    """
+    date_from = period_start.strftime("%m/%d/%Y")
+    date_to   = period_end.strftime("%m/%d/%Y")
+
+    filters = [
+        # (CSS selector fragment, fill_value or None, select_label or None)
+        ("court",   court_code,  None),
+        ("From",    date_from,   None),
+        ("To",      date_to,     None),
+        ("chapter", None,        str(chapter)),
+    ]
+
+    refine_submitted = False
+    for frag, fill_val, sel_label in filters:
+        try:
+            locator = page.locator(
+                f'[id*="frmRefineSearch"][id*="{frag}"], '
+                f'[name*="frmRefineSearch"][name*="{frag}"]'
+            ).first
+            if not locator.is_visible(timeout=2_000):
+                continue
+            if fill_val:
+                locator.fill(fill_val)
+            elif sel_label:
+                try:
+                    locator.select_option(value=sel_label, timeout=ACTION_TIMEOUT)
+                except Exception:
+                    locator.fill(sel_label)
+            refine_submitted = True
+        except Exception:
+            pass
+
+    if refine_submitted:
+        try:
+            btn = page.locator(
+                'form#frmRefineSearch button[type="submit"], '
+                '[id*="frmRefineSearch"][id*="btn"]'
+            ).first
+            if btn.is_visible(timeout=3_000):
+                btn.click()
+                page.wait_for_load_state("networkidle", timeout=NAV_TIMEOUT)
+        except Exception as e:
+            logger.debug(f"Refine submit failed: {e}")
+
+
+def _extract_count(page) -> int:
+    """Extract the total result count from a PCL results page."""
+    try:
+        text = page.inner_text("body")
+
+        # "Showing 1 to 25 of 47 results" / "1 to 25 of 47"
+        m = re.search(r"\d[\d,]*\s+to\s+\d[\d,]*\s+of\s+(\d[\d,]*)", text)
         if m:
-            return int(m.group(1).replace(",", ""))
+            n = int(m.group(1).replace(",", ""))
+            # Ignore the "108,000 batch limit" message
+            if n < 108_000:
+                return n
 
-    # Pattern 2: "N results" or "N cases"
-    count_text = soup.find(string=re.compile(r"\d+\s+(result|case)", re.IGNORECASE))
-    if count_text:
-        m = re.search(r"(\d[\d,]*)", count_text)
+        # "47 results" / "47 cases found"
+        m = re.search(r"(\d[\d,]*)\s+(?:result|case)", text, re.IGNORECASE)
         if m:
-            return int(m.group(1).replace(",", ""))
+            n = int(m.group(1).replace(",", ""))
+            if n < 108_000:
+                return n
 
-    # Pattern 3: "No cases found" / "no records"
-    page_lower = html.lower()
-    if any(p in page_lower for p in ("no cases found", "no records", "no results", "0 case")):
+        # No results
+        if re.search(r"no (?:result|case|match)", text, re.IGNORECASE):
+            return 0
+
+        # Count data rows as fallback
+        rows = page.locator("table.pcl-results-table tbody tr, table[id*='result'] tbody tr").count()
+        return max(0, rows)
+
+    except Exception as e:
+        logger.error(f"Count extraction failed: {e}")
         return 0
-
-    # Pattern 4: Count result rows in the main data table (fallback)
-    table = soup.find("table", {"class": re.compile(r"result", re.IGNORECASE)})
-    if not table:
-        table = soup.find("table", id=re.compile(r"result", re.IGNORECASE))
-    if table:
-        rows = table.find_all("tr")[1:]  # skip header
-        if rows:
-            return len(rows)
-
-    logger.warning("PCL: could not parse result count from response")
-    return 0
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _all_inputs(form) -> dict:
-    """Return name→value for every input/select in a form element."""
-    data = {}
-    if not form:
-        return data
-    for inp in form.find_all(["input", "select"]):
-        name = inp.get("name")
-        if name:
-            data[name] = inp.get("value", "")
-    return data
-
-
-def _find_form_with_password(soup: BeautifulSoup):
-    """Return the first form that contains a password-type input."""
-    for form in soup.find_all("form"):
-        if form.find("input", {"type": "password"}):
-            return form
-    return None
-
-
-def _find_content_form(soup: BeautifulSoup):
-    """
-    Return the main content form — i.e., not the navbar form.
-    PACER pages have a cbMenuForm nav form first; skip it.
-    """
-    forms = soup.find_all("form")
-    # Skip any form whose id/name contains "menu" or "nav"
-    for form in forms:
-        form_id = (form.get("id") or form.get("name") or "").lower()
-        if "menu" not in form_id and "nav" not in form_id:
-            return form
-    return forms[-1] if forms else None
-
-
-def _parse_jsf_ajax_redirect(response_text: str) -> Optional[str]:
-    """
-    Parse a JSF/PrimeFaces AJAX XML response for a redirect URL.
-    The response looks like:
-      <?xml version='1.0'?>
-      <partial-response>
-        <redirect url="https://..."/>
-      </partial-response>
-    Returns the URL string, or None if not found or not XML.
-    """
-    text = response_text.strip()
-    if not (text.startswith("<?xml") or text.startswith("<partial-response")):
-        return None
-    try:
-        import xml.etree.ElementTree as ET
-        root = ET.fromstring(text)
-        redirect = root.find(".//redirect")
-        if redirect is not None:
-            return redirect.get("url")
-    except Exception as e:
-        logger.debug(f"PACER: XML parse failed: {e}")
-    return None
-
-
-def _detect_field(form, input_types: tuple, name_hints: tuple) -> Optional[str]:
-    """
-    Find an input field in a form by type and/or name keyword hints.
-    Returns the field's name attribute, or None.
-    """
-    for inp in form.find_all("input"):
-        inp_type = (inp.get("type") or "text").lower()
-        inp_name = (inp.get("name") or "").lower()
-        if input_types and inp_type not in input_types:
-            continue
-        if not name_hints:
-            return inp.get("name")
-        if any(h in inp_name for h in name_hints):
-            return inp.get("name")
-    return None
-
-
 def _parse_name(full_name: str) -> Optional[dict]:
-    """
-    Parse 'Matthew T. McKee' → {'first': 'Matthew', 'last': 'McKee'}.
-    Returns None for placeholder names like 'Unknown'.
-    """
     name = _SUFFIX_RE.sub("", full_name).strip()
     parts = name.split()
     if len(parts) < 2 or parts[0].lower() in ("unknown", "tbd", "n/a"):
@@ -448,12 +319,11 @@ def _parse_name(full_name: str) -> Optional[dict]:
 
 
 def _districts_for_competitor(comp: Competitor) -> set:
-    """Return the set of PACER districts this competitor operates in."""
     districts = set()
     for loc in comp.locations:
-        district = MARKET_TO_DISTRICT.get(loc.market)
-        if district:
-            districts.add(district)
+        d = MARKET_TO_DISTRICT.get(loc.market)
+        if d:
+            districts.add(d)
     return districts
 
 
@@ -471,10 +341,10 @@ def _upsert_snapshot(
         db.query(FilingSnapshot)
         .filter(
             FilingSnapshot.competitor_id == competitor_id,
-            FilingSnapshot.attorney_id == attorney_id,
-            FilingSnapshot.district == district,
-            FilingSnapshot.chapter == chapter,
-            FilingSnapshot.period_start == period_start,
+            FilingSnapshot.attorney_id   == attorney_id,
+            FilingSnapshot.district      == district,
+            FilingSnapshot.chapter       == chapter,
+            FilingSnapshot.period_start  == period_start,
         )
         .first()
     )
