@@ -61,6 +61,127 @@ def run_reviews(
     })
 
 
+@router.get("/admin/debug/cmecf")
+def debug_cmecf(
+    request: Request,
+    court_code: str = "ncmb",
+    last_name: str = "Duncan",
+    first_name: str = "Damon",
+    chapter: int = 7,
+    user: dict = Depends(auth_required),
+):
+    """
+    After PACER login, navigate to the CM/ECF court and inspect the
+    attorney query interface — shows what forms/links/fields are available.
+    """
+    from playwright.sync_api import sync_playwright
+    from datetime import date, timedelta
+
+    result: dict = {
+        "login_title": None,
+        "cmecf_title": None,
+        "cmecf_url": None,
+        "nav_links": None,
+        "iquery_title": None,
+        "iquery_form_fields": None,
+        "iquery_html_snippet": None,
+        "search_result_title": None,
+        "search_result_snippet": None,
+        "error": None,
+    }
+
+    today      = date.today()
+    period_end   = date(today.year, today.month, 1) - timedelta(days=1)
+    period_start = date(period_end.year, period_end.month, 1)
+    court_base = f"https://ecf.{court_code}.uscourts.gov"
+
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"])
+            page = browser.new_page()
+            page.set_default_timeout(45_000)
+
+            # Login via PACER central
+            page.goto("https://pacer.login.uscourts.gov/csologin/login.jsf", wait_until="networkidle")
+            page.fill('[name="loginForm:loginName"]', settings.pacer_username)
+            page.fill('[name="loginForm:password"]',  settings.pacer_password)
+            page.click('[id$="fbtnLogin"]')
+            page.wait_for_load_state("networkidle")
+            result["login_title"] = page.title()
+
+            # Navigate to CM/ECF court homepage
+            page.goto(court_base, wait_until="networkidle")
+            result["cmecf_title"] = page.title()
+            result["cmecf_url"]   = page.url
+
+            # Capture navigation links (to find Query section)
+            links = page.eval_on_selector_all(
+                "a[href]",
+                "els => els.map(e => ({text: e.innerText.trim(), href: e.href})).filter(e => e.text)"
+            )
+            result["nav_links"] = [l for l in links if any(
+                kw in l["text"].lower() for kw in ["query", "report", "attorney", "case"]
+            )][:20]
+
+            # Try iquery.pl directly
+            iquery_url = f"{court_base}/cgi-bin/iquery.pl"
+            page.goto(iquery_url, wait_until="networkidle")
+            result["iquery_title"] = page.title()
+
+            # Capture form fields
+            form_fields = page.eval_on_selector_all(
+                "input, select",
+                "els => els.map(e => ({tag: e.tagName, name: e.name, id: e.id, type: e.type}))"
+            )
+            result["iquery_form_fields"] = form_fields[:30]
+            result["iquery_html_snippet"] = page.content()[:3000]
+
+            # Try submitting a test attorney search
+            try:
+                # Fill what we can find
+                for field_name in ["lastAnameField", "LastName", "last_name", "lname"]:
+                    try:
+                        page.fill(f'[name="{field_name}"]', last_name, timeout=2_000)
+                        break
+                    except Exception:
+                        pass
+                for field_name in ["firstAnameField", "FirstName", "first_name", "fname"]:
+                    try:
+                        page.fill(f'[name="{field_name}"]', first_name, timeout=2_000)
+                        break
+                    except Exception:
+                        pass
+
+                # Date range
+                for field_name in ["Sdate", "DateFiled_from", "date_filed_from", "filed_from"]:
+                    try:
+                        page.fill(f'[name="{field_name}"]', period_start.strftime("%m/%d/%Y"), timeout=2_000)
+                        break
+                    except Exception:
+                        pass
+                for field_name in ["Edate", "DateFiled_to", "date_filed_to", "filed_to"]:
+                    try:
+                        page.fill(f'[name="{field_name}"]', period_end.strftime("%m/%d/%Y"), timeout=2_000)
+                        break
+                    except Exception:
+                        pass
+
+                # Submit
+                page.click('input[type="submit"], button[type="submit"]', timeout=5_000)
+                page.wait_for_load_state("networkidle")
+                result["search_result_title"]   = page.title()
+                result["search_result_snippet"] = page.inner_text("body")[:2000]
+            except Exception as e:
+                result["search_result_title"] = f"Search attempt failed: {e}"
+
+            browser.close()
+
+    except Exception as e:
+        result["error"] = str(e)
+
+    return JSONResponse(result)
+
+
 @router.get("/admin/debug/pacer-playwright")
 def debug_pacer_playwright(
     request: Request,
