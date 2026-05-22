@@ -1,0 +1,63 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Duncan Law — Competitor Configuration
+#
+# HOW TO ADD A COMPETITOR:
+#   1. Add a new entry under `competitors:` with a unique `id`
+#   2. Find the google_place_id using Google Maps (search the firm, click Share,
+#      the Place ID is in the URL or use the Place ID Finder tool)
+#   3. List all attorney names exactly as they appear in PACER (check a recent filing)
+#   4. Add aliases for any name variations you've seen in PACER
+#   5. Save the file and redeploy — the database syncs automatically on startup
+# ─────────────────────────────────────────────────────────────────────────────
+
+own_firm:
+  name: "Duncan Law"
+  google_place_id: ""           # Required: find at maps.google.com → Share → Copy link
+  domain: "duncanlawonline.com"
+  bbb_url: ""                   # Optional: your BBB profile URL
+  attorneys:
+    - name: "Damon Duncan"
+      aliases:
+        - "D Duncan"
+        - "Damon T Duncan"
+        - "Damon Trevor Duncan"
+
+competitors:
+  # ── EXAMPLE ENTRY (replace with real competitors) ──────────────────────────
+  # - id: comp_001                          # Unique ID — never change this once set
+  #   name: "Firm Display Name"
+  #   google_place_id: ""                   # Required for review tracking
+  #   bbb_url: ""                           # Optional
+  #   markets:                              # Markets where this firm operates
+  #     - greensboro
+  #   attorneys:
+  #     - name: "Attorney Full Name"        # Exactly as in PACER
+  #       aliases:
+  #         - "A Name"
+  # ───────────────────────────────────────────────────────────────────────────
+
+markets:
+  greensboro:
+    display_name: "Greensboro"
+    district: MDNC
+    state: NC
+  winston_salem:
+    display_name: "Winston-Salem"
+    district: MDNC
+    state: NC
+  high_point:
+    display_name: "High Point"
+    district: MDNC
+    state: NC
+  salisbury:
+    display_name: "Salisbury"
+    district: MDNC
+    state: NC
+  charlotte:
+    display_name: "Charlotte"
+    district: WDNC
+    state: NC
+  asheville:
+    display_name: "Asheville"
+    district: WDNC
+    state: NC

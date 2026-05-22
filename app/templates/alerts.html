@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Alerts{% endblock %}
+{% block content %}
+<h1>Alerts</h1>
+<p class="page-sub">Immediate and digest-flagged intelligence events</p>
+
+{% if alerts %}
+<div class="card">
+  <table>
+    <tr>
+      <th>Severity</th>
+      <th>Type</th>
+      <th>Market / Keyword</th>
+      <th>Detail</th>
+      <th>Triggered</th>
+      <th>Status</th>
+      <th></th>
+    </tr>
+    {% for alert in alerts %}
+    <tr style="{% if alert.acknowledged_at %}opacity:.5;{% endif %}">
+      <td>
+        {% if alert.severity == 'immediate' %}
+        <span class="chip chip-red">Immediate</span>
+        {% else %}
+        <span class="chip chip-yellow">Digest</span>
+        {% endif %}
+      </td>
+      <td style="font-size:12px;">
+        {% if alert.alert_type == 'pack_drop' %}Own firm dropped from 3-pack
+        {% elif alert.alert_type == 'competitor_pack_entry' %}Competitor entered 3-pack
+        {% elif alert.alert_type == 'pacer_volume_spike' %}PACER volume trend spike
+        {% else %}{{ alert.alert_type }}{% endif %}
+      </td>
+      <td style="font-size:12px;color:var(--muted);">
+        {% if alert.market %}{{ alert.market }}{% endif %}
+        {% if alert.keyword %}<br>{{ alert.keyword }}{% endif %}
+      </td>
+      <td style="font-size:12px;max-width:240px;">
+        {% if alert.detail %}
+          {% for k, v in alert.detail.items() %}
+          <div><span style="color:var(--muted);">{{ k }}:</span> {{ v }}</div>
+          {% endfor %}
+        {% endif %}
+      </td>
+      <td style="font-size:12px;color:var(--muted);white-space:nowrap;">
+        {{ alert.triggered_at.strftime('%b %d, %I:%M %p') if alert.triggered_at else '—' }}
+      </td>
+      <td>
+        {% if alert.acknowledged_at %}
+        <span class="chip chip-green">Acknowledged</span>
+        {% elif alert.emailed_at %}
+        <span class="chip chip-blue">Emailed</span>
+        {% else %}
+        <span class="chip chip-red">New</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if not alert.acknowledged_at %}
+        <form method="post" action="/alerts/{{ alert.id }}/acknowledge">
+          <button type="submit" class="btn btn-ghost btn-sm">Dismiss</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% else %}
+<div class="card">
+  <p style="color:var(--muted);font-size:13px;line-height:1.6;">
+    No alerts yet. Alerts are generated automatically during daily and weekly data collection jobs.<br><br>
+    <strong style="color:var(--text);">Immediate alerts</strong> fire when your firm drops from the Google 3-pack or a competitor newly enters it.<br>
+    <strong style="color:var(--text);">Digest alerts</strong> flag competitors whose PACER filing volume has increased 20%+ over a 90-day window.
+  </p>
+</div>
+{% endif %}
+{% endblock %}

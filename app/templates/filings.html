@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}PACER Filings{% endblock %}
+{% block content %}
+<h1>PACER Filing Volume</h1>
+<p class="page-sub">Monthly Chapter 7 and Chapter 13 case counts — MDNC and WDNC districts</p>
+
+<div class="card-grid">
+  <div class="stat-card">
+    <div class="label">Districts Tracked</div>
+    <div class="value">2</div>
+    <div class="sub">MDNC (Greensboro/W-S) + WDNC (Charlotte/Asheville)</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Chapter Types</div>
+    <div class="value">2</div>
+    <div class="sub">Chapter 7 and Chapter 13</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Trend Window</div>
+    <div class="value">90 days</div>
+    <div class="sub">Sustained 20%+ increase triggers alert</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Refresh Cadence</div>
+    <div class="value" style="font-size:18px;margin-top:8px;">Monthly</div>
+    <div class="sub">Runs on the 1st of each month</div>
+  </div>
+</div>
+
+<div class="card">
+  <p style="color:var(--muted);font-size:13px;line-height:1.6;">
+    Filing volume data will appear here once PACER credentials are configured and the first monthly collection runs.<br><br>
+    <strong style="color:var(--text);">Required before filings populate:</strong><br>
+    &bull; <code>PACER_USERNAME</code> and <code>PACER_PASSWORD</code> in Railway env vars<br>
+    &bull; Attorney names in <code>config/competitors.yaml</code> exactly matching PACER records<br>
+    &bull; First collection runs automatically on the 1st of next month, or trigger the weekly job manually from Overview<br><br>
+    <strong style="color:var(--text);">Alert logic:</strong> If a competitor's 90-day filing total increases 20%+ compared to the prior 90-day period, it is flagged in the weekly Monday digest.
+  </p>
+</div>
+{% endblock %}

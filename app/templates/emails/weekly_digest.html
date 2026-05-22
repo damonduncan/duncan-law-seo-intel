@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Weekly SEO Intelligence Digest — Duncan Law</title>
+<style>
+  body { margin: 0; padding: 0; background: #f4f6f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; font-size: 14px; color: #1a1d27; }
+  .wrapper { max-width: 620px; margin: 30px auto; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; }
+  .header { background: #1a1d27; padding: 28px 32px; }
+  .header h1 { color: #ffffff; font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+  .header p { color: #8892a4; font-size: 13px; margin: 0; }
+  .section { padding: 24px 32px; border-bottom: 1px solid #e2e8f0; }
+  .section:last-child { border-bottom: none; }
+  .section h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #8892a4; margin: 0 0 16px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #8892a4; padding: 8px 10px; border-bottom: 2px solid #e2e8f0; }
+  td { padding: 9px 10px; border-bottom: 1px solid #f0f2f5; font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  .chip { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+  .green { background: #d1fae5; color: #065f46; }
+  .yellow { background: #fef3c7; color: #92400e; }
+  .red { background: #fee2e2; color: #991b1b; }
+  .blue { background: #dbeafe; color: #1e40af; }
+  .footer { background: #f8fafc; padding: 20px 32px; font-size: 12px; color: #8892a4; }
+  .footer a { color: #3b82f6; text-decoration: none; }
+  .no-data { color: #8892a4; font-size: 13px; font-style: italic; }
+  .alert-row td { background: #fff7ed; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="header">
+    <h1>Weekly Intelligence Digest</h1>
+    <p>Duncan Law &mdash; {{ digest_date }} &mdash; All 6 NC Markets</p>
+  </div>
+
+  <!-- Rankings Summary -->
+  <div class="section">
+    <h2>Google 3-Pack Rankings</h2>
+    {% if rankings_summary %}
+    <table>
+      <tr><th>Market</th><th>Keyword</th><th>Your Position</th><th>Change</th></tr>
+      {% for row in rankings_summary %}
+      <tr>
+        <td>{{ row.market }}</td>
+        <td style="font-size:12px;">{{ row.keyword }}</td>
+        <td>
+          {% if row.position %}
+          <span class="chip {% if row.position <= 3 %}green{% else %}yellow{% endif %}">
+            #{{ row.position }}
+          </span>
+          {% else %}
+          <span class="chip red">Not in pack</span>
+          {% endif %}
+        </td>
+        <td style="font-size:12px;">
+          {% if row.change == 0 %}<span style="color:#8892a4;">No change</span>
+          {% elif row.change > 0 %}<span style="color:#065f46;">&#9650; Improved {{ row.change }}</span>
+          {% elif row.change < 0 %}<span style="color:#991b1b;">&#9660; Dropped {{ row.change | abs }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="no-data">Rankings data not yet available. Run the daily collection job to populate.</p>
+    {% endif %}
+  </div>
+
+  <!-- Reviews Update -->
+  <div class="section">
+    <h2>Review Standings</h2>
+    {% if reviews_summary %}
+    <table>
+      <tr><th>Firm</th><th>Google Rating</th><th>Reviews</th><th>Week Change</th></tr>
+      {% for row in reviews_summary %}
+      <tr>
+        <td><strong>{{ row.name }}</strong>{% if row.is_own_firm %} <span class="chip blue">You</span>{% endif %}</td>
+        <td>{{ row.rating or '—' }}</td>
+        <td>{{ row.review_count or '—' }}</td>
+        <td style="font-size:12px;">
+          {% if row.new_reviews > 0 %}+{{ row.new_reviews }} this week
+          {% else %}<span style="color:#8892a4;">No change</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="no-data">Review data not yet available. Configure Google Places API key to enable.</p>
+    {% endif %}
+  </div>
+
+  <!-- PACER Trends -->
+  <div class="section">
+    <h2>PACER Filing Trends</h2>
+    {% if pacer_summary %}
+    <table>
+      <tr><th>Firm / Attorney</th><th>District</th><th>Ch. 7 (90d)</th><th>Ch. 13 (90d)</th><th>Trend</th></tr>
+      {% for row in pacer_summary %}
+      <tr {% if row.spike_alert %}class="alert-row"{% endif %}>
+        <td>
+          <strong>{{ row.name }}</strong>{% if row.is_own_firm %} <span class="chip blue">You</span>{% endif %}
+        </td>
+        <td style="font-size:12px;">{{ row.district }}</td>
+        <td>{{ row.ch7_count or '—' }}</td>
+        <td>{{ row.ch13_count or '—' }}</td>
+        <td>
+          {% if row.spike_alert %}
+          <span class="chip red">&#9650; +{{ row.trend_pct }}% (90d)</span>
+          {% elif row.trend_pct > 0 %}
+          <span class="chip yellow">+{{ row.trend_pct }}%</span>
+          {% else %}
+          <span style="color:#8892a4;font-size:12px;">Stable</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="no-data">Filing data not yet available. PACER collection runs on the 1st of each month.</p>
+    {% endif %}
+  </div>
+
+  <!-- Active Alerts -->
+  {% if active_alerts %}
+  <div class="section">
+    <h2>&#9888; Active Alerts This Week</h2>
+    {% for alert in active_alerts %}
+    <div style="background:#fff7ed;border-left:3px solid #f59e0b;padding:10px 14px;margin-bottom:8px;border-radius:0 4px 4px 0;">
+      <strong style="font-size:13px;">{{ alert.title }}</strong>
+      <div style="color:#78350f;font-size:12px;margin-top:3px;">{{ alert.detail }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="footer">
+    <a href="{{ dashboard_url }}/dashboard">Open Dashboard</a> &nbsp;&bull;&nbsp;
+    <a href="{{ dashboard_url }}/alerts">View All Alerts</a>
+    <br><br>
+    This digest is generated automatically every Monday at 5 AM ET.
+    Rankings are checked daily; competitor data weekly; PACER monthly.
+  </div>
+</div>
+</body>
+</html>

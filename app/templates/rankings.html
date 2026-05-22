@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Rankings{% endblock %}
+{% block content %}
+<h1>Local Pack Rankings</h1>
+<p class="page-sub">Google 3-pack positions across all 24 keyword/city combinations</p>
+
+<div class="card" style="margin-bottom:24px;">
+  <p style="color:var(--muted);font-size:13px;line-height:1.6;">
+    Rankings data will appear here once the daily and weekly collection jobs have run.
+    Your firm's positions are checked daily; competitor positions are checked weekly.<br><br>
+    <strong style="color:var(--text);">To start collection:</strong> Go to Overview and click "Run Daily Job Now" to fetch your current 3-pack positions.
+  </p>
+</div>
+
+<div class="card">
+  <h2 style="font-size:15px;font-weight:600;margin-bottom:16px;">Keywords Tracked</h2>
+  <table>
+    <tr><th>Template</th><th>Markets</th><th>Total Combos</th></tr>
+    <tr><td>bankruptcy attorney {city}</td><td>All 6</td><td>6</td></tr>
+    <tr><td>chapter 7 attorney {city}</td><td>All 6</td><td>6</td></tr>
+    <tr><td>chapter 13 attorney {city}</td><td>All 6</td><td>6</td></tr>
+    <tr><td>bankruptcy lawyer {city}</td><td>All 6</td><td>6</td></tr>
+  </table>
+  <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);">
+    24 total keyword/city combinations tracked. Position 1–3 = in the local 3-pack. Position null = not present.
+  </div>
+</div>
+{% endblock %}

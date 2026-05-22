@@ -1,0 +1,16 @@
+# Keyword templates tracked across all markets.
+# {city} is replaced with each market's display_name at runtime.
+templates:
+  - "bankruptcy attorney {city}"
+  - "chapter 7 attorney {city}"
+  - "chapter 13 attorney {city}"
+  - "bankruptcy lawyer {city}"
+
+# Cities used to expand templates (must match display_name in competitors.yaml markets)
+cities:
+  - "Greensboro"
+  - "Winston-Salem"
+  - "High Point"
+  - "Charlotte"
+  - "Salisbury"
+  - "Asheville"

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Reviews{% endblock %}
+{% block content %}
+<h1>Review Monitoring</h1>
+<p class="page-sub">Google ratings, review velocity, and BBB profiles across all tracked firms</p>
+
+<div class="card-grid">
+  <div class="stat-card">
+    <div class="label">Primary Source</div>
+    <div class="value" style="font-size:18px;margin-top:8px;">Google</div>
+    <div class="sub">Business Profile ratings + review count</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Secondary Source</div>
+    <div class="value" style="font-size:18px;margin-top:8px;">BBB</div>
+    <div class="sub">Rating + complaint count</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Refresh Cadence</div>
+    <div class="value" style="font-size:18px;margin-top:8px;">Weekly</div>
+    <div class="sub">Own firm daily, competitors weekly</div>
+  </div>
+</div>
+
+<div class="card">
+  <p style="color:var(--muted);font-size:13px;line-height:1.6;">
+    Review snapshots will appear here once the weekly collection job has run and API credentials are configured.<br><br>
+    <strong style="color:var(--text);">Required before reviews populate:</strong><br>
+    &bull; <code>GOOGLE_PLACES_API_KEY</code> — for competitor Google review counts<br>
+    &bull; <code>google_place_id</code> in <code>config/competitors.yaml</code> for each firm<br>
+    &bull; BBB URLs (optional) in <code>config/competitors.yaml</code>
+  </p>
+</div>
+{% endblock %}

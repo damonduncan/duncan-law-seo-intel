@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}SEO Intelligence{% endblock %} — Duncan Law</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3a;
+      --text: #e2e8f0;
+      --muted: #8892a4;
+      --accent: #3b82f6;
+      --green: #10b981;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --nav-w: 220px;
+    }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; display: flex; min-height: 100vh; }
+
+    /* Sidebar nav */
+    nav { width: var(--nav-w); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 0; position: fixed; height: 100vh; }
+    nav .logo { padding: 0 20px 24px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    nav .logo span { font-size: 13px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--accent); }
+    nav .logo small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+    nav a { display: flex; align-items: center; gap: 10px; padding: 9px 20px; color: var(--muted); text-decoration: none; font-size: 13px; transition: background .15s, color .15s; }
+    nav a:hover, nav a.active { background: rgba(59,130,246,.1); color: var(--text); }
+    nav a.active { border-left: 3px solid var(--accent); padding-left: 17px; }
+    nav .spacer { flex: 1; }
+    nav .user-info { padding: 16px 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+    nav .user-info strong { display: block; color: var(--text); margin-bottom: 6px; }
+    nav .user-info a { padding: 0; display: inline; color: var(--accent); font-size: 12px; }
+
+    /* Main content */
+    main { margin-left: var(--nav-w); flex: 1; padding: 32px; overflow-y: auto; }
+    h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+    .page-sub { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+
+    /* Cards */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; }
+    .stat-card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .stat-card .value { font-size: 28px; font-weight: 700; margin: 6px 0 2px; }
+    .stat-card .sub { font-size: 12px; color: var(--muted); }
+
+    /* Status chips */
+    .chip { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .chip-green { background: rgba(16,185,129,.15); color: var(--green); }
+    .chip-yellow { background: rgba(245,158,11,.15); color: var(--yellow); }
+    .chip-red { background: rgba(239,68,68,.15); color: var(--red); }
+    .chip-blue { background: rgba(59,130,246,.15); color: var(--accent); }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    td { padding: 11px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    tr:last-child td { border-bottom: none; }
+
+    /* Alert banner */
+    .alert-banner { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; color: var(--red); font-size: 13px; }
+
+    /* Buttons */
+    .btn { display: inline-block; padding: 7px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; text-decoration: none; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+
+    /* Chart wrapper */
+    .chart-wrap { position: relative; height: 260px; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      nav { display: none; }
+      main { margin-left: 0; padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="logo">
+      <span>Duncan Law</span>
+      <small>SEO Intelligence</small>
+    </div>
+    <a href="/dashboard" class="{% if active_page == 'dashboard' %}active{% endif %}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Overview
+    </a>
+    <a href="/rankings" class="{% if active_page == 'rankings' %}active{% endif %}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Rankings
+    </a>
+    <a href="/reviews" class="{% if active_page == 'reviews' %}active{% endif %}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      Reviews
+    </a>
+    <a href="/filings" class="{% if active_page == 'filings' %}active{% endif %}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      PACER Filings
+    </a>
+    <a href="/competitors" class="{% if active_page == 'competitors' %}active{% endif %}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Competitors
+    </a>
+    <a href="/alerts" class="{% if active_page == 'alerts' %}active{% endif %}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      Alerts
+      {% if unacked_alerts is defined and unacked_alerts > 0 %}
+      <span class="chip chip-red">{{ unacked_alerts }}</span>
+      {% endif %}
+    </a>
+    <div class="spacer"></div>
+    <div class="user-info">
+      <strong>{{ user.name if user else "Signed in" }}</strong>
+      {{ user.email if user else "" }}
+      <br><a href="/auth/logout">Sign out</a>
+    </div>
+  </nav>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

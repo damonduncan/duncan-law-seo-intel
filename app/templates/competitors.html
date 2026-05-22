@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Competitors{% endblock %}
+{% block content %}
+<h1>Tracked Competitors</h1>
+<p class="page-sub">All firms loaded from <code>config/competitors.yaml</code></p>
+
+{% if competitors %}
+<div class="card">
+  <table>
+    <tr>
+      <th>#</th>
+      <th>Firm Name</th>
+      <th>Attorneys</th>
+      <th>Google Place ID</th>
+      <th>BBB</th>
+      <th>Status</th>
+    </tr>
+    {% for c in competitors %}
+    <tr>
+      <td style="color:var(--muted);">{{ loop.index }}</td>
+      <td><strong>{{ c.name }}</strong></td>
+      <td>
+        {% for atty in c.attorneys %}
+        <div style="font-size:12px;">{{ atty.attorney_name }}
+          {% if atty.aliases %}
+          <span style="color:var(--muted);font-size:11px;">(+{{ atty.aliases|length }} alias{{ 'es' if atty.aliases|length != 1 else '' }})</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </td>
+      <td>
+        {% if c.google_place_id %}
+        <span class="chip chip-green">&#10003; Set</span>
+        {% else %}
+        <span class="chip chip-yellow">Missing</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if c.bbb_url %}
+        <a href="{{ c.bbb_url }}" target="_blank" style="color:var(--accent);font-size:12px;">View</a>
+        {% else %}
+        <span style="color:var(--muted);font-size:12px;">—</span>
+        {% endif %}
+      </td>
+      <td><span class="chip chip-green">Active</span></td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div style="margin-top:16px;font-size:12px;color:var(--muted);">
+  To add, edit, or remove competitors: update <code>config/competitors.yaml</code> and redeploy. The database syncs automatically on startup.
+</div>
+
+{% else %}
+<div class="card">
+  <p style="color:var(--muted);font-size:13px;line-height:1.6;">
+    No competitors configured yet.<br><br>
+    Open <code>config/competitors.yaml</code> and add your competitor list following the example format in that file.
+    Each entry needs a unique <code>id</code>, the firm's <code>name</code>, attorney names as they appear in PACER,
+    and the firm's <code>google_place_id</code> for review tracking.
+  </p>
+</div>
+{% endif %}
+{% endblock %}

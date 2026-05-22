@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Overview{% endblock %}
+{% block content %}
+<h1>Overview</h1>
+<p class="page-sub">Your competitive position across all 6 NC markets</p>
+
+{% if request.query_params.get('msg') %}
+<div style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:6px;padding:10px 14px;margin-bottom:20px;color:#3b82f6;font-size:13px;">
+  {{ request.query_params.get('msg') }}
+</div>
+{% endif %}
+
+{% if unacked_alerts > 0 %}
+<div class="alert-banner">
+  {{ unacked_alerts }} unacknowledged alert{{ 's' if unacked_alerts != 1 else '' }} require your attention.
+  <a href="/alerts" style="color:inherit;font-weight:600;margin-left:8px;">View alerts &rarr;</a>
+</div>
+{% endif %}
+
+<!-- Summary cards -->
+<div class="card-grid">
+  <div class="stat-card">
+    <div class="label">Competitors Tracked</div>
+    <div class="value">{{ competitors | length }}</div>
+    <div class="sub">across MDNC + WDNC</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Markets</div>
+    <div class="value">6</div>
+    <div class="sub">Greensboro, W-S, HP, CLT, Salisbury, Asheville</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Keywords Tracked</div>
+    <div class="value">24</div>
+    <div class="sub">4 keywords × 6 cities</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Open Alerts</div>
+    <div class="value" style="color:{% if unacked_alerts > 0 %}var(--red){% else %}var(--green){% endif %}">{{ unacked_alerts }}</div>
+    <div class="sub">{% if unacked_alerts == 0 %}all clear{% else %}action needed{% endif %}</div>
+  </div>
+</div>
+
+<!-- Own firm status -->
+<div class="card" style="margin-bottom:24px;">
+  <h2 style="font-size:15px;font-weight:600;margin-bottom:16px;">Your Firm — Duncan Law</h2>
+  {% if own_firm %}
+  <table>
+    <tr>
+      <th>Firm</th><th>Google Place ID</th><th>Status</th>
+    </tr>
+    <tr>
+      <td><strong>{{ own_firm.name }}</strong></td>
+      <td>
+        {% if own_firm.google_place_id %}
+        <span class="chip chip-green">Configured</span>
+        {% else %}
+        <span class="chip chip-yellow">Missing — add to competitors.yaml</span>
+        {% endif %}
+      </td>
+      <td><span class="chip chip-green">Active</span></td>
+    </tr>
+  </table>
+  {% else %}
+  <p style="color:var(--muted);font-size:13px;">Own firm not yet configured. Add your details to <code>config/competitors.yaml</code> and redeploy.</p>
+  {% endif %}
+</div>
+
+<!-- Competitor list -->
+<div class="card" style="margin-bottom:24px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <h2 style="font-size:15px;font-weight:600;">Tracked Competitors</h2>
+    <a href="/competitors" style="font-size:12px;color:var(--accent);">View all &rarr;</a>
+  </div>
+  {% if competitors %}
+  <table>
+    <tr>
+      <th>Firm</th><th>Attorneys</th><th>Google Place ID</th><th>BBB</th>
+    </tr>
+    {% for c in competitors %}
+    <tr>
+      <td><strong>{{ c.name }}</strong></td>
+      <td>{{ c.attorneys | length }}</td>
+      <td>
+        {% if c.google_place_id %}
+        <span class="chip chip-green">Set</span>
+        {% else %}
+        <span class="chip chip-yellow">Missing</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if c.bbb_url %}
+        <span class="chip chip-green">Set</span>
+        {% else %}
+        <span class="chip chip-blue">Optional</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p style="color:var(--muted);font-size:13px;">No competitors configured yet. Add them to <code>config/competitors.yaml</code> and redeploy.</p>
+  {% endif %}
+</div>
+
+<!-- Last job run -->
+<div class="card">
+  <h2 style="font-size:15px;font-weight:600;margin-bottom:14px;">Data Collection Status</h2>
+  {% if last_job %}
+  <table>
+    <tr><th>Job</th><th>Last Run</th><th>Status</th><th>Records</th></tr>
+    <tr>
+      <td>{{ last_job.job_name | title }}</td>
+      <td>{{ last_job.started_at.strftime('%b %d %Y, %I:%M %p') if last_job.started_at else '—' }}</td>
+      <td>
+        {% if last_job.status == 'success' %}<span class="chip chip-green">Success</span>
+        {% elif last_job.status == 'failed' %}<span class="chip chip-red">Failed</span>
+        {% else %}<span class="chip chip-yellow">{{ last_job.status }}</span>{% endif %}
+      </td>
+      <td>{{ last_job.records_processed or '—' }}</td>
+    </tr>
+  </table>
+  {% else %}
+  <p style="color:var(--muted);font-size:13px;">No jobs have run yet. Data collection starts automatically on the next scheduled window.</p>
+  {% endif %}
+
+  <!-- Manual trigger buttons -->
+  <div style="margin-top:16px;display:flex;gap:10px;border-top:1px solid var(--border);padding-top:16px;">
+    <form method="post" action="/admin/run-job/daily">
+      <button type="submit" class="btn btn-ghost btn-sm">Run Daily Job Now</button>
+    </form>
+    <form method="post" action="/admin/run-job/weekly">
+      <button type="submit" class="btn btn-ghost btn-sm">Run Weekly Job Now</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
