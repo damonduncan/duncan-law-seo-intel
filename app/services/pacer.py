@@ -91,11 +91,16 @@ def collect_filing_snapshots(db: Session) -> int:
                     for district in _districts_for_competitor(comp):
                         by_district[district].append((comp, attorney, name))
 
-            for district, attorney_list in by_district.items():
+            for i, (district, attorney_list) in enumerate(by_district.items()):
                 if not attorney_list:
                     continue
-                court_code = DISTRICT_TO_COURT[district]
 
+                # Brief pause between districts so PACER doesn't rate-limit the second login
+                if i > 0:
+                    logger.info("Pausing 30s between districts to avoid rate limiting")
+                    time.sleep(30)
+
+                court_code = DISTRICT_TO_COURT[district]
                 if not _login(page, court_code=court_code):
                     logger.error(f"PACER login failed for {district} — skipping district")
                     continue

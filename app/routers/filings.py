@@ -66,53 +66,90 @@ def filings(
     for s in snapshots:
         counts[(s.competitor_id, s.attorney_id, s.district, s.chapter, s.period_start)] = s.case_count
 
-    # Build display rows grouped by district
-    # Each row: firm, attorney, ch7_current, ch13_current, ch7_prior, ch13_prior, total_current
-    def make_rows(district: str) -> list:
+    def make_firm_groups(district: str) -> list:
+        """
+        Build firm-level groups, each containing a firm rollup total and
+        individual attorney rows sorted by cases filed. Own firm always first.
+        """
         keys = {
             (cid, aid)
             for (cid, aid, dist, ch, per) in counts
             if dist == district and per == current_period
         }
-        rows = []
-        for cid, aid in sorted(keys, key=lambda k: comp_map.get(k[0], Competitor()).name or ""):
+
+        # Collect all attorney rows keyed by competitor_id
+        firm_attorneys: dict = defaultdict(list)
+        for cid, aid in keys:
             comp = comp_map.get(cid)
             atty = attorney_map.get(aid)
             if not comp or not atty:
                 continue
 
-            def get(ch, period):
-                return counts.get((cid, aid, district, ch, period), 0)
+            def get(c, aid=aid, cid=cid, period=None):
+                return counts.get((cid, aid, district, c, period or current_period), 0)
 
-            ch7_cur  = get(7, current_period)
-            ch13_cur = get(13, current_period)
-            ch7_pri  = get(7, prior_period) if prior_period else None
-            ch13_pri = get(13, prior_period) if prior_period else None
+            ch7_cur   = get(7)
+            ch13_cur  = get(13)
+            ch7_pri   = counts.get((cid, aid, district, 7,  prior_period), 0) if prior_period else None
+            ch13_pri  = counts.get((cid, aid, district, 13, prior_period), 0) if prior_period else None
             total_cur = ch7_cur + ch13_cur
             total_pri = (ch7_pri + ch13_pri) if prior_period else None
 
-            pct_change = None
-            if total_pri is not None and total_pri > 0:
-                pct_change = round((total_cur - total_pri) / total_pri * 100)
+            atty_pct = None
+            if total_pri and total_pri > 0:
+                atty_pct = round((total_cur - total_pri) / total_pri * 100)
 
-            rows.append({
-                "firm": comp.name,
-                "attorney": atty.attorney_name,
-                "ch7": ch7_cur,
-                "ch13": ch13_cur,
-                "total": total_cur,
-                "ch7_prior": ch7_pri,
-                "ch13_prior": ch13_pri,
+            firm_attorneys[cid].append({
+                "attorney":    atty.attorney_name,
+                "ch7":         ch7_cur,
+                "ch13":        ch13_cur,
+                "total":       total_cur,
+                "ch7_prior":   ch7_pri,
+                "ch13_prior":  ch13_pri,
                 "total_prior": total_pri,
-                "pct_change": pct_change,
+                "pct_change":  atty_pct,
                 "is_own_firm": comp.is_own_firm,
             })
 
-        rows.sort(key=lambda r: r["total"], reverse=True)
-        return rows
+        # Build firm groups
+        groups = []
+        for cid, atty_rows in firm_attorneys.items():
+            comp = comp_map.get(cid)
+            if not comp:
+                continue
 
-    mdnc_rows = make_rows("MDNC")
-    wdnc_rows = make_rows("WDNC")
+            atty_rows.sort(key=lambda r: r["total"], reverse=True)
+
+            firm_ch7   = sum(r["ch7"]  for r in atty_rows)
+            firm_ch13  = sum(r["ch13"] for r in atty_rows)
+            firm_total = firm_ch7 + firm_ch13
+
+            firm_pri = None
+            if prior_period:
+                firm_pri = sum(
+                    (r["total_prior"] or 0) for r in atty_rows
+                )
+            pct_change = None
+            if firm_pri:
+                pct_change = round((firm_total - firm_pri) / firm_pri * 100)
+
+            groups.append({
+                "firm":        comp.name,
+                "is_own_firm": comp.is_own_firm,
+                "ch7":         firm_ch7,
+                "ch13":        firm_ch13,
+                "total":       firm_total,
+                "total_prior": firm_pri,
+                "pct_change":  pct_change,
+                "attorneys":   atty_rows,
+            })
+
+        # Own firm first, then by total descending
+        groups.sort(key=lambda g: (not g["is_own_firm"], -g["total"]))
+        return groups
+
+    mdnc_rows = make_firm_groups("MDNC")
+    wdnc_rows = make_firm_groups("WDNC")
 
     return templates.TemplateResponse("filings.html", {
         "request": request,

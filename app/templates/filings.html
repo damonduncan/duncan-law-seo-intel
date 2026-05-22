@@ -47,50 +47,56 @@
 {% else %}
 {# ── Data view ────────────────────────────────────────────────────────────── #}
 
-{% macro district_table(rows, district_name) %}
+{% macro pct_chip(pct) %}
+  {% if pct is not none %}
+    {% if pct > 20 %}<span class="chip chip-red">+{{ pct }}%</span>
+    {% elif pct > 0 %}<span style="color:var(--yellow);font-size:12px;">+{{ pct }}%</span>
+    {% elif pct < 0 %}<span style="color:var(--green);font-size:12px;">{{ pct }}%</span>
+    {% else %}<span style="color:var(--muted);font-size:12px;">—</span>{% endif %}
+  {% else %}<span style="color:var(--muted);font-size:12px;">new</span>{% endif %}
+{% endmacro %}
+
+{% macro district_table(groups, district_name) %}
 <div class="card" style="margin-bottom:24px;">
   <h2 style="font-size:15px;font-weight:600;margin-bottom:4px;">{{ district_name }}</h2>
   <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">
     {{ current_period.strftime('%B %Y') if current_period else '—' }}
     {% if prior_period %} vs {{ prior_period.strftime('%B %Y') }}{% endif %}
   </p>
-  {% if rows %}
+  {% if groups %}
   <table>
     <tr>
-      <th>Firm / Attorney</th>
+      <th>Firm</th>
       <th style="text-align:right;">Ch. 7</th>
       <th style="text-align:right;">Ch. 13</th>
       <th style="text-align:right;">Total</th>
       {% if prior_period %}<th style="text-align:right;">vs Prior</th>{% endif %}
     </tr>
-    {% for r in rows %}
-    <tr {% if r.is_own_firm %}style="background:rgba(59,130,246,.05);"{% endif %}>
-      <td>
-        {% if r.is_own_firm %}<strong>{{ r.firm }}</strong>
-        {% else %}{{ r.firm }}{% endif %}
-        <div style="font-size:11px;color:var(--muted);">{{ r.attorney }}</div>
-      </td>
-      <td style="text-align:right;">{{ r.ch7 }}</td>
-      <td style="text-align:right;">{{ r.ch13 }}</td>
-      <td style="text-align:right;font-weight:600;">{{ r.total }}</td>
-      {% if prior_period %}
-      <td style="text-align:right;">
-        {% if r.pct_change is not none %}
-          {% if r.pct_change > 20 %}
-          <span class="chip chip-red">+{{ r.pct_change }}%</span>
-          {% elif r.pct_change > 0 %}
-          <span style="color:var(--yellow);font-size:12px;">+{{ r.pct_change }}%</span>
-          {% elif r.pct_change < 0 %}
-          <span style="color:var(--green);font-size:12px;">{{ r.pct_change }}%</span>
-          {% else %}
-          <span style="color:var(--muted);font-size:12px;">—</span>
-          {% endif %}
-        {% else %}
-        <span style="color:var(--muted);font-size:12px;">new</span>
+    {% for g in groups %}
+    {# ── Firm rollup row ── #}
+    <tr style="{% if g.is_own_firm %}background:rgba(59,130,246,.08);{% else %}background:rgba(255,255,255,.02);{% endif %}">
+      <td style="font-weight:600;font-size:13px;">
+        {% if g.is_own_firm %}<span style="color:var(--accent);">{{ g.firm }}</span>
+        {% else %}{{ g.firm }}{% endif %}
+        {% if g.attorneys|length > 1 %}
+        <span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:6px;">{{ g.attorneys|length }} attorneys</span>
         {% endif %}
       </td>
-      {% endif %}
+      <td style="text-align:right;font-weight:600;">{{ g.ch7 }}</td>
+      <td style="text-align:right;font-weight:600;">{{ g.ch13 }}</td>
+      <td style="text-align:right;font-weight:700;font-size:14px;">{{ g.total }}</td>
+      {% if prior_period %}<td style="text-align:right;">{{ pct_chip(g.pct_change) }}</td>{% endif %}
     </tr>
+    {# ── Attorney detail rows (indented) ── #}
+    {% for r in g.attorneys %}
+    <tr style="opacity:.8;">
+      <td style="padding-left:24px;font-size:12px;color:var(--muted);">{{ r.attorney }}</td>
+      <td style="text-align:right;font-size:12px;">{{ r.ch7 }}</td>
+      <td style="text-align:right;font-size:12px;">{{ r.ch13 }}</td>
+      <td style="text-align:right;font-size:12px;font-weight:600;">{{ r.total }}</td>
+      {% if prior_period %}<td style="text-align:right;">{{ pct_chip(r.pct_change) }}</td>{% endif %}
+    </tr>
+    {% endfor %}
     {% endfor %}
   </table>
   {% else %}
