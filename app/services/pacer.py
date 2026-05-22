@@ -426,7 +426,12 @@ def _parse_name(full_name: str) -> Optional[dict]:
     parts = name.split()
     if len(parts) < 2 or parts[0].lower() in ("unknown", "tbd", "n/a"):
         return None
-    return {"first": parts[0], "last": parts[-1]}
+    # Skip single-letter initials (e.g. "R. Todd Mosley" → first="Todd")
+    # PACER won't match "R." against a full first name like "Robert"
+    first = parts[0]
+    if len(first.rstrip(".")) == 1 and len(parts) > 2:
+        first = parts[1]
+    return {"first": first, "last": parts[-1]}
 
 
 def _districts_for_competitor(comp: Competitor) -> set:
