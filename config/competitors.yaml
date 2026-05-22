@@ -194,6 +194,18 @@ competitors:
 
   # ── CHARLOTTE ─────────────────────────────────────────────────────────────
 
+  - id: comp_022
+    name: "Blossom Law PLLC"
+    google_place_id: "ChIJNTAcyHmfVogRsaApqMs_lMw"
+    bbb_url: ""
+    markets:
+      - charlotte
+    attorneys:
+      - name: "Rashad Blossom"
+        aliases:
+          - "R Blossom"
+          - "Rashad A Blossom"
+
   - id: comp_011
     name: "Law Office of Jack G. Lezman"
     google_place_id: "ChIJ4Rfst7sdVIgRiV4EIKHs1Uo"

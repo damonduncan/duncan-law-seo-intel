@@ -2,33 +2,144 @@
 {% block title %}Reviews{% endblock %}
 {% block content %}
 <h1>Review Monitoring</h1>
-<p class="page-sub">Google ratings, review velocity, and BBB profiles across all tracked firms</p>
+<p class="page-sub">Google ratings, review counts, and BBB grades across all tracked firms</p>
 
+{% if not has_data %}
+{# ── No data yet ─────────────────────────────────────────────────────────── #}
 <div class="card-grid">
   <div class="stat-card">
     <div class="label">Primary Source</div>
     <div class="value" style="font-size:18px;margin-top:8px;">Google</div>
-    <div class="sub">Business Profile ratings + review count</div>
+    <div class="sub">Places API — rating + review count</div>
   </div>
   <div class="stat-card">
     <div class="label">Secondary Source</div>
     <div class="value" style="font-size:18px;margin-top:8px;">BBB</div>
-    <div class="sub">Rating + complaint count</div>
+    <div class="sub">Letter grade + complaint count</div>
   </div>
   <div class="stat-card">
     <div class="label">Refresh Cadence</div>
     <div class="value" style="font-size:18px;margin-top:8px;">Weekly</div>
-    <div class="sub">Own firm daily, competitors weekly</div>
+    <div class="sub">Monday with competitor rankings</div>
   </div>
 </div>
 
 <div class="card">
-  <p style="color:var(--muted);font-size:13px;line-height:1.6;">
-    Review snapshots will appear here once the weekly collection job has run and API credentials are configured.<br><br>
-    <strong style="color:var(--text);">Required before reviews populate:</strong><br>
-    &bull; <code>GOOGLE_PLACES_API_KEY</code> — for competitor Google review counts<br>
-    &bull; <code>google_place_id</code> in <code>config/competitors.yaml</code> for each firm<br>
-    &bull; BBB URLs (optional) in <code>config/competitors.yaml</code>
+  <p style="color:var(--muted);font-size:13px;line-height:1.8;">
+    Review snapshots will appear here once the weekly collection job has run.<br><br>
+    <strong style="color:var(--text);">Required setup:</strong><br>
+    &bull; Add <code>GOOGLE_PLACES_API_KEY</code> in Railway environment variables<br>
+    &bull; Enable <em>Places API (New)</em> in Google Cloud Console for that key<br>
+    &bull; Then run the weekly job — or trigger it from the Overview page
   </p>
 </div>
+
+{% else %}
+{# ── Summary cards ───────────────────────────────────────────────────────── #}
+<div class="card-grid" style="margin-bottom:24px;">
+  <div class="stat-card">
+    <div class="label">Duncan Law — Avg Google Rating</div>
+    <div class="value" style="color:var(--green);">
+      {% if own_avg_rating %}{{ own_avg_rating }} ★{% else %}—{% endif %}
+    </div>
+    <div class="sub">average across all markets</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Duncan Law — Total Reviews</div>
+    <div class="value">{{ own_total_reviews or "—" }}</div>
+    <div class="sub">sum across all Google listings</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Competitors Tracked</div>
+    <div class="value">{{ competitor_count }}</div>
+    <div class="sub">active firms with Place IDs</div>
+  </div>
+</div>
+
+{# ── Own firm by market ──────────────────────────────────────────────────── #}
+{% if own_google_snaps %}
+<div class="card" style="margin-bottom:24px;">
+  <h2 style="font-size:15px;font-weight:600;margin-bottom:16px;">Duncan Law — Google Ratings by Market</h2>
+  <table>
+    <tr>
+      <th>Market</th>
+      <th>Rating</th>
+      <th>Reviews</th>
+      <th>Last Collected</th>
+    </tr>
+    {% for s in own_google_snaps %}
+    <tr>
+      <td>{{ s.market | replace('_', ' ') | title }}</td>
+      <td>
+        {% if s.rating %}
+        <span style="color:var(--green);font-weight:600;">{{ "%.1f"|format(s.rating|float) }} ★</span>
+        {% else %}—{% endif %}
+      </td>
+      <td>{{ s.review_count if s.review_count else "—" }}</td>
+      <td style="font-size:12px;color:var(--muted);">
+        {{ s.snapped_at.strftime('%b %d, %Y') if s.snapped_at else "—" }}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{# ── Competitor table ────────────────────────────────────────────────────── #}
+<div class="card">
+  <h2 style="font-size:15px;font-weight:600;margin-bottom:16px;">Competitor Review Profiles</h2>
+  {% if comp_rows %}
+  <table>
+    <tr>
+      <th>Firm</th>
+      <th>Google Rating</th>
+      <th>Google Reviews</th>
+      <th>BBB Grade</th>
+      <th>Last Updated</th>
+    </tr>
+    {% for r in comp_rows %}
+    <tr>
+      <td style="font-weight:500;max-width:260px;">{{ r.name }}</td>
+      <td>
+        {% if r.google_rating is not none %}
+        <span style="{% if r.google_rating >= 4.5 %}color:var(--green){% elif r.google_rating >= 4.0 %}color:var(--yellow){% else %}color:var(--red){% endif %};font-weight:600;">
+          {{ "%.1f"|format(r.google_rating) }} ★
+        </span>
+        {% else %}
+        <span style="color:var(--muted);">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if r.google_count is not none %}
+        {{ "{:,}".format(r.google_count) }}
+        {% else %}
+        <span style="color:var(--muted);">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if r.bbb_grade %}
+        <span class="chip {% if r.bbb_grade.startswith('A') %}chip-green{% elif r.bbb_grade.startswith('B') %}chip-yellow{% else %}chip-red{% endif %}">
+          {{ r.bbb_grade }}
+        </span>
+        {% if r.bbb_complaint_count %}
+        <span style="font-size:11px;color:var(--muted);margin-left:6px;">{{ r.bbb_complaint_count }} complaint{{ 's' if r.bbb_complaint_count != 1 }}</span>
+        {% endif %}
+        {% elif r.has_bbb_url %}
+        <span style="color:var(--muted);font-size:12px;">pending</span>
+        {% else %}
+        <span style="color:var(--muted);">—</span>
+        {% endif %}
+      </td>
+      <td style="font-size:12px;color:var(--muted);">
+        {{ r.last_updated.strftime('%b %d, %Y') if r.last_updated else "—" }}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p style="color:var(--muted);font-size:13px;">No competitor review data collected yet.</p>
+  {% endif %}
+</div>
+
+{% endif %}
 {% endblock %}

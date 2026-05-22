@@ -41,10 +41,10 @@ def run_weekly_job() -> None:
             )
 
         # Phase 3: Competitor reviews
-        # from app.services.google_places import collect_competitor_reviews
-        # records += collect_competitor_reviews(db)
-        # from app.services.bbb import collect_bbb_reviews
-        # records += collect_bbb_reviews(db)
+        from app.services.google_places import collect_competitor_reviews
+        records += collect_competitor_reviews(db)
+        from app.services.bbb import collect_bbb_reviews
+        records += collect_bbb_reviews(db)
 
         # Phase 4: PACER (only on 1st of month)
         # if date.today().day == 1:
