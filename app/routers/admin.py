@@ -271,8 +271,27 @@ def debug_pacer(
                              headers={"Referer": resp2.url})
         resp3_soup = BeautifulSoup(resp3.text, "lxml")
         result["search_page_title"] = resp3_soup.title.string.strip() if resp3_soup.title else "(no title)"
-        result["search_response_snippet"] = resp3.text[:800].replace("\n", " ")
+        # Show 4000 chars so we can see the count text and filter elements
+        result["search_response_snippet"] = resp3.text[:4000].replace("\n", " ")
         result["parsed_count"] = _parse_result_count(resp3.text)
+        # Show what forms are on the results page (for filter options)
+        result["results_form_ids"] = [
+            f.get("id") or f.get("name") or "(no id)"
+            for f in resp3_soup.find_all("form")
+        ]
+        # Find any text nodes containing "of" + number (to see raw count text)
+        count_texts = []
+        for el in resp3_soup.find_all(string=re.compile(r"\d+\s+to\s+\d+\s+of\s+\d+|\d+\s+result|\d+\s+case", re.I)):
+            count_texts.append(el.strip()[:100])
+        result["count_text_found"] = count_texts[:5]
+        # Show all select/option values in the search form to find correct party role codes
+        role_options = []
+        if frm_search:
+            role_sel = frm_search.find(attrs={"name": re.compile("scmPartyRole$")})
+            if role_sel:
+                for opt in role_sel.find_all("option"):
+                    role_options.append({"value": opt.get("value"), "text": opt.text.strip()})
+        result["party_role_options"] = role_options[:20]
 
     except Exception as e:
         result["error"] = str(e)
