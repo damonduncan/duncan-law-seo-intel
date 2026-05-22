@@ -4,6 +4,13 @@
 <h1>PACER Filing Volume</h1>
 <p class="page-sub">Monthly Chapter 7 and Chapter 13 case counts — MDNC and WDNC districts</p>
 
+{% if request.query_params.get('msg') == 'discovery_running' %}
+<div style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:6px;padding:14px 18px;margin-bottom:24px;color:var(--accent);">
+  <strong>EDNC discovery is running in the background.</strong>
+  Pulling the NCEB Filed Cases report — takes 2–3 minutes. Refresh this page when done.
+</div>
+{% endif %}
+
 {% if request.query_params.get('msg') == 'pacer_running' %}
 <div style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:6px;padding:14px 18px;margin-bottom:24px;color:var(--accent);">
   <strong>PACER collection is running in the background.</strong>
@@ -118,6 +125,76 @@
 {{ district_table(mdnc_rows, "MDNC — Middle District of NC") }}
 {{ district_table(wdnc_rows, "WDNC — Western District of NC") }}
 {{ district_table(ednc_rows, "EDNC — Eastern District of NC") }}
+
+{# ── EDNC Discovery ─────────────────────────────────────────────────────── #}
+{% if ednc_discovery %}
+<div class="card" style="margin-bottom:24px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <h2 style="font-size:15px;font-weight:600;">
+      EDNC Top Filers — {{ ednc_discovery.period }}
+      <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:8px;">
+        {{ ednc_discovery.total_found }} attorney appearances parsed
+      </span>
+    </h2>
+    <form method="post" action="/admin/discover/ednc" style="margin:0;">
+      <button type="submit" class="btn btn-ghost btn-sm"
+              onclick="this.disabled=true;this.textContent='Running…';this.form.submit();">
+        Refresh Discovery
+      </button>
+    </form>
+  </div>
+  {% if ednc_discovery.error %}
+  <div style="font-size:13px;color:var(--red);margin-bottom:12px;">
+    Error: {{ ednc_discovery.error }}
+  </div>
+  {% endif %}
+  {% if ednc_discovery.top_filers %}
+  <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">
+    Add any untracked attorneys to <code>config/competitors.yaml</code> and run Sync + Collect PACER to include them.
+  </p>
+  <table>
+    <tr>
+      <th style="width:40px;">#</th>
+      <th>Attorney (as appears in PACER)</th>
+      <th style="text-align:right;">Cases</th>
+      <th>In Config?</th>
+    </tr>
+    {% set tracked_names = [] %}
+    {% for filer in ednc_discovery.top_filers %}
+    <tr>
+      <td style="color:var(--muted);font-size:12px;">{{ loop.index }}</td>
+      <td style="font-size:13px;">{{ filer.attorney }}</td>
+      <td style="text-align:right;font-weight:600;">{{ filer.cases }}</td>
+      <td style="font-size:12px;color:var(--muted);">—</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p style="font-size:13px;color:var(--muted);">
+    No attorney data found yet.
+    {% if ednc_discovery.result_snippet %}
+    <br><br><strong>Response preview:</strong>
+    <pre style="font-size:11px;color:var(--muted);white-space:pre-wrap;max-height:200px;overflow:auto;">{{ ednc_discovery.result_snippet[:800] }}</pre>
+    {% endif %}
+  </p>
+  {% endif %}
+</div>
+{% else %}
+<div class="card" style="margin-bottom:24px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px;">EDNC Top Filers — Discovery</div>
+      <div style="font-size:12px;color:var(--muted);">Pull the NCEB Filed Cases report to discover which attorneys are most active in the Eastern District.</div>
+    </div>
+    <form method="post" action="/admin/discover/ednc" style="margin:0;">
+      <button type="submit" class="btn btn-primary btn-sm"
+              onclick="this.disabled=true;this.textContent='Starting…';this.form.submit();">
+        Run EDNC Discovery
+      </button>
+    </form>
+  </div>
+</div>
+{% endif %}
 
 <div style="margin-top:8px;">
   <form method="post" action="/admin/run-pacer" style="display:inline;">

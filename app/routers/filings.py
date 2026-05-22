@@ -8,6 +8,7 @@ from app.dependencies import RedirectIfNotAuthenticated
 from app.database import get_db
 from app.models.competitor import Competitor, CompetitorAttorney
 from app.models.filings import FilingSnapshot
+from app.services.pacer_discovery import get_cached_results
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -148,9 +149,10 @@ def filings(
         groups.sort(key=lambda g: (not g["is_own_firm"], -g["total"]))
         return groups
 
-    mdnc_rows = make_firm_groups("MDNC")
-    wdnc_rows = make_firm_groups("WDNC")
-    ednc_rows = make_firm_groups("EDNC")
+    mdnc_rows      = make_firm_groups("MDNC")
+    wdnc_rows      = make_firm_groups("WDNC")
+    ednc_rows      = make_firm_groups("EDNC")
+    ednc_discovery = get_cached_results(db)
 
     return templates.TemplateResponse("filings.html", {
         "request": request,
@@ -159,7 +161,8 @@ def filings(
         "has_data": True,
         "current_period": current_period,
         "prior_period": prior_period,
-        "mdnc_rows": mdnc_rows,
-        "wdnc_rows": wdnc_rows,
-        "ednc_rows": ednc_rows,
+        "mdnc_rows":      mdnc_rows,
+        "wdnc_rows":      wdnc_rows,
+        "ednc_rows":      ednc_rows,
+        "ednc_discovery": ednc_discovery,
     })

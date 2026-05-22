@@ -61,6 +61,29 @@ def run_reviews(
     })
 
 
+@router.post("/admin/discover/ednc")
+def discover_ednc(
+    request: Request,
+    user: dict = Depends(auth_required),
+    year: int = 2026,
+    month: int = 4,
+):
+    """Start EDNC top-filer discovery in background. Results stored in DB."""
+    from app.database import SessionLocal
+    from app.services.pacer_discovery import run_ednc_discovery
+
+    def _run():
+        db = SessionLocal()
+        try:
+            run_ednc_discovery(db, year=year, month=month)
+        finally:
+            db.close()
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+    return RedirectResponse(url="/filings?msg=discovery_running", status_code=303)
+
+
 @router.get("/admin/discover/ednc-filers")
 def discover_ednc_filers(
     request: Request,
