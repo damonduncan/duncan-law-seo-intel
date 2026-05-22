@@ -39,3 +39,17 @@ def acknowledge_alert(
         alert.acknowledged_at = datetime.now(timezone.utc)
         db.commit()
     return RedirectResponse(url="/alerts", status_code=303)
+
+
+@router.post("/alerts/dismiss-all")
+def dismiss_all_alerts(
+    request: Request,
+    user: dict = Depends(auth_required),
+    db: Session = Depends(get_db),
+):
+    now = datetime.now(timezone.utc)
+    unacked = db.query(Alert).filter(Alert.acknowledged_at == None).all()
+    for alert in unacked:
+        alert.acknowledged_at = now
+    db.commit()
+    return RedirectResponse(url="/alerts", status_code=303)

@@ -5,6 +5,14 @@
 <p class="page-sub">Immediate and digest-flagged intelligence events</p>
 
 {% if alerts %}
+{% set unacked_count = alerts | selectattr('acknowledged_at', 'none') | list | length %}
+{% if unacked_count > 0 %}
+<div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+  <form method="post" action="/alerts/dismiss-all">
+    <button type="submit" class="btn btn-ghost btn-sm">Dismiss All ({{ unacked_count }})</button>
+  </form>
+</div>
+{% endif %}
 <div class="card">
   <table>
     <tr>

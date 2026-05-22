@@ -116,41 +116,58 @@ def _check_competitor_entry(db: Session, today_row: LocalPackRanking, own_firm_i
             .first()
         )
 
-        if not comp_yesterday:
-            comp = db.query(Competitor).filter(Competitor.id == comp_row.competitor_id).first()
-            comp_name = comp.name if comp else "Unknown competitor"
+        if comp_yesterday:
+            continue
 
-            existing = (
-                db.query(Alert)
-                .filter(
-                    Alert.alert_type == "competitor_pack_entry",
-                    Alert.competitor_id == comp_row.competitor_id,
-                    Alert.keyword == today_row.keyword,
-                    Alert.market == today_row.market,
-                    cast(Alert.triggered_at, Date) == date.today(),
-                )
-                .first()
+        # Don't fire on first-run initialization — require at least one prior
+        # data point for this competitor/keyword before treating it as new entry
+        has_prior_data = (
+            db.query(LocalPackRanking)
+            .filter(
+                LocalPackRanking.competitor_id == comp_row.competitor_id,
+                LocalPackRanking.keyword == today_row.keyword,
+                LocalPackRanking.city == today_row.city,
+                cast(LocalPackRanking.scraped_at, Date) < date.today(),
             )
-            if not existing:
-                alert = Alert(
-                    id=new_uuid(),
-                    alert_type="competitor_pack_entry",
-                    severity="immediate",
-                    competitor_id=comp_row.competitor_id,
-                    keyword=today_row.keyword,
-                    market=today_row.market,
-                    detail={
-                        "keyword": today_row.keyword,
-                        "city": today_row.city,
-                        "competitor_name": comp_name,
-                        "position": comp_row.rank_position,
-                        "message": f"{comp_name} newly entered the 3-pack for '{today_row.keyword}'",
-                    },
-                    triggered_at=datetime.now(timezone.utc),
-                )
-                db.add(alert)
-                logger.warning(f"ALERT: Competitor entered pack — {comp_name} for '{today_row.keyword}' in {today_row.city}")
-                _send_immediate_alert_email(alert, db)
+            .first()
+        )
+        if not has_prior_data:
+            continue
+
+        comp = db.query(Competitor).filter(Competitor.id == comp_row.competitor_id).first()
+        comp_name = comp.name if comp else "Unknown competitor"
+
+        existing = (
+            db.query(Alert)
+            .filter(
+                Alert.alert_type == "competitor_pack_entry",
+                Alert.competitor_id == comp_row.competitor_id,
+                Alert.keyword == today_row.keyword,
+                Alert.market == today_row.market,
+                cast(Alert.triggered_at, Date) == date.today(),
+            )
+            .first()
+        )
+        if not existing:
+            alert = Alert(
+                id=new_uuid(),
+                alert_type="competitor_pack_entry",
+                severity="immediate",
+                competitor_id=comp_row.competitor_id,
+                keyword=today_row.keyword,
+                market=today_row.market,
+                detail={
+                    "keyword": today_row.keyword,
+                    "city": today_row.city,
+                    "competitor_name": comp_name,
+                    "position": comp_row.rank_position,
+                    "message": f"{comp_name} newly entered the 3-pack for '{today_row.keyword}'",
+                },
+                triggered_at=datetime.now(timezone.utc),
+            )
+            db.add(alert)
+            logger.warning(f"ALERT: Competitor entered pack — {comp_name} for '{today_row.keyword}' in {today_row.city}")
+            _send_immediate_alert_email(alert, db)
 
 
 def _send_immediate_alert_email(alert: Alert, db: Session) -> None:
