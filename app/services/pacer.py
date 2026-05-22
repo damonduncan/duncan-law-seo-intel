@@ -174,12 +174,25 @@ def _pacer_login() -> Optional[requests.Session]:
             if btn.get("type", "").lower() == "submit" and btn.get("name"):
                 form_data[btn["name"]] = btn.get("value", "Login")
 
+        # PrimeFaces p:commandButton submits via AJAX by default.
+        # Without these fields the server treats it as a malformed request
+        # and re-renders the login page without processing credentials.
+        btn_id = f"{form_id}:fbtnLogin" if form_id else "loginForm:fbtnLogin"
+        form_data.update({
+            "jakarta.faces.partial.ajax":   "true",
+            "jakarta.faces.source":         btn_id,
+            "jakarta.faces.partial.execute": "@all",
+            "jakarta.faces.partial.render":  "@all",
+            "jakarta.faces.behavior.event":  "action",
+            "jakarta.faces.partial.event":   "click",
+            btn_id:                          btn_id,
+        })
+
         logger.debug(
-            f"PACER login fields: user={user_field}, pass={pass_field}, "
-            f"form_id={form_id}, all={list(form_data.keys())}"
+            f"PACER login: user={user_field}, btn={btn_id}, "
+            f"all_fields={list(form_data.keys())}"
         )
 
-        # Use the form's own action URL; browsers follow it, scrapers often hardcode
         form_action = login_form.get("action", "")
         post_url = urljoin(resp.url, form_action) if form_action else resp.url
 
@@ -192,13 +205,24 @@ def _pacer_login() -> Optional[requests.Session]:
                 "Referer": PACER_LOGIN_URL,
                 "Origin": "https://pacer.login.uscourts.gov",
                 "Content-Type": "application/x-www-form-urlencoded",
+                "Faces-Request": "partial/ajax",
+                "X-Requested-With": "XMLHttpRequest",
+                "Accept": "application/xml, text/xml, */*; q=0.01",
             },
         )
+
+        # JSF AJAX response is XML — parse it for a redirect URL
+        redirect_url = _parse_jsf_ajax_redirect(resp.text)
+        if redirect_url:
+            redirect_url = urljoin(post_url, redirect_url)
+            logger.debug(f"PACER: following AJAX redirect to {redirect_url}")
+            resp = session.get(redirect_url, timeout=30,
+                               headers={"Referer": post_url})
 
         if "PACER: Login" in resp.text:
             logger.error(
                 "PACER login failed — response still shows login page. "
-                "Check PACER_USERNAME / PACER_PASSWORD in Railway env vars."
+                "Credentials may be wrong or PACER changed their login flow."
             )
             return None
 
@@ -344,6 +368,30 @@ def _find_content_form(soup: BeautifulSoup):
         if "menu" not in form_id and "nav" not in form_id:
             return form
     return forms[-1] if forms else None
+
+
+def _parse_jsf_ajax_redirect(response_text: str) -> Optional[str]:
+    """
+    Parse a JSF/PrimeFaces AJAX XML response for a redirect URL.
+    The response looks like:
+      <?xml version='1.0'?>
+      <partial-response>
+        <redirect url="https://..."/>
+      </partial-response>
+    Returns the URL string, or None if not found or not XML.
+    """
+    text = response_text.strip()
+    if not (text.startswith("<?xml") or text.startswith("<partial-response")):
+        return None
+    try:
+        import xml.etree.ElementTree as ET
+        root = ET.fromstring(text)
+        redirect = root.find(".//redirect")
+        if redirect is not None:
+            return redirect.get("url")
+    except Exception as e:
+        logger.debug(f"PACER: XML parse failed: {e}")
+    return None
 
 
 def _detect_field(form, input_types: tuple, name_hints: tuple) -> Optional[str]:

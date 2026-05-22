@@ -186,17 +186,46 @@ def debug_pacer(
         post_url = _urljoin(PACER_LOGIN_URL, form_action) if form_action else PACER_LOGIN_URL
         result["post_url"] = post_url
 
+        form_id = login_form.get("id", "loginForm") if login_form else "loginForm"
+        btn_id = f"{form_id}:fbtnLogin"
+        inputs.update({
+            "jakarta.faces.partial.ajax":    "true",
+            "jakarta.faces.source":          btn_id,
+            "jakarta.faces.partial.execute": "@all",
+            "jakarta.faces.partial.render":  "@all",
+            "jakarta.faces.behavior.event":  "action",
+            "jakarta.faces.partial.event":   "click",
+            btn_id:                          btn_id,
+        })
         resp = session.post(
             post_url, data=inputs, timeout=30, allow_redirects=True,
             headers={
                 "Referer": PACER_LOGIN_URL,
                 "Origin": "https://pacer.login.uscourts.gov",
                 "Content-Type": "application/x-www-form-urlencoded",
+                "Faces-Request": "partial/ajax",
+                "X-Requested-With": "XMLHttpRequest",
+                "Accept": "application/xml, text/xml, */*; q=0.01",
             },
         )
         result["login_status"] = resp.status_code
-        result["login_succeeded"] = "PACER: Login" not in resp.text
-        result["login_response_snippet"] = resp.text[:600].replace("\n", " ")
+        result["login_content_type"] = resp.headers.get("Content-Type", "")
+        result["login_raw_response"] = resp.text[:800].replace("\n", " ")
+
+        # Parse JSF AJAX redirect
+        from app.services.pacer import _parse_jsf_ajax_redirect
+        redirect_url = _parse_jsf_ajax_redirect(resp.text)
+        result["ajax_redirect_url"] = redirect_url
+        if redirect_url:
+            from urllib.parse import urljoin as _uj
+            redirect_url = _uj(post_url, redirect_url)
+            resp2 = session.get(redirect_url, timeout=30, headers={"Referer": post_url})
+            result["after_redirect_title"] = BeautifulSoup(resp2.text, "lxml").title.string if BeautifulSoup(resp2.text, "lxml").title else "(no title)"
+            result["login_succeeded"] = "PACER: Login" not in resp2.text
+            result["login_response_snippet"] = resp2.text[:400].replace("\n", " ")
+        else:
+            result["login_succeeded"] = "PACER: Login" not in resp.text
+            result["login_response_snippet"] = resp.text[:400].replace("\n", " ")
 
         # Step 2: GET PCL search page
         resp2 = session.get(PCL_SEARCH_PAGE, timeout=30)
