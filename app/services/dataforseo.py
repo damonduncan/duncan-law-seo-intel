@@ -162,9 +162,14 @@ def collect_rankings_for_keywords(
                     ids_to_store.add(competitor_place_map[r["place_id"]])
 
         # Store own firm result (or absence)
+        # Only the top 3 results constitute the actual Google local 3-pack
+        pack_results = [r for r in results if r["rank_position"] and r["rank_position"] <= 3]
+
         own_result = next(
             (r for r in results if r["place_id"] in own_place_ids), None
         )
+        own_in_pack = own_result is not None and own_result.get("rank_position", 99) <= 3
+
         _upsert_ranking(
             db=db,
             competitor_id=own_firm_id,
@@ -172,7 +177,7 @@ def collect_rankings_for_keywords(
             city=city,
             market=market,
             rank_position=own_result["rank_position"] if own_result else None,
-            in_pack=own_result is not None,
+            in_pack=own_in_pack,
             is_own_firm=True,
             result_data=own_result,
             today=today,
@@ -180,7 +185,7 @@ def collect_rankings_for_keywords(
         rows_stored += 1
 
         if not only_own_firm:
-            for r in results:
+            for r in pack_results:
                 comp_id = competitor_place_map.get(r["place_id"])
                 if comp_id:
                     _upsert_ranking(
