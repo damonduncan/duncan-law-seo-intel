@@ -244,21 +244,34 @@ def debug_pacer(
         today = date.today()
         period_end = date(today.year, today.month, 1) - timedelta(days=1)
         period_start = date(period_end.year, period_end.month, 1)
+        frm_id = content_form.get("id", "frmSearch") if content_form else "frmSearch"
+        date_from = period_start.strftime("%m/%d/%Y")
+        date_to   = period_end.strftime("%m/%d/%Y")
         pcl_inputs.update({
-            "findPartyForm:partyType": "at",
-            "findPartyForm:lastName":  last_name,
-            "findPartyForm:firstName": first_name,
-            "findPartyForm:courtType": "bk",
-            "findPartyForm:courtId":   court_code,
-            "findPartyForm:dateFiled": (
-                f"{period_start.strftime('%m/%d/%Y')} "
-                f"to {period_end.strftime('%m/%d/%Y')}"
-            ),
-            "findPartyForm:chapter":   str(chapter),
-            "findPartyForm:btnSearch": "Search",
+            f"{frm_id}:txtPartyNameLast":      last_name,
+            f"{frm_id}:txtPartyNameFirst":     first_name,
+            f"{frm_id}:txtPartyNameMiddle":    "",
+            f"{frm_id}:scmPartyRole":          "at",
+            f"{frm_id}:scmPartyRole_focus":    "",
+            f"{frm_id}:scmPartyRole_filter":   "",
+            f"{frm_id}:ddCaseTypeBasic_input": "bk",
+            f"{frm_id}:cbExactMatches_input":  "false",
+            f"{frm_id}:cbEmptyMatches_input":  "false",
+            f"{frm_id}:courtId":               court_code,
+            f"{frm_id}:dateFiledFrom":         date_from,
+            f"{frm_id}:dateFiledTo":           date_to,
+            f"{frm_id}:chapter":               str(chapter),
+            f"{frm_id}:btnSearch":             "Search",
         })
-        resp3 = session.post(PCL_SEARCH_PAGE, data=pcl_inputs, timeout=30)
-        result["search_response_snippet"] = resp3.text[:1200].replace("\n", " ")
+        result["search_fields_submitted"] = list(pcl_inputs.keys())
+        form_action2 = content_form.get("action", "") if content_form else ""
+        from urllib.parse import urljoin as _uj2
+        post_url2 = _uj2(resp2.url, form_action2) if form_action2 else resp2.url
+        resp3 = session.post(post_url2, data=pcl_inputs, timeout=30,
+                             headers={"Referer": resp2.url})
+        resp3_soup = BeautifulSoup(resp3.text, "lxml")
+        result["search_page_title"] = resp3_soup.title.string.strip() if resp3_soup.title else "(no title)"
+        result["search_response_snippet"] = resp3.text[:800].replace("\n", " ")
         result["parsed_count"] = _parse_result_count(resp3.text)
 
     except Exception as e:

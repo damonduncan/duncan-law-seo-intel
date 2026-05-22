@@ -270,21 +270,31 @@ def _search_pcl(
         if form_id in form_data and not form_data[form_id]:
             form_data[form_id] = form_id
 
-        date_range = (
-            f"{period_start.strftime('%m/%d/%Y')} "
-            f"to {period_end.strftime('%m/%d/%Y')}"
-        )
+        date_from = period_start.strftime("%m/%d/%Y")
+        date_to   = period_end.strftime("%m/%d/%Y")
 
-        # Field names follow the form's JSF component ID prefix (frmSearch:*)
+        # Actual PCL frmSearch field names (discovered from form introspection).
+        # scmPartyRole = SelectOneMenu; "at" = Attorney.
+        # ddCaseTypeBasic_input = Dropdown display text; "bk" = Bankruptcy.
+        # Court and chapter are submitted as hidden fields discovered on some
+        # PCL page variants; included here in case they exist in the form.
         form_data.update({
-            f"{form_id}:partyType": "at",    # attorney
-            f"{form_id}:lastName":  last_name,
-            f"{form_id}:firstName": first_name,
-            f"{form_id}:courtType": "bk",
-            f"{form_id}:courtId":   court_code,
-            f"{form_id}:dateFiled": date_range,
-            f"{form_id}:chapter":   str(chapter),
-            f"{form_id}:btnSearch": "Search",
+            f"{form_id}:txtPartyNameLast":      last_name,
+            f"{form_id}:txtPartyNameFirst":     first_name,
+            f"{form_id}:txtPartyNameMiddle":    "",
+            f"{form_id}:scmPartyRole":          "at",
+            f"{form_id}:scmPartyRole_focus":    "",
+            f"{form_id}:scmPartyRole_filter":   "",
+            f"{form_id}:ddCaseTypeBasic_input": "bk",
+            f"{form_id}:cbExactMatches_input":  "false",
+            f"{form_id}:cbEmptyMatches_input":  "false",
+            # Court and date range — included if the form exposes them
+            f"{form_id}:courtId":               court_code,
+            f"{form_id}:dateFiledFrom":         date_from,
+            f"{form_id}:dateFiledTo":           date_to,
+            f"{form_id}:chapter":               str(chapter),
+            # Submit button
+            f"{form_id}:btnSearch":             "Search",
         })
 
         form_action = search_form.get("action", "") if search_form else ""
