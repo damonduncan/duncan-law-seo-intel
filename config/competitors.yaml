@@ -12,7 +12,6 @@
 
 own_firm:
   name: "Duncan Law"
-  google_place_id: ""           # Required: find at maps.google.com → Share → Copy link
   domain: "duncanlawonline.com"
   bbb_url: ""                   # Optional: your BBB profile URL
   attorneys:
@@ -21,6 +20,20 @@ own_firm:
         - "D Duncan"
         - "Damon T Duncan"
         - "Damon Trevor Duncan"
+  # One entry per office — each market has its own Google reviews and local pack ranking
+  locations:
+    - market: greensboro
+      google_place_id: ""       # Find at: maps.google.com → search "Duncan Law Greensboro" → Share → copy Place ID
+    - market: winston_salem
+      google_place_id: ""
+    - market: high_point
+      google_place_id: ""
+    - market: salisbury
+      google_place_id: ""
+    - market: charlotte
+      google_place_id: ""
+    - market: asheville
+      google_place_id: ""
 
 competitors:
   # ── EXAMPLE ENTRY (replace with real competitors) ──────────────────────────

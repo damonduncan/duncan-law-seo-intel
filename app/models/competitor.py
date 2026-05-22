@@ -19,6 +19,16 @@ class Competitor(Base, TimestampMixin):
     attorneys: Mapped[List["CompetitorAttorney"]] = relationship(
         back_populates="competitor", cascade="all, delete-orphan"
     )
+    locations: Mapped[List["CompetitorLocation"]] = relationship(
+        back_populates="competitor", cascade="all, delete-orphan"
+    )
+
+    def place_id_for_market(self, market: str) -> Optional[str]:
+        """Return the Google Place ID for a specific market, falling back to the firm-level id."""
+        for loc in self.locations:
+            if loc.market == market and loc.google_place_id:
+                return loc.google_place_id
+        return self.google_place_id
 
     def __repr__(self) -> str:
         return f"<Competitor {self.name}>"
@@ -44,6 +54,22 @@ class CompetitorAttorney(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         return f"<CompetitorAttorney {self.attorney_name}>"
+
+
+class CompetitorLocation(Base, TimestampMixin):
+    __tablename__ = "competitor_locations"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    competitor_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("competitors.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    market: Mapped[str] = mapped_column(String(50), nullable=False)
+    google_place_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+    competitor: Mapped["Competitor"] = relationship(back_populates="locations")
+
+    def __repr__(self) -> str:
+        return f"<CompetitorLocation {self.competitor_id}:{self.market}>"
 
 
 class AttorneyAlias(Base):

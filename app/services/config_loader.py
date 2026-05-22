@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 import yaml
 from sqlalchemy.orm import Session
-from app.models.competitor import Competitor, CompetitorAttorney, AttorneyAlias
+from app.models.competitor import Competitor, CompetitorAttorney, AttorneyAlias, CompetitorLocation
 from app.models.base import new_uuid
 from datetime import datetime, timezone
 
@@ -120,6 +120,33 @@ def _upsert_competitor(
                     attorney_id=attorney.id,
                     alias=alias,
                 ))
+
+    # Sync locations (own firm has per-market entries; competitors use google_place_id per market)
+    yaml_locations: List[Dict] = data.get("locations", [])
+    if not yaml_locations and data.get("google_place_id"):
+        # Competitor with a single place_id — create one location per listed market
+        markets_list: List[str] = data.get("markets", [])
+        yaml_locations = [
+            {"market": m, "google_place_id": data["google_place_id"]}
+            for m in markets_list
+        ]
+
+    existing_locations = {loc.market: loc for loc in competitor.locations}
+    for loc_data in yaml_locations:
+        market = loc_data.get("market", "")
+        place_id = loc_data.get("google_place_id") or None
+        if market in existing_locations:
+            existing_locations[market].google_place_id = place_id
+            existing_locations[market].updated_at = now
+        else:
+            db.add(CompetitorLocation(
+                id=new_uuid(),
+                competitor_id=competitor.id,
+                market=market,
+                google_place_id=place_id,
+                created_at=now,
+                updated_at=now,
+            ))
 
     return competitor
 
