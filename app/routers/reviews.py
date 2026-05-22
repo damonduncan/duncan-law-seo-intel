@@ -8,6 +8,7 @@ from app.dependencies import RedirectIfNotAuthenticated
 from app.database import get_db
 from app.models.reviews import ReviewSnapshot
 from app.models.competitor import Competitor
+from app.models.alerts import JobRun
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -22,12 +23,24 @@ def reviews(
 ):
     has_data = db.query(ReviewSnapshot).first() is not None
 
+    last_weekly = (
+        db.query(JobRun)
+        .filter(JobRun.job_name == "weekly")
+        .order_by(JobRun.started_at.desc())
+        .first()
+    )
+    competitor_count = db.query(Competitor).filter(
+        Competitor.active == True, Competitor.is_own_firm == False
+    ).count()
+
     if not has_data:
         return templates.TemplateResponse("reviews.html", {
             "request": request,
             "user": user,
             "active_page": "reviews",
             "has_data": False,
+            "last_weekly": last_weekly,
+            "competitor_count": competitor_count,
         })
 
     # Most recent snapshots — last 60 days, newest first

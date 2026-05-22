@@ -1,10 +1,14 @@
 import threading
 from fastapi import APIRouter, Request, Depends
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
 from app.dependencies import RedirectIfNotAuthenticated
+from app.database import get_db
 
 router = APIRouter()
 auth_required = RedirectIfNotAuthenticated()
+templates = Jinja2Templates(directory="app/templates")
 
 
 @router.post("/admin/sync-config")
@@ -17,6 +21,31 @@ def sync_config(request: Request, user: dict = Depends(auth_required)):
     finally:
         db.close()
     return RedirectResponse(url="/dashboard?msg=Config+synced+%E2%80%94+competitor+list+updated", status_code=303)
+
+
+@router.post("/admin/run-reviews", response_class=HTMLResponse)
+def run_reviews(
+    request: Request,
+    user: dict = Depends(auth_required),
+    db: Session = Depends(get_db),
+):
+    """Run review collection synchronously and show a result page."""
+    google_count, bbb_count, error = 0, 0, None
+    try:
+        from app.services.google_places import collect_competitor_reviews
+        google_count = collect_competitor_reviews(db)
+        from app.services.bbb import collect_bbb_reviews
+        bbb_count = collect_bbb_reviews(db)
+    except Exception as e:
+        error = str(e)
+    return templates.TemplateResponse("admin_reviews_result.html", {
+        "request": request,
+        "user": user,
+        "active_page": "reviews",
+        "google_count": google_count,
+        "bbb_count": bbb_count,
+        "error": error,
+    })
 
 
 @router.post("/admin/run-job/daily")

@@ -6,7 +6,7 @@
 
 {% if not has_data %}
 {# ── No data yet ─────────────────────────────────────────────────────────── #}
-<div class="card-grid">
+<div class="card-grid" style="margin-bottom:24px;">
   <div class="stat-card">
     <div class="label">Primary Source</div>
     <div class="value" style="font-size:18px;margin-top:8px;">Google</div>
@@ -24,14 +24,35 @@
   </div>
 </div>
 
+{% if last_weekly %}
+<div class="card" style="margin-bottom:16px;">
+  <div style="font-size:13px;color:var(--muted);">
+    Last weekly job:
+    <strong style="color:var(--text);">{{ last_weekly.started_at.strftime('%b %d, %I:%M %p') }}</strong>
+    &mdash;
+    {% if last_weekly.status == 'success' %}
+    <span style="color:var(--green);">succeeded</span> ({{ last_weekly.records_processed or 0 }} records)
+    {% elif last_weekly.status == 'failed' %}
+    <span style="color:var(--red);">failed</span>
+    {% if last_weekly.error_detail %}
+    <span style="font-size:12px;"> — {{ last_weekly.error_detail[:120] }}</span>
+    {% endif %}
+    {% else %}
+    <span style="color:var(--yellow);">{{ last_weekly.status }}</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
 <div class="card">
-  <p style="color:var(--muted);font-size:13px;line-height:1.8;">
-    Review snapshots will appear here once the weekly collection job has run.<br><br>
-    <strong style="color:var(--text);">Required setup:</strong><br>
-    &bull; Add <code>GOOGLE_PLACES_API_KEY</code> in Railway environment variables<br>
-    &bull; Enable <em>Places API (New)</em> in Google Cloud Console for that key<br>
-    &bull; Then run the weekly job — or trigger it from the Overview page
+  <p style="color:var(--muted);font-size:13px;line-height:1.8;margin-bottom:16px;">
+    No review snapshots collected yet. Click below to run collection now — this will call
+    the Google Places API for all {{ competitor_count }} tracked firms and show you exactly
+    what was collected (or why it failed).
   </p>
+  <form method="post" action="/admin/run-reviews">
+    <button type="submit" class="btn btn-primary btn-sm">Collect Reviews Now</button>
+  </form>
 </div>
 
 {% else %}
