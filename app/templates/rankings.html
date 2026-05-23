@@ -6,55 +6,85 @@
 
 {% if not has_data %}
 <div class="card" style="margin-bottom:24px;">
-  <p style="color:var(--muted);font-size:13px;line-height:1.8;">
-    No rankings data yet. Click the button below to run the first collection now — it will fetch your current 3-pack positions across all 24 keyword/city combinations.<br><br>
+  <div class="section-title">
+    <span class="section-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </span>
+    No Rankings Data Yet
+  </div>
+  <p style="color:var(--muted);font-size:13px;line-height:1.8;margin-bottom:16px;">
+    Click below to run the first collection now — it will fetch your current 3-pack positions across all 24 keyword/city combinations.<br>
     <strong style="color:var(--text);">Note:</strong> Make sure your Google Place IDs are set in <code>config/competitors.yaml</code> under <code>own_firm → locations</code>.
   </p>
-  <div style="margin-top:16px;">
-    <form method="post" action="/admin/run-job/daily">
-      <button type="submit" class="btn btn-primary">Run Rankings Collection Now</button>
-    </form>
-  </div>
+  <form method="post" action="/admin/run-job/daily">
+    <button type="submit" class="btn btn-primary">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Run Rankings Collection Now
+    </button>
+  </form>
 </div>
 {% else %}
 
-<!-- Summary cards -->
+<!-- KPI row -->
 <div class="card-grid" style="margin-bottom:24px;">
-  <div class="stat-card">
-    <div class="label">In 3-Pack</div>
-    <div class="value" style="color:{% if in_pack_count == total_keywords %}var(--green){% elif in_pack_count > 0 %}var(--yellow){% else %}var(--red){% endif %}">
-      {{ in_pack_count }}/{{ total_keywords }}
+  <div class="stat-card {% if in_pack_count == total_keywords %}stat-green{% elif in_pack_count > 0 %}stat-yellow{% else %}stat-red{% endif %}">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
     </div>
-    <div class="sub">keyword/city combos with a 3-pack position</div>
+    <div class="label">In 3-Pack</div>
+    <div class="value">{{ in_pack_count }}/{{ total_keywords }}</div>
+    <div class="sub">keyword/city combos ranked</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card stat-blue">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
     <div class="label">Keywords Tracked</div>
     <div class="value">24</div>
     <div class="sub">4 keywords × 6 markets</div>
   </div>
 </div>
 
-<!-- Current position table -->
+<!-- Current positions — grouped by keyword -->
 <div class="card" style="margin-bottom:24px;">
-  <h2 style="font-size:15px;font-weight:600;margin-bottom:16px;">Current Positions — Duncan Law</h2>
+  <div class="section-title">
+    <span class="section-icon green">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+    </span>
+    Current Positions — Duncan Law
+  </div>
   <table>
-    <tr>
+    <thead><tr>
       <th>Keyword</th>
       <th>Market</th>
       <th>Position</th>
       <th>Last Checked</th>
-    </tr>
-    {% for (keyword, city), r in latest_by_keyword.items() | sort(attribute='0') %}
+    </tr></thead>
+    <tbody>
+    {% set ns = namespace(prev_kw='__none__') %}
+    {% for (keyword, city), r in latest_by_keyword.items() | sort %}
+    {% if keyword != ns.prev_kw and ns.prev_kw != '__none__' %}
+    <tr><td colspan="4" style="padding:0;height:1px;background:var(--border);"></td></tr>
+    {% endif %}
+    {% set ns.prev_kw = keyword %}
     <tr>
-      <td style="font-size:12px;">{{ keyword }}</td>
-      <td>{{ city }}</td>
+      <td style="font-size:12px;color:var(--muted);font-weight:500;">{{ keyword }}</td>
+      <td style="font-weight:600;">{{ city }}</td>
       <td>
         {% if r.in_pack %}
-        <span class="chip {% if r.rank_position == 1 %}chip-green{% elif r.rank_position == 2 %}chip-green{% else %}chip-yellow{% endif %}">
-          #{{ r.rank_position }}
-        </span>
+          {% if r.rank_position == 1 %}
+            <span class="rank-badge rank-gold">#1</span>
+          {% elif r.rank_position <= 3 %}
+            <span class="rank-badge rank-top">#{{ r.rank_position }}</span>
+          {% elif r.rank_position <= 7 %}
+            <span class="rank-badge rank-mid">#{{ r.rank_position }}</span>
+          {% else %}
+            <span class="rank-badge rank-low">#{{ r.rank_position }}</span>
+          {% endif %}
         {% else %}
-        <span class="chip chip-red">Not in pack</span>
+          <span class="rank-badge rank-out">Not ranked</span>
         {% endif %}
       </td>
       <td style="font-size:12px;color:var(--muted);">
@@ -62,20 +92,35 @@
       </td>
     </tr>
     {% endfor %}
+    </tbody>
   </table>
 </div>
 
-<!-- Trend charts per market -->
+<!-- Rank legend -->
+<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px;align-items:center;">
+  <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Position key:</span>
+  <span class="rank-badge rank-gold">#1</span><span style="font-size:12px;color:var(--muted);">Gold — Top position</span>
+  <span class="rank-badge rank-top">#2–3</span><span style="font-size:12px;color:var(--muted);">Green — In pack</span>
+  <span class="rank-badge rank-mid">#4–7</span><span style="font-size:12px;color:var(--muted);">Amber — Competitive</span>
+  <span class="rank-badge rank-low">#8+</span><span style="font-size:12px;color:var(--muted);">Red — Watch</span>
+</div>
+
+<!-- Trend charts -->
 {% if chart_data %}
 <div class="card" style="margin-bottom:24px;">
-  <h2 style="font-size:15px;font-weight:600;margin-bottom:20px;">Position Trend — Last 30 Days</h2>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px;">
+  <div class="section-title">
+    <span class="section-icon purple">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+    </span>
+    Position Trend — Last 30 Days
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;">
     {% for market, data in chart_data.items() %}
-    <div>
-      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">
+    <div style="background:var(--surface-2);border-radius:var(--r);padding:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;">
         {{ market | replace('_', ' ') | title }}
       </div>
-      <div class="chart-wrap" style="height:160px;">
+      <div class="chart-wrap" style="height:140px;">
         <canvas id="chart_{{ market }}"></canvas>
       </div>
     </div>
@@ -84,7 +129,10 @@
 </div>
 
 <script>
-const chartDefaults = {
+Chart.defaults.color = '#64748B';
+Chart.defaults.borderColor = '#E2E8F0';
+
+const chartBase = {
   type: 'line',
   options: {
     responsive: true,
@@ -97,14 +145,17 @@ const chartDefaults = {
         max: 3,
         ticks: {
           stepSize: 1,
-          color: '#8892a4',
+          color: '#64748B',
+          font: { size: 11, family: 'Inter' },
           callback: v => '#' + v,
         },
-        grid: { color: '#2a2d3a' },
+        grid: { color: 'rgba(226,232,240,.8)' },
+        border: { display: false },
       },
       x: {
-        ticks: { color: '#8892a4', maxTicksLimit: 6 },
+        ticks: { color: '#94A3B8', maxTicksLimit: 5, font: { size: 10, family: 'Inter' } },
         grid: { display: false },
+        border: { display: false },
       },
     },
   },
@@ -112,42 +163,75 @@ const chartDefaults = {
 
 {% for market, data in chart_data.items() %}
 new Chart(document.getElementById('chart_{{ market }}'), {
-  ...chartDefaults,
+  ...chartBase,
   data: {
     labels: {{ data.labels | tojson }},
     datasets: [{
       data: {{ data.data | tojson }},
-      borderColor: '#3b82f6',
-      backgroundColor: 'rgba(59,130,246,.1)',
-      tension: 0.3,
+      borderColor: '#2563EB',
+      backgroundColor: 'rgba(37,99,235,.08)',
+      tension: 0.4,
       fill: true,
       pointRadius: 3,
+      pointBackgroundColor: '#2563EB',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2,
     }],
   },
-  options: { ...chartDefaults.options },
+  options: { ...chartBase.options },
 });
 {% endfor %}
 </script>
 {% endif %}
 
-<!-- Today's full 3-pack occupancy -->
+<!-- Today's full 3-pack -->
 {% if current_pack %}
 <div class="card">
-  <h2 style="font-size:15px;font-weight:600;margin-bottom:16px;">Today's 3-Pack — All Firms</h2>
+  <div class="section-title">
+    <span class="section-icon teal">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+    </span>
+    Today's 3-Pack — All Firms
+  </div>
   <table>
-    <tr><th>Market</th><th>Keyword</th><th>Position</th><th>Firm</th></tr>
+    <thead><tr>
+      <th>Market</th>
+      <th>Keyword</th>
+      <th>Pos.</th>
+      <th>Firm</th>
+    </tr></thead>
+    <tbody>
     {% for r in current_pack %}
-    <tr {% if r.is_own_firm %}style="background:rgba(59,130,246,.05);"{% endif %}>
-      <td style="font-size:12px;">{{ r.market | replace('_', ' ') | title }}</td>
-      <td style="font-size:12px;">{{ r.keyword }}</td>
-      <td><span class="chip chip-{% if r.is_own_firm %}blue{% else %}green{% endif %}">#{{ r.rank_position }}</span></td>
-      <td style="font-size:12px;">
-        {% if r.is_own_firm %}<strong>Duncan Law</strong>
-        {% elif r.result_data %}<span>{{ r.result_data.get('title', '—') }}</span>
+    <tr {% if r.is_own_firm %}style="background:rgba(37,99,235,.04);"{% endif %}>
+      <td style="font-size:12px;color:var(--muted);">{{ r.market | replace('_', ' ') | title }}</td>
+      <td style="font-size:12px;color:var(--muted);">{{ r.keyword }}</td>
+      <td>
+        {% if r.rank_position == 1 %}
+          <span class="rank-badge rank-gold">#1</span>
+        {% elif r.rank_position <= 3 %}
+          <span class="rank-badge {% if r.is_own_firm %}rank-top{% else %}rank-top{% endif %}">#{{ r.rank_position }}</span>
+        {% else %}
+          <span class="rank-badge rank-mid">#{{ r.rank_position }}</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if r.is_own_firm %}
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="firm-badge" style="background:var(--accent-mid);color:var(--accent-dark);">DL</div>
+            <strong style="color:var(--accent);">Duncan Law</strong>
+            <span class="chip chip-blue" style="font-size:10px;">You</span>
+          </div>
+        {% elif r.result_data %}
+          {% set firm_name = r.result_data.get('title', '—') %}
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="firm-badge" style="background:var(--surface-3);color:var(--muted);">{{ firm_name[:2] | upper }}</div>
+            <span>{{ firm_name }}</span>
+          </div>
         {% else %}—{% endif %}
       </td>
     </tr>
     {% endfor %}
+    </tbody>
   </table>
 </div>
 {% endif %}

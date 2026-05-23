@@ -5,152 +5,207 @@
 <p class="page-sub">Google ratings, review counts, and BBB grades across all tracked firms</p>
 
 {% if not has_data %}
-{# ── No data yet ─────────────────────────────────────────────────────────── #}
+<!-- No data yet -->
 <div class="card-grid" style="margin-bottom:24px;">
-  <div class="stat-card">
+  <div class="stat-card stat-blue">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </div>
     <div class="label">Primary Source</div>
-    <div class="value" style="font-size:18px;margin-top:8px;">Google</div>
-    <div class="sub">Places API — rating + review count</div>
+    <div class="value" style="font-size:20px;margin-top:4px;">Google</div>
+    <div class="sub">Places API — rating + count</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card stat-orange">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    </div>
     <div class="label">Secondary Source</div>
-    <div class="value" style="font-size:18px;margin-top:8px;">BBB</div>
-    <div class="sub">Letter grade + complaint count</div>
+    <div class="value" style="font-size:20px;margin-top:4px;">BBB</div>
+    <div class="sub">Letter grade + complaints</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card stat-teal">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    </div>
     <div class="label">Refresh Cadence</div>
-    <div class="value" style="font-size:18px;margin-top:8px;">Weekly</div>
-    <div class="sub">Monday with competitor rankings</div>
+    <div class="value" style="font-size:20px;margin-top:4px;">Weekly</div>
+    <div class="sub">Monday with rankings</div>
   </div>
 </div>
 
 {% if last_weekly %}
-<div class="card" style="margin-bottom:16px;">
-  <div style="font-size:13px;color:var(--muted);">
-    Last weekly job:
-    <strong style="color:var(--text);">{{ last_weekly.started_at.strftime('%b %d, %I:%M %p') }}</strong>
-    &mdash;
-    {% if last_weekly.status == 'success' %}
-    <span style="color:var(--green);">succeeded</span> ({{ last_weekly.records_processed or 0 }} records)
-    {% elif last_weekly.status == 'failed' %}
-    <span style="color:var(--red);">failed</span>
-    {% if last_weekly.error_detail %}
-    <span style="font-size:12px;"> — {{ last_weekly.error_detail[:120] }}</span>
-    {% endif %}
-    {% else %}
-    <span style="color:var(--yellow);">{{ last_weekly.status }}</span>
-    {% endif %}
-  </div>
+<div class="info-banner" style="margin-bottom:20px;">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+  <span>Last weekly job: <strong>{{ last_weekly.started_at.strftime('%b %d, %I:%M %p') }}</strong> —
+    {% if last_weekly.status == 'success' %}succeeded ({{ last_weekly.records_processed or 0 }} records)
+    {% elif last_weekly.status == 'failed' %}failed{% if last_weekly.error_detail %} — {{ last_weekly.error_detail[:100] }}{% endif %}
+    {% else %}{{ last_weekly.status }}{% endif %}
+  </span>
 </div>
 {% endif %}
 
 <div class="card">
+  <div class="section-title">
+    <span class="section-icon yellow">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </span>
+    Collect Review Data
+  </div>
   <p style="color:var(--muted);font-size:13px;line-height:1.8;margin-bottom:16px;">
-    No review snapshots collected yet. Click below to run collection now — this will call
-    the Google Places API for all {{ competitor_count }} tracked firms and show you exactly
-    what was collected (or why it failed).
+    No review snapshots collected yet. Click below to run collection — this will call the Google Places API
+    for all {{ competitor_count }} tracked firms.
   </p>
   <form method="post" action="/admin/run-reviews">
-    <button type="submit" class="btn btn-primary btn-sm">Collect Reviews Now</button>
+    <button type="submit" class="btn btn-primary btn-sm">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      Collect Reviews Now
+    </button>
   </form>
 </div>
 
 {% else %}
-{# ── Summary cards ───────────────────────────────────────────────────────── #}
+<!-- Summary KPIs -->
 <div class="card-grid" style="margin-bottom:24px;">
-  <div class="stat-card">
-    <div class="label">Duncan Law — Avg Google Rating</div>
-    <div class="value" style="color:var(--green);">
-      {% if own_avg_rating %}{{ own_avg_rating }} ★{% else %}—{% endif %}
+  <div class="stat-card stat-yellow">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     </div>
-    <div class="sub">average across all markets</div>
+    <div class="label">Duncan Law — Avg Rating</div>
+    <div class="value" style="color:var(--yellow-dark);">
+      {% if own_avg_rating %}{{ own_avg_rating }}{% else %}—{% endif %}
+    </div>
+    <div class="sub">{% if own_avg_rating %}★★★★★ average across markets{% else %}No data yet{% endif %}</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card stat-green">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+    </div>
     <div class="label">Duncan Law — Total Reviews</div>
     <div class="value">{{ own_total_reviews or "—" }}</div>
     <div class="sub">sum across all Google listings</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card stat-purple">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </div>
     <div class="label">Competitors Tracked</div>
     <div class="value">{{ competitor_count }}</div>
     <div class="sub">active firms with Place IDs</div>
   </div>
 </div>
 
-{# ── Recommendations ────────────────────────────────────────────────────── #}
+<!-- Recommendations -->
 {% if recommendations %}
 <div class="card" style="margin-bottom:24px;">
-  <h2 style="font-size:15px;font-weight:600;margin-bottom:14px;">Recommended Actions</h2>
-  {% for r in recommendations %}
-  <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
-    <span class="chip {% if r.priority == 'high' %}chip-red{% else %}chip-yellow{% endif %}" style="flex-shrink:0;align-self:flex-start;margin-top:1px;">
-      {{ 'High' if r.priority == 'high' else 'Medium' }}
+  <div class="section-title">
+    <span class="section-icon orange">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     </span>
-    <span style="font-size:13px;line-height:1.6;">{{ r.text }}</span>
+    Recommended Actions
   </div>
-  {% endfor %}
+  <div style="display:flex;flex-direction:column;gap:0;">
+    {% for r in recommendations %}
+    <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);{% if loop.last %}border-bottom:none;{% endif %}">
+      <span class="chip {% if r.priority == 'high' %}chip-red{% else %}chip-yellow{% endif %}" style="flex-shrink:0;align-self:flex-start;margin-top:1px;">
+        {% if r.priority == 'high' %}
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="18 15 12 9 6 15"/></svg>
+        {% endif %}
+        {{ 'High' if r.priority == 'high' else 'Medium' }}
+      </span>
+      <span style="font-size:13px;line-height:1.6;color:var(--text-2);">{{ r.text }}</span>
+    </div>
+    {% endfor %}
+  </div>
 </div>
 {% endif %}
 
-{# ── Own firm by market ──────────────────────────────────────────────────── #}
+<!-- Own firm by market -->
 {% if own_google_snaps %}
 <div class="card" style="margin-bottom:24px;">
-  <h2 style="font-size:15px;font-weight:600;margin-bottom:16px;">Duncan Law — Google Ratings by Market</h2>
+  <div class="section-title">
+    <span class="section-icon yellow">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </span>
+    Duncan Law — Google Ratings by Market
+  </div>
   <table>
-    <tr>
+    <thead><tr>
       <th>Market</th>
       <th>Rating</th>
       <th>Reviews</th>
       <th>Last Collected</th>
-    </tr>
+    </tr></thead>
+    <tbody>
     {% for s in own_google_snaps %}
     <tr>
-      <td>{{ s.market | replace('_', ' ') | title }}</td>
+      <td style="font-weight:600;">{{ s.market | replace('_', ' ') | title }}</td>
       <td>
         {% if s.rating %}
-        <span style="color:var(--green);font-weight:600;">{{ "%.1f"|format(s.rating|float) }} ★</span>
-        {% else %}—{% endif %}
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:var(--yellow);font-size:14px;letter-spacing:1px;">
+            {% for i in range(5) %}{% if loop.index <= s.rating | int %}★{% else %}☆{% endif %}{% endfor %}
+          </span>
+          <strong style="font-size:13px;color:var(--yellow-dark);">{{ "%.1f"|format(s.rating|float) }}</strong>
+        </div>
+        {% else %}<span style="color:var(--muted);">—</span>{% endif %}
       </td>
-      <td>{{ s.review_count if s.review_count else "—" }}</td>
-      <td style="font-size:12px;color:var(--muted);">
-        {{ s.snapped_at.strftime('%b %d, %Y') if s.snapped_at else "—" }}
-      </td>
+      <td style="font-weight:600;">{{ s.review_count if s.review_count else "—" }}</td>
+      <td style="font-size:12px;color:var(--muted);">{{ s.snapped_at.strftime('%b %d, %Y') if s.snapped_at else "—" }}</td>
     </tr>
     {% endfor %}
+    </tbody>
   </table>
 </div>
 {% endif %}
 
-{# ── Competitor table ────────────────────────────────────────────────────── #}
+<!-- Competitor review profiles -->
 <div class="card">
-  <h2 style="font-size:15px;font-weight:600;margin-bottom:16px;">Competitor Review Profiles</h2>
+  <div class="section-title">
+    <span class="section-icon purple">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </span>
+    Competitor Review Profiles
+  </div>
   {% if comp_rows %}
   <table>
-    <tr>
+    <thead><tr>
       <th>Firm</th>
       <th>Google Rating</th>
-      <th>Google Reviews</th>
+      <th>Reviews</th>
       <th>BBB Grade</th>
       <th>Last Updated</th>
-    </tr>
+    </tr></thead>
+    <tbody>
     {% for r in comp_rows %}
     <tr>
-      <td style="font-weight:500;max-width:260px;">{{ r.name }}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="firm-badge" style="background:var(--surface-3);color:var(--muted);">{{ r.name[:2] | upper }}</div>
+          <span style="font-weight:500;">{{ r.name }}</span>
+        </div>
+      </td>
       <td>
         {% if r.google_rating is not none %}
-        <span style="{% if r.google_rating >= 4.5 %}color:var(--green){% elif r.google_rating >= 4.0 %}color:var(--yellow){% else %}color:var(--red){% endif %};font-weight:600;">
-          {{ "%.1f"|format(r.google_rating) }} ★
-        </span>
-        {% else %}
-        <span style="color:var(--muted);">—</span>
-        {% endif %}
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:var(--yellow);font-size:13px;letter-spacing:.5px;">
+            {% for i in range(5) %}{% if loop.index <= r.google_rating | int %}★{% else %}☆{% endif %}{% endfor %}
+          </span>
+          <strong style="font-size:13px;{% if r.google_rating >= 4.5 %}color:var(--green-dark){% elif r.google_rating >= 4.0 %}color:var(--yellow-dark){% else %}color:var(--red-dark){% endif %};">
+            {{ "%.1f"|format(r.google_rating) }}
+          </strong>
+        </div>
+        {% else %}<span style="color:var(--muted);">—</span>{% endif %}
       </td>
       <td>
         {% if r.google_count is not none %}
-        {{ "{:,}".format(r.google_count) }}
-        {% else %}
-        <span style="color:var(--muted);">—</span>
-        {% endif %}
+        <span style="font-weight:600;">{{ "{:,}".format(r.google_count) }}</span>
+        {% else %}<span style="color:var(--muted);">—</span>{% endif %}
       </td>
       <td>
         {% if r.bbb_grade %}
@@ -161,16 +216,15 @@
         <span style="font-size:11px;color:var(--muted);margin-left:6px;">{{ r.bbb_complaint_count }} complaint{{ 's' if r.bbb_complaint_count != 1 }}</span>
         {% endif %}
         {% elif r.has_bbb_url %}
-        <span style="color:var(--muted);font-size:12px;">pending</span>
+        <span style="color:var(--muted-2);font-size:12px;">pending</span>
         {% else %}
         <span style="color:var(--muted);">—</span>
         {% endif %}
       </td>
-      <td style="font-size:12px;color:var(--muted);">
-        {{ r.last_updated.strftime('%b %d, %Y') if r.last_updated else "—" }}
-      </td>
+      <td style="font-size:12px;color:var(--muted);">{{ r.last_updated.strftime('%b %d, %Y') if r.last_updated else "—" }}</td>
     </tr>
     {% endfor %}
+    </tbody>
   </table>
   {% else %}
   <p style="color:var(--muted);font-size:13px;">No competitor review data collected yet.</p>

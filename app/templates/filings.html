@@ -7,168 +7,186 @@
 {% set msg = request.query_params.get('msg', '') %}
 {% if msg in ('discovery_running', 'discovery_running_ednc', 'discovery_running_mdnc', 'discovery_running_wdnc') %}
 {% set disc_district = 'EDNC' if 'ednc' in msg else ('MDNC' if 'mdnc' in msg else ('WDNC' if 'wdnc' in msg else 'EDNC')) %}
-<div style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:6px;padding:14px 18px;margin-bottom:24px;color:var(--accent);">
-  <strong>{{ disc_district }} discovery is running in the background.</strong>
-  Pulling the CaseFiled-Rpt.pl report — takes 2–3 minutes. Refresh this page when done.
+<div class="status-bar blue">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+  <div>
+    <strong>{{ disc_district }} discovery is running in the background.</strong><br>
+    <span style="font-size:12px;opacity:.8;">Pulling the CaseFiled-Rpt.pl report — takes 2–3 minutes. Refresh this page when done.</span>
+  </div>
 </div>
 {% endif %}
 
 {% if request.query_params.get('msg') == 'pacer_running' %}
-<div id="pacer-status-bar" style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:6px;padding:14px 18px;margin-bottom:24px;color:var(--accent);">
-  <div style="display:flex;align-items:center;gap:12px;">
-    <div id="pacer-spinner" style="width:14px;height:14px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>
-    <div>
-      <strong id="pacer-status-text">PACER collection is running…</strong>
-      <span id="pacer-elapsed" style="margin-left:10px;font-size:12px;opacity:.7;"></span>
-      <div id="pacer-sub" style="font-size:12px;margin-top:2px;opacity:.8;">Searching MDNC and WDNC for all tracked attorneys. Typical run: 5–8 minutes.</div>
-    </div>
+<div id="pacer-status-bar" class="status-bar blue">
+  <div id="pacer-spinner" class="spin" style="flex-shrink:0;margin-top:1px;"></div>
+  <div>
+    <strong id="pacer-status-text">PACER collection is running…</strong>
+    <span id="pacer-elapsed" style="margin-left:10px;font-size:12px;opacity:.7;"></span>
+    <div id="pacer-sub" style="font-size:12px;margin-top:2px;opacity:.8;">Searching MDNC and WDNC for all tracked attorneys. Typical run: 5–8 minutes.</div>
   </div>
 </div>
-<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 <script>
 (function() {
   var start = Date.now();
-  var bar   = document.getElementById('pacer-status-bar');
-  var txt   = document.getElementById('pacer-status-text');
-  var sub   = document.getElementById('pacer-sub');
-  var elp   = document.getElementById('pacer-elapsed');
-  var spin  = document.getElementById('pacer-spinner');
-
-  function fmt(sec) {
-    if (sec < 60) return sec + 's';
-    return Math.floor(sec/60) + 'm ' + (sec%60) + 's';
-  }
-
+  var bar  = document.getElementById('pacer-status-bar');
+  var txt  = document.getElementById('pacer-status-text');
+  var sub  = document.getElementById('pacer-sub');
+  var elp  = document.getElementById('pacer-elapsed');
+  var spin = document.getElementById('pacer-spinner');
+  function fmt(sec) { return sec < 60 ? sec + 's' : Math.floor(sec/60) + 'm ' + (sec%60) + 's'; }
   function poll() {
     fetch('/api/pacer-status')
       .then(function(r){ return r.json(); })
       .then(function(d) {
         var elapsed = d.elapsed_seconds || Math.round((Date.now()-start)/1000);
         elp.textContent = '(' + fmt(elapsed) + ')';
-
         if (d.status === 'success') {
           spin.style.display = 'none';
-          bar.style.background = 'rgba(16,185,129,.1)';
-          bar.style.borderColor = 'rgba(16,185,129,.3)';
-          bar.style.color = 'var(--green)';
+          bar.className = 'status-bar green';
           txt.textContent = 'Collection complete — ' + (d.records_processed||0) + ' filing snapshots saved.';
           sub.textContent = 'Reloading page…';
           setTimeout(function(){ window.location.href = '/filings'; }, 1500);
         } else if (d.status === 'failed' || d.status === 'stalled') {
           spin.style.display = 'none';
-          bar.style.background = 'rgba(239,68,68,.1)';
-          bar.style.borderColor = 'rgba(239,68,68,.3)';
-          bar.style.color = 'var(--red)';
-          txt.textContent = d.status === 'stalled'
-            ? 'Collection appears to have stalled (> 25 min). The browser likely ran out of memory.'
-            : 'Collection failed.';
-          sub.textContent = d.status === 'stalled'
-            ? 'The run is now split into one browser per district to fix this. Click Collect PACER Now to retry.'
-            : (d.error || 'Check Railway logs for details.');
-        } else {
-          setTimeout(poll, 20000);  // poll every 20s while running
-        }
+          bar.className = 'status-bar red';
+          txt.textContent = d.status === 'stalled' ? 'Collection appears to have stalled (> 25 min).' : 'Collection failed.';
+          sub.textContent = d.status === 'stalled' ? 'Click Collect PACER Now to retry.' : (d.error || 'Check Railway logs for details.');
+        } else { setTimeout(poll, 20000); }
       })
       .catch(function() { setTimeout(poll, 30000); });
   }
-
-  setTimeout(poll, 10000);  // first check after 10s
+  setTimeout(poll, 10000);
 })();
 </script>
 {% endif %}
 
 {% if not has_data %}
-{# ── No data yet ─────────────────────────────────────────────────────────── #}
 <div class="card-grid" style="margin-bottom:24px;">
-  <div class="stat-card">
+  <div class="stat-card stat-blue">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    </div>
     <div class="label">Districts Tracked</div>
-    <div class="value">2</div>
-    <div class="sub">MDNC (Greensboro/W-S/HP/Salisbury) + WDNC (Charlotte/Asheville)</div>
+    <div class="value">3</div>
+    <div class="sub">MDNC · WDNC · EDNC</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card stat-purple">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    </div>
     <div class="label">Chapter Types</div>
     <div class="value">2</div>
     <div class="sub">Chapter 7 and Chapter 13</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card stat-red">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+    </div>
     <div class="label">Trend Alert</div>
-    <div class="value" style="font-size:18px;margin-top:8px;">20%+</div>
-    <div class="sub">90-day volume spike triggers digest alert</div>
+    <div class="value">20%+</div>
+    <div class="sub">90-day spike triggers alert</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card stat-teal">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    </div>
     <div class="label">Refresh Cadence</div>
-    <div class="value" style="font-size:18px;margin-top:8px;">Monthly</div>
-    <div class="sub">1st of each month, prior month data</div>
+    <div class="value" style="font-size:20px;margin-top:4px;">Monthly</div>
+    <div class="sub">1st of each month</div>
   </div>
 </div>
-
 <div class="card">
-  <p style="color:var(--muted);font-size:13px;line-height:1.8;">
-    No filing data collected yet. Click below to run the first collection — it will query
-    PACER for last month's Chapter 7 and Chapter 13 filings for all tracked attorneys in
-    MDNC and WDNC.<br><br>
+  <div class="section-title">
+    <span class="section-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    </span>
+    Collect PACER Data
+  </div>
+  <p style="color:var(--muted);font-size:13px;line-height:1.8;margin-bottom:16px;">
+    No filing data collected yet. Click below to run the first collection — it will query PACER for last month's
+    Chapter 7 and Chapter 13 filings for all tracked attorneys in MDNC, WDNC, and EDNC.<br><br>
     <strong style="color:var(--text);">Required:</strong>
     <code>PACER_USERNAME</code> and <code>PACER_PASSWORD</code> in Railway environment variables.
   </p>
-  <div style="margin-top:16px;">
-    <form method="post" action="/admin/run-pacer" id="pacerForm">
-      <button type="submit" class="btn btn-primary btn-sm" id="pacerBtn"
-              onclick="this.disabled=true;this.textContent='Starting…';this.form.submit();">
-        Collect PACER Data Now
-      </button>
-    </form>
-  </div>
+  <form method="post" action="/admin/run-pacer" id="pacerForm">
+    <button type="submit" class="btn btn-primary btn-sm" id="pacerBtn"
+            onclick="this.disabled=true;this.innerHTML='<span class=\'spin\'></span> Starting…';this.form.submit();">
+      Collect PACER Data Now
+    </button>
+  </form>
 </div>
 
 {% else %}
-{# ── Data view ────────────────────────────────────────────────────────────── #}
 
 {% macro pct_chip(pct) %}
   {% if pct is not none %}
-    {% if pct > 20 %}<span class="chip chip-red">+{{ pct }}%</span>
-    {% elif pct > 0 %}<span style="color:var(--yellow);font-size:12px;">+{{ pct }}%</span>
-    {% elif pct < 0 %}<span style="color:var(--green);font-size:12px;">{{ pct }}%</span>
+    {% if pct > 20 %}<span class="chip chip-red">▲ {{ pct }}%</span>
+    {% elif pct > 0 %}<span style="color:var(--yellow-dark);font-size:12px;font-weight:700;">+{{ pct }}%</span>
+    {% elif pct < 0 %}<span style="color:var(--green-dark);font-size:12px;font-weight:700;">{{ pct }}%</span>
     {% else %}<span style="color:var(--muted);font-size:12px;">—</span>{% endif %}
-  {% else %}<span style="color:var(--muted);font-size:12px;">new</span>{% endif %}
+  {% else %}<span style="color:var(--muted-2);font-size:12px;">new</span>{% endif %}
 {% endmacro %}
 
 {% macro district_table(groups, district_name) %}
 <div class="card" style="margin-bottom:24px;">
-  <h2 style="font-size:15px;font-weight:600;margin-bottom:4px;">{{ district_name }}</h2>
-  <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">
-    {{ current_period.strftime('%B %Y') if current_period else '—' }}
-    {% if prior_period %} vs {{ prior_period.strftime('%B %Y') }}{% endif %}
-  </p>
+  <div style="margin-bottom:16px;">
+    <div class="section-title" style="margin-bottom:3px;">
+      <span class="section-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </span>
+      {{ district_name }}
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-left:36px;">
+      {{ current_period.strftime('%B %Y') if current_period else '—' }}
+      {% if prior_period %} vs {{ prior_period.strftime('%B %Y') }}{% endif %}
+    </div>
+  </div>
   {% if groups %}
   <table>
-    <tr>
+    <thead><tr>
       <th>Firm</th>
       <th style="text-align:right;">Ch. 7</th>
       <th style="text-align:right;">Ch. 13</th>
       <th style="text-align:right;">Total</th>
-      <th style="text-align:right;">Share</th>
+      <th>Market Share</th>
       {% if prior_period %}<th style="text-align:right;">vs Prior</th>{% endif %}
-    </tr>
+    </tr></thead>
+    <tbody>
     {% for g in groups %}
-    {# ── Firm rollup row ── #}
-    <tr style="{% if g.is_own_firm %}background:rgba(59,130,246,.08);{% else %}background:rgba(255,255,255,.02);{% endif %}">
-      <td style="font-weight:600;font-size:13px;">
-        {% if g.is_own_firm %}<span style="color:var(--accent);">{{ g.firm }}</span>
-        {% else %}{{ g.firm }}{% endif %}
-        {% if g.attorneys|length > 1 %}
-        <span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:6px;">{{ g.attorneys|length }} attorneys</span>
-        {% endif %}
+    <tr style="{% if g.is_own_firm %}background:rgba(37,99,235,.04);{% endif %}">
+      <td>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="firm-badge" style="{% if g.is_own_firm %}background:var(--accent-mid);color:var(--accent-dark);{% else %}background:var(--surface-3);color:var(--muted);{% endif %}">
+            {{ g.firm[:2] | upper }}
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:13px;{% if g.is_own_firm %}color:var(--accent);{% endif %}">{{ g.firm }}</div>
+            {% if g.attorneys|length > 1 %}
+            <div style="font-size:11px;color:var(--muted);">{{ g.attorneys|length }} attorneys</div>
+            {% endif %}
+          </div>
+        </div>
       </td>
       <td style="text-align:right;font-weight:600;">{{ g.ch7 }}</td>
       <td style="text-align:right;font-weight:600;">{{ g.ch13 }}</td>
-      <td style="text-align:right;font-weight:700;font-size:14px;">{{ g.total }}</td>
-      <td style="text-align:right;font-size:12px;color:var(--muted);">{{ g.market_share }}%</td>
+      <td style="text-align:right;font-weight:800;font-size:14px;">{{ g.total }}</td>
+      <td style="min-width:130px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="progress-wrap" style="flex:1;">
+            <div class="progress-fill" style="width:{{ [g.market_share|float, 100]|min }}%;background:{% if g.is_own_firm %}var(--accent){% else %}var(--green){% endif %};"></div>
+          </div>
+          <span style="font-size:12px;font-weight:700;color:{% if g.is_own_firm %}var(--accent){% else %}var(--muted){% endif %};min-width:34px;text-align:right;">{{ g.market_share }}%</span>
+        </div>
+      </td>
       {% if prior_period %}<td style="text-align:right;">{{ pct_chip(g.pct_change) }}</td>{% endif %}
     </tr>
-    {# ── Attorney detail rows (indented) ── #}
     {% for r in g.attorneys %}
-    <tr style="opacity:.8;">
-      <td style="padding-left:24px;font-size:12px;color:var(--muted);">{{ r.attorney }}</td>
+    <tr style="opacity:.75;">
+      <td style="padding-left:52px;font-size:12px;color:var(--muted);">{{ r.attorney }}</td>
       <td style="text-align:right;font-size:12px;">{{ r.ch7 }}</td>
       <td style="text-align:right;font-size:12px;">{{ r.ch13 }}</td>
       <td style="text-align:right;font-size:12px;font-weight:600;">{{ r.total }}</td>
@@ -177,6 +195,7 @@
     </tr>
     {% endfor %}
     {% endfor %}
+    </tbody>
   </table>
   {% else %}
   <p style="color:var(--muted);font-size:13px;">No filings recorded for this district.</p>
@@ -188,85 +207,75 @@
 {% set slug = district | lower %}
 {% if discovery %}
 <div class="card" style="margin-bottom:24px;">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-    <h2 style="font-size:15px;font-weight:600;">
-      {{ district_label }} New Filings — {{ discovery.period }}
-      <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:8px;">
-        {{ discovery.total_found }} debtor attorney lines parsed from CaseFiled-Rpt.pl
-      </span>
-    </h2>
-    <form method="post" action="/admin/discover/{{ slug }}" style="margin:0;">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;gap:16px;">
+    <div>
+      <div class="section-title" style="margin-bottom:3px;">
+        <span class="section-icon teal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+        {{ district_label }} New Filings — {{ discovery.period }}
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-left:36px;">{{ discovery.total_found }} debtor attorney lines parsed from CaseFiled-Rpt.pl</div>
+    </div>
+    <form method="post" action="/admin/discover/{{ slug }}" style="margin:0;flex-shrink:0;">
       <button type="submit" class="btn btn-ghost btn-sm"
-              onclick="this.disabled=true;this.textContent='Running…';this.form.submit();">
-        Refresh
-      </button>
+              onclick="this.disabled=true;this.textContent='Running…';this.form.submit();">Refresh</button>
     </form>
   </div>
   {% if discovery.error %}
-  <div style="font-size:13px;color:var(--red);margin-bottom:12px;">Error: {{ discovery.error }}</div>
+  <div style="font-size:13px;color:var(--red-dark);background:var(--red-light);padding:10px 14px;border-radius:var(--r-sm);margin-bottom:12px;">Error: {{ discovery.error }}</div>
   {% endif %}
   {% if discovery.top_filers %}
-  <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">
-    Use this to <strong>discover untracked attorneys</strong> by name. Case counts here come from
-    CaseFiled-Rpt.pl and may differ from the PACER table above — use the table counts for
-    competitive analysis. Add new attorneys to <code>config/competitors.yaml</code>, then Sync Config + Collect PACER.
+  <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.7;">
+    Use this to <strong style="color:var(--text);">discover untracked attorneys</strong> by name. Counts here come from
+    CaseFiled-Rpt.pl and may differ from the PACER table above. Add new attorneys to <code>config/competitors.yaml</code>, then Sync Config + Collect PACER.
   </p>
   <table>
-    <tr>
-      <th style="width:40px;">#</th>
+    <thead><tr>
+      <th style="width:44px;">#</th>
       <th>Attorney (as appears in PACER)</th>
       <th>In Config?</th>
-    </tr>
+    </tr></thead>
+    <tbody>
     {% for filer in discovery.top_filers %}
     {% set filer_last = filer.attorney.split()[-1] | lower %}
     <tr>
-      <td style="color:var(--muted);font-size:12px;">{{ loop.index }}</td>
+      <td style="color:var(--muted);font-size:12px;font-weight:600;">{{ loop.index }}</td>
       <td style="font-size:13px;">{{ filer.attorney }}</td>
       {% if filer_last in tracked_names %}
-      <td style="font-size:12px;color:var(--green);">✓ Tracked</td>
+      <td><span class="chip chip-green">✓ Tracked</span></td>
       {% else %}
-      <td style="font-size:12px;color:var(--muted);">—</td>
+      <td style="color:var(--muted-2);font-size:12px;">—</td>
       {% endif %}
     </tr>
     {% endfor %}
+    </tbody>
   </table>
   {% else %}
-  <div style="font-size:13px;color:var(--muted);">
-    <strong style="color:var(--text);">No attorney names parsed.</strong>
-    {% if discovery.error %}<div style="color:var(--red);margin-top:6px;">Error: {{ discovery.error }}</div>{% endif %}
-    <div style="margin-top:8px;font-size:12px;line-height:1.7;">
-      {% if discovery.party_checkbox_found is defined %}
-        Party/attorney checkbox: <strong style="color:{% if discovery.party_checkbox_found %}var(--green){% else %}var(--red){% endif %};">
-          {% if discovery.party_checkbox_found %}found &amp; checked{% else %}NOT found — attorney names will be absent from output{% endif %}
-        </strong><br>
-      {% endif %}
-      {% if discovery.trigger_lines_found is defined %}
-        "Attorney for Debtor" trigger lines in body: <strong>{{ discovery.trigger_lines_found }}</strong>
-        {% if discovery.trigger_sample %} (e.g. "{{ discovery.trigger_sample[0] }}"){% endif %}<br>
-      {% endif %}
-      Body length: <strong>{{ discovery.result_snippet | length if discovery.result_snippet else 0 }} chars (preview)</strong>
-    </div>
+  <p style="font-size:13px;color:var(--muted);">
+    No attorney data found yet.
     {% if discovery.result_snippet %}
-    <details style="margin-top:10px;">
-      <summary style="cursor:pointer;color:var(--accent);font-size:12px;">Show raw response (first 600 chars)</summary>
-      <pre style="font-size:11px;color:var(--muted);white-space:pre-wrap;max-height:150px;overflow:auto;margin-top:6px;">{{ discovery.result_snippet[:600] }}</pre>
-    </details>
+    <br><strong style="color:var(--text);">Response preview:</strong>
+    <pre style="font-size:11px;color:var(--muted);white-space:pre-wrap;max-height:150px;overflow:auto;margin-top:8px;background:var(--surface-2);padding:10px;border-radius:var(--r-sm);">{{ discovery.result_snippet[:600] }}</pre>
     {% endif %}
-  </div>
+  </p>
   {% endif %}
 </div>
 {% else %}
 <div class="card" style="margin-bottom:24px;">
-  <div style="display:flex;align-items:center;justify-content:space-between;">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
     <div>
-      <div style="font-size:14px;font-weight:600;margin-bottom:4px;">{{ district_label }} New Filings — Discovery</div>
-      <div style="font-size:12px;color:var(--muted);">
-        Pull CaseFiled-Rpt.pl to get exact new-case counts per attorney for this district.
+      <div class="section-title" style="margin-bottom:3px;">
+        <span class="section-icon teal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+        {{ district_label }} New Filings — Discovery
       </div>
+      <div style="font-size:12px;color:var(--muted);margin-left:36px;">Pull CaseFiled-Rpt.pl to get exact new-case counts per attorney.</div>
     </div>
-    <form method="post" action="/admin/discover/{{ slug }}" style="margin:0;">
+    <form method="post" action="/admin/discover/{{ slug }}" style="margin:0;flex-shrink:0;">
       <button type="submit" class="btn btn-primary btn-sm"
-              onclick="this.disabled=true;this.textContent='Starting…';this.form.submit();">
+              onclick="this.disabled=true;this.innerHTML='<span class=\'spin\'></span> Starting…';this.form.submit();">
         Run Discovery
       </button>
     </form>
@@ -284,11 +293,11 @@
 {{ district_table(ednc_rows, "EDNC — Eastern District of NC") }}
 {{ discovery_section(ednc_discovery, "EDNC", "EDNC", ednc_tracked) }}
 
-<div style="margin-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;">
   <form method="post" action="/admin/run-pacer" style="margin:0;">
     <button type="submit" class="btn btn-ghost btn-sm"
-            onclick="this.disabled=true;this.textContent='Starting…';this.form.submit();">
-      Collect PACER Data Now
+            onclick="this.disabled=true;this.innerHTML='<span class=\'spin\'></span> Starting…';this.form.submit();">
+      Collect PACER Now
     </button>
   </form>
   <form method="post" action="/admin/clean-pacer-dupes" style="margin:0;">
@@ -299,7 +308,7 @@
   </form>
   <form method="post" action="/admin/clean-district-mismatch" style="margin:0;">
     <button type="submit" class="btn btn-ghost btn-sm"
-            onclick="return confirm('Remove rows where a firm appears in a district it has no markets in (e.g. Triad firms in WDNC)?')">
+            onclick="return confirm('Remove rows where a firm appears in a district it has no markets in?')">
       Fix District Mismatch
     </button>
   </form>

@@ -1,93 +1,166 @@
 {% extends "base.html" %}
 {% block title %}Overview{% endblock %}
 {% block content %}
-<h1>Overview</h1>
-<p class="page-sub">Your competitive position across all 6 NC markets</p>
+<h1>Intelligence Overview</h1>
+<p class="page-sub">Your competitive position across all 6 NC markets — live monitoring</p>
 
 {% if request.query_params.get('msg') %}
-<div style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:6px;padding:10px 14px;margin-bottom:20px;color:#3b82f6;font-size:13px;">
+<div class="info-banner">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
   {{ request.query_params.get('msg') }}
 </div>
 {% endif %}
 
 {% if unacked_alerts > 0 %}
 <div class="alert-banner">
-  {{ unacked_alerts }} unacknowledged alert{{ 's' if unacked_alerts != 1 else '' }} require your attention.
-  <a href="/alerts" style="color:inherit;font-weight:600;margin-left:8px;">View alerts &rarr;</a>
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+  <span>{{ unacked_alerts }} unacknowledged alert{{ 's' if unacked_alerts != 1 else '' }} require your attention.
+  <a href="/alerts" style="color:inherit;font-weight:700;margin-left:6px;">View alerts →</a></span>
 </div>
 {% endif %}
 
-<!-- Summary cards -->
+<!-- Hero insight card -->
+<div class="hero-card">
+  <div class="hero-label">Competitive Intelligence Active</div>
+  <h2>Duncan Law SEO Command Center</h2>
+  <p>Monitoring Google 3-pack rankings, competitor reviews, and PACER filing volume across Greensboro, Winston-Salem, High Point, Charlotte, Salisbury, and Asheville.</p>
+  <a href="/rankings" class="hero-btn">
+    View Rankings
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+  </a>
+  <div class="hero-stats">
+    {% if scorecard %}
+    {% set ns = namespace(total_in=0, total_kw=0) %}
+    {% for m in scorecard if m.status != 'no_data' %}
+      {% set ns.total_in = ns.total_in + m.in_pack %}
+      {% set ns.total_kw = ns.total_kw + m.total %}
+    {% endfor %}
+    <div class="hero-stat">
+      <span class="hero-stat-val">{{ ns.total_in }}/{{ ns.total_kw }}</span>
+      <span class="hero-stat-lbl">Keywords in 3-pack</span>
+    </div>
+    {% endif %}
+    <div class="hero-stat">
+      <span class="hero-stat-val">{{ competitors | length }}</span>
+      <span class="hero-stat-lbl">Competitors tracked</span>
+    </div>
+    <div class="hero-stat">
+      <span class="hero-stat-val">6</span>
+      <span class="hero-stat-lbl">Markets monitored</span>
+    </div>
+    <div class="hero-stat">
+      <span class="hero-stat-val" style="color:{% if unacked_alerts > 0 %}#FCA5A5{% else %}#6EE7B7{% endif %};">{{ unacked_alerts }}</span>
+      <span class="hero-stat-lbl">Active alerts</span>
+    </div>
+  </div>
+</div>
+
+<!-- KPI summary row -->
 <div class="card-grid">
-  <div class="stat-card">
+  <div class="stat-card stat-purple">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </div>
     <div class="label">Competitors Tracked</div>
     <div class="value">{{ competitors | length }}</div>
     <div class="sub">across MDNC + WDNC</div>
   </div>
-  <div class="stat-card">
+
+  <div class="stat-card stat-teal">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    </div>
     <div class="label">Markets</div>
     <div class="value">6</div>
-    <div class="sub">Greensboro, W-S, HP, CLT, Salisbury, Asheville</div>
+    <div class="sub">GSO · W-S · HP · CLT · SAL · AVL</div>
   </div>
-  <div class="stat-card">
+
+  <div class="stat-card stat-blue">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
     <div class="label">Keywords Tracked</div>
     <div class="value">24</div>
     <div class="sub">4 keywords × 6 cities</div>
   </div>
-  <div class="stat-card">
+
+  <div class="stat-card {% if unacked_alerts > 0 %}stat-red{% else %}stat-green{% endif %}">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    </div>
     <div class="label">Open Alerts</div>
-    <div class="value" style="color:{% if unacked_alerts > 0 %}var(--red){% else %}var(--green){% endif %}">{{ unacked_alerts }}</div>
-    <div class="sub">{% if unacked_alerts == 0 %}all clear{% else %}action needed{% endif %}</div>
+    <div class="value">{{ unacked_alerts }}</div>
+    <div class="sub">{% if unacked_alerts == 0 %}All clear — no issues{% else %}Action needed{% endif %}</div>
   </div>
 </div>
 
-<!-- Market scorecard -->
+<!-- Market health scorecard -->
 {% if scorecard %}
 <div class="card" style="margin-bottom:24px;">
-  <h2 style="font-size:15px;font-weight:600;margin-bottom:16px;">Market Health — Duncan Law</h2>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
+  <div class="section-title">
+    <span class="section-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    </span>
+    Market Health — Duncan Law
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px;">
     {% for m in scorecard %}
-    {% set color = 'var(--green)' if m.status == 'strong' else ('var(--yellow)' if m.status == 'ok' else ('var(--muted)' if m.status == 'no_data' else 'var(--red)')) %}
-    {% set bg = 'rgba(16,185,129,.06)' if m.status == 'strong' else ('rgba(245,158,11,.06)' if m.status == 'ok' else ('transparent' if m.status == 'no_data' else 'rgba(239,68,68,.06)')) %}
-    <div style="background:{{ bg }};border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
-      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;">
-        {{ m.display }}
+    {% if m.status == 'strong' %}
+      {% set bg = 'var(--green-light)' %}{% set border_c = 'rgba(16,185,129,.25)' %}{% set val_color = 'var(--green-dark)' %}{% set dot = 'var(--green)' %}
+    {% elif m.status == 'ok' %}
+      {% set bg = 'var(--yellow-light)' %}{% set border_c = 'rgba(245,158,11,.25)' %}{% set val_color = 'var(--yellow-dark)' %}{% set dot = 'var(--yellow)' %}
+    {% elif m.status == 'no_data' %}
+      {% set bg = 'var(--surface-2)' %}{% set border_c = 'var(--border)' %}{% set val_color = 'var(--muted)' %}{% set dot = 'var(--muted-2)' %}
+    {% else %}
+      {% set bg = 'var(--red-light)' %}{% set border_c = 'rgba(244,63,94,.25)' %}{% set val_color = 'var(--red-dark)' %}{% set dot = 'var(--red)' %}
+    {% endif %}
+    <div style="background:{{ bg }};border:1px solid {{ border_c }};border-radius:var(--r);padding:14px 16px;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:{{ dot }};flex-shrink:0;"></span>
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">{{ m.display }}</span>
       </div>
       {% if m.status == 'no_data' %}
-      <div style="font-size:12px;color:var(--muted);">No data yet</div>
+      <div style="font-size:12px;color:var(--muted-2);">No data yet</div>
       {% else %}
-      <div style="font-size:13px;font-weight:600;color:{{ color }};margin-bottom:4px;">
-        {{ m.in_pack }}/{{ m.total }} in pack
-      </div>
-      <div style="font-size:12px;color:var(--muted);">
-        {{ m.reviews if m.reviews is not none else '—' }} Google reviews
-      </div>
+      <div style="font-size:18px;font-weight:800;color:{{ val_color }};letter-spacing:-.02em;line-height:1;margin-bottom:3px;">{{ m.in_pack }}/{{ m.total }}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:{% if m.reviews is not none %}3px{% else %}0{% endif %};">in 3-pack</div>
+      {% if m.reviews is not none %}
+      <div style="font-size:11px;color:var(--muted);">{{ m.reviews }} reviews</div>
+      {% endif %}
       {% endif %}
     </div>
     {% endfor %}
   </div>
-  <div style="margin-top:12px;font-size:11px;color:var(--muted);">
-    <span style="color:var(--green);">&#9632;</span> Strong &nbsp;
-    <span style="color:var(--yellow);">&#9632;</span> Competitive &nbsp;
-    <span style="color:var(--red);">&#9632;</span> Needs attention
+  <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:14px;font-size:11px;color:var(--muted);">
+    <span><span style="color:var(--green);">●</span> Strong</span>
+    <span><span style="color:var(--yellow);">●</span> Competitive</span>
+    <span><span style="color:var(--red);">●</span> Needs attention</span>
+    <span><span style="color:var(--muted-2);">●</span> No data</span>
   </div>
 </div>
 {% endif %}
 
-<!-- Own firm status -->
+<!-- Own firm -->
 <div class="card" style="margin-bottom:24px;">
-  <h2 style="font-size:15px;font-weight:600;margin-bottom:16px;">Your Firm — Duncan Law</h2>
+  <div class="section-title">
+    <span class="section-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </span>
+    Your Firm — Duncan Law, LLP
+  </div>
   {% if own_firm %}
   <table>
-    <tr>
-      <th>Firm</th><th>Google Place ID</th><th>Status</th>
-    </tr>
-    <tr>
+    <thead><tr><th>Firm</th><th>Office Configuration</th><th>Status</th></tr></thead>
+    <tbody><tr>
       <td><strong>{{ own_firm.name }}</strong></td>
       <td>
         {% set configured_locations = own_firm.locations | selectattr('google_place_id') | list %}
         {% if configured_locations | length == 6 %}
-        <span class="chip chip-green">{{ configured_locations | length }}/6 offices configured</span>
+        <span class="chip chip-green">✓ {{ configured_locations | length }}/6 offices configured</span>
         {% elif configured_locations | length > 0 %}
         <span class="chip chip-yellow">{{ configured_locations | length }}/6 offices configured</span>
         {% else %}
@@ -95,96 +168,117 @@
         {% endif %}
       </td>
       <td><span class="chip chip-green">Active</span></td>
-    </tr>
+    </tr></tbody>
   </table>
   {% else %}
   <p style="color:var(--muted);font-size:13px;">Own firm not yet configured. Add your details to <code>config/competitors.yaml</code> and redeploy.</p>
   {% endif %}
 </div>
 
-<!-- Competitor list -->
+<!-- Tracked competitors -->
 <div class="card" style="margin-bottom:24px;">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-    <h2 style="font-size:15px;font-weight:600;">Tracked Competitors</h2>
-    <a href="/competitors" style="font-size:12px;color:var(--accent);">View all &rarr;</a>
+    <div class="section-title" style="margin-bottom:0;">
+      <span class="section-icon purple">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </span>
+      Tracked Competitors
+    </div>
+    <a href="/competitors" style="font-size:12px;color:var(--accent);font-weight:600;text-decoration:none;">View all →</a>
   </div>
   {% if competitors %}
   <table>
-    <tr>
-      <th>Firm</th><th>Attorneys</th><th>Google Place ID</th><th>BBB</th>
-    </tr>
+    <thead><tr><th>Firm</th><th>Attorneys</th><th>Google Place ID</th><th>BBB</th></tr></thead>
+    <tbody>
     {% for c in competitors %}
     <tr>
-      <td><strong>{{ c.name }}</strong></td>
-      <td>{{ c.attorneys | length }}</td>
       <td>
-        {% if c.google_place_id %}
-        <span class="chip chip-green">Set</span>
-        {% else %}
-        <span class="chip chip-yellow">Missing</span>
-        {% endif %}
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="firm-badge">{{ c.name[:2] | upper }}</div>
+          <strong>{{ c.name }}</strong>
+        </div>
+      </td>
+      <td style="color:var(--muted);">{{ c.attorneys | length }}</td>
+      <td>
+        {% if c.google_place_id %}<span class="chip chip-green">✓ Set</span>
+        {% else %}<span class="chip chip-yellow">Missing</span>{% endif %}
       </td>
       <td>
-        {% if c.bbb_url %}
-        <span class="chip chip-green">Set</span>
-        {% else %}
-        <span class="chip chip-blue">Optional</span>
-        {% endif %}
+        {% if c.bbb_url %}<span class="chip chip-green">✓ Set</span>
+        {% else %}<span class="chip chip-blue">Optional</span>{% endif %}
       </td>
     </tr>
     {% endfor %}
+    </tbody>
   </table>
   {% else %}
   <p style="color:var(--muted);font-size:13px;">No competitors configured yet. Add them to <code>config/competitors.yaml</code> and redeploy.</p>
   {% endif %}
 </div>
 
-<!-- Last job run -->
+<!-- Data collection -->
 <div class="card">
-  <h2 style="font-size:15px;font-weight:600;margin-bottom:14px;">Data Collection Status</h2>
+  <div class="section-title">
+    <span class="section-icon teal">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </span>
+    Data Collection
+  </div>
   {% if last_job %}
   <table>
-    <tr><th>Job</th><th>Last Run</th><th>Status</th><th>Records</th></tr>
-    <tr>
-      <td>{{ last_job.job_name | title }}</td>
-      <td>{{ last_job.started_at.strftime('%b %d %Y, %I:%M %p') if last_job.started_at else '—' }}</td>
+    <thead><tr><th>Job</th><th>Last Run</th><th>Status</th><th>Records</th></tr></thead>
+    <tbody><tr>
+      <td style="font-weight:500;">{{ last_job.job_name | title }}</td>
+      <td style="color:var(--muted);">{{ last_job.started_at.strftime('%b %d %Y, %I:%M %p') if last_job.started_at else '—' }}</td>
       <td>
-        {% if last_job.status == 'success' %}<span class="chip chip-green">Success</span>
+        {% if last_job.status == 'success' %}<span class="chip chip-green">✓ Success</span>
         {% elif last_job.status == 'failed' %}<span class="chip chip-red">Failed</span>
         {% else %}<span class="chip chip-yellow">{{ last_job.status }}</span>{% endif %}
       </td>
-      <td>{{ last_job.records_processed or '—' }}</td>
-    </tr>
+      <td style="font-weight:600;">{{ last_job.records_processed or '—' }}</td>
+    </tr></tbody>
   </table>
   {% else %}
-  <p style="color:var(--muted);font-size:13px;">No jobs have run yet. Data collection starts automatically on the next scheduled window.</p>
+  <p style="color:var(--muted);font-size:13px;padding-bottom:4px;">No jobs have run yet. Data collection starts automatically on the next scheduled window.</p>
   {% endif %}
 
-  <!-- Manual trigger buttons -->
-  <div style="margin-top:16px;display:flex;gap:10px;border-top:1px solid var(--border);padding-top:16px;">
+  <div class="admin-actions">
     <form method="post" action="/admin/run-job/daily">
-      <button type="submit" class="btn btn-ghost btn-sm">Run Daily Job Now</button>
+      <button type="submit" class="btn btn-ghost btn-sm">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Run Daily Job
+      </button>
     </form>
     <form method="post" action="/admin/run-job/weekly">
-      <button type="submit" class="btn btn-ghost btn-sm">Run Weekly Job Now</button>
+      <button type="submit" class="btn btn-ghost btn-sm">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Run Weekly Job
+      </button>
     </form>
     <form method="post" action="/admin/sync-config">
-      <button type="submit" class="btn btn-ghost btn-sm">Sync Competitor Config</button>
+      <button type="submit" class="btn btn-ghost btn-sm">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        Sync Config
+      </button>
+    </form>
+    <form method="post" action="/admin/run-pacer">
+      <button type="submit" class="btn btn-ghost btn-sm"
+              onclick="this.disabled=true;this.innerHTML='<span class=\'spin\'></span> Starting…';this.form.submit();">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Collect PACER
+      </button>
+    </form>
+    <form method="post" action="/admin/send-digest">
+      <button type="submit" class="btn btn-ghost btn-sm">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Send Digest
+      </button>
     </form>
     <form method="post" action="/admin/clean-pacer-dupes">
       <button type="submit" class="btn btn-ghost btn-sm">Clean PACER Dupes</button>
     </form>
     <form method="post" action="/admin/clear-filings">
-      <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--red);">Clear Filing Data</button>
-    </form>
-    <form method="post" action="/admin/run-pacer">
-      <button type="submit" class="btn btn-ghost btn-sm"
-              onclick="this.disabled=true;this.textContent='Starting…';this.form.submit();">
-        Collect PACER Now
-      </button>
-    </form>
-    <form method="post" action="/admin/send-digest">
-      <button type="submit" class="btn btn-ghost btn-sm">Send Digest Now</button>
+      <button type="submit" class="btn btn-danger btn-sm">Clear Filing Data</button>
     </form>
   </div>
 </div>

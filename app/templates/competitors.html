@@ -6,56 +6,79 @@
 
 {% if competitors %}
 <div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div class="section-title" style="margin-bottom:0;">
+      <span class="section-icon purple">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </span>
+      {{ competitors | length }} Tracked Firms
+    </div>
+    <span class="chip chip-green">All Active</span>
+  </div>
   <table>
-    <tr>
-      <th>#</th>
+    <thead><tr>
+      <th style="width:36px;">#</th>
       <th>Firm Name</th>
       <th>Attorneys</th>
       <th>Google Place ID</th>
       <th>BBB</th>
       <th>Status</th>
-    </tr>
+    </tr></thead>
+    <tbody>
     {% for c in competitors %}
     <tr>
-      <td style="color:var(--muted);">{{ loop.index }}</td>
-      <td><strong>{{ c.name }}</strong></td>
+      <td style="color:var(--muted-2);font-size:12px;font-weight:600;">{{ loop.index }}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="firm-badge">{{ c.name[:2] | upper }}</div>
+          <strong>{{ c.name }}</strong>
+        </div>
+      </td>
       <td>
         {% for atty in c.attorneys %}
-        <div style="font-size:12px;">{{ atty.attorney_name }}
+        <div style="font-size:12px;color:var(--text-2);padding:1px 0;">
+          {{ atty.attorney_name }}
           {% if atty.aliases %}
-          <span style="color:var(--muted);font-size:11px;">(+{{ atty.aliases|length }} alias{{ 'es' if atty.aliases|length != 1 else '' }})</span>
+          <span style="color:var(--muted);font-size:11px;"> +{{ atty.aliases|length }} alias{{ 'es' if atty.aliases|length != 1 else '' }}</span>
           {% endif %}
         </div>
         {% endfor %}
       </td>
       <td>
         {% if c.google_place_id %}
-        <span class="chip chip-green">&#10003; Set</span>
+        <span class="chip chip-green">✓ Set</span>
         {% else %}
         <span class="chip chip-yellow">Missing</span>
         {% endif %}
       </td>
       <td>
         {% if c.bbb_url %}
-        <a href="{{ c.bbb_url }}" target="_blank" style="color:var(--accent);font-size:12px;">View</a>
+        <a href="{{ c.bbb_url }}" target="_blank" style="color:var(--accent);font-size:12px;font-weight:500;text-decoration:none;">View BBB →</a>
         {% else %}
-        <span style="color:var(--muted);font-size:12px;">—</span>
+        <span style="color:var(--muted-2);font-size:12px;">—</span>
         {% endif %}
       </td>
       <td><span class="chip chip-green">Active</span></td>
     </tr>
     {% endfor %}
+    </tbody>
   </table>
 </div>
 
-<div style="margin-top:16px;font-size:12px;color:var(--muted);">
-  To add, edit, or remove competitors: update <code>config/competitors.yaml</code> and redeploy. The database syncs automatically on startup.
+<div style="margin-top:14px;font-size:12px;color:var(--muted);line-height:1.7;">
+  To add, edit, or remove competitors: update <code>config/competitors.yaml</code> and redeploy.
+  The database syncs automatically on startup.
 </div>
 
 {% else %}
 <div class="card">
-  <p style="color:var(--muted);font-size:13px;line-height:1.6;">
-    No competitors configured yet.<br><br>
+  <div class="section-title">
+    <span class="section-icon purple">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+    </span>
+    No Competitors Configured
+  </div>
+  <p style="color:var(--muted);font-size:13px;line-height:1.8;">
     Open <code>config/competitors.yaml</code> and add your competitor list following the example format in that file.
     Each entry needs a unique <code>id</code>, the firm's <code>name</code>, attorney names as they appear in PACER,
     and the firm's <code>google_place_id</code> for review tracking.
