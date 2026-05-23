@@ -5,7 +5,9 @@ with a plain "Places API" key from Google Cloud Console — no "New" API needed.
 
 Fetches rating and review count for every tracked firm.
 Own firm: iterates per-market Place IDs (one listing per city).
-Competitors: uses the single google_place_id on the Competitor record.
+Competitors: iterates CompetitorLocation rows so multi-office firms (Orcutt,
+Gourley, Flippin, Mosley, Rowland & Yauger) are fully covered. A place_id
+cache avoids duplicate API calls when the same ID appears in multiple markets.
 """
 import logging
 import time
@@ -53,23 +55,33 @@ def collect_competitor_reviews(db: Session) -> int:
                 records += 1
             time.sleep(REQUEST_DELAY)
 
-    # Competitors: one snapshot per firm (primary Place ID)
-    comps = (
-        db.query(Competitor)
+    # Competitors: one snapshot per CompetitorLocation row.
+    # This correctly handles multi-office firms (whose Place IDs live in
+    # CompetitorLocation, not on the Competitor record itself) as well as
+    # single-market firms whose same place_id is synced to each location row.
+    # A small cache avoids a redundant API call when the same place_id appears
+    # across multiple markets for the same firm.
+    comp_locs = (
+        db.query(CompetitorLocation)
+        .join(Competitor, Competitor.id == CompetitorLocation.competitor_id)
         .filter(
             Competitor.is_own_firm == False,
             Competitor.active == True,
-            Competitor.google_place_id != None,
-            Competitor.google_place_id != "",
+            CompetitorLocation.google_place_id != None,
+            CompetitorLocation.google_place_id != "",
         )
         .all()
     )
-    for comp in comps:
-        data = _fetch_place(comp.google_place_id)
+    _place_cache: dict = {}
+    for loc in comp_locs:
+        pid = loc.google_place_id
+        if pid not in _place_cache:
+            _place_cache[pid] = _fetch_place(pid)
+            time.sleep(REQUEST_DELAY)
+        data = _place_cache[pid]
         if data:
-            db.add(_make_snapshot(comp.id, "google", data, market=None))
+            db.add(_make_snapshot(loc.competitor_id, "google", data, market=loc.market))
             records += 1
-        time.sleep(REQUEST_DELAY)
 
     db.commit()
     logger.info(f"Google Places: saved {records} review snapshots")

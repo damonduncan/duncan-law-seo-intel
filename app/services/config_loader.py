@@ -38,17 +38,28 @@ def sync_competitors(db: Session) -> None:
 
     db.commit()
 
-    # Validation warning: competitors without google_place_id
-    competitors = db.query(Competitor).filter(
-        Competitor.active == True,
-        Competitor.google_place_id == None,
-    ).all()
-    for c in competitors:
-        logger.warning(
-            f"Competitor '{c.name}' (config_id={c.config_id}) has no google_place_id — "
-            "review tracking and rankings matching will be skipped for this firm. "
-            "Add google_place_id to competitors.yaml."
+    # Validation warning: competitors with no Place ID anywhere (neither at the
+    # Competitor level nor in any CompetitorLocation row). Multi-office firms
+    # (e.g. Orcutt, Gourley, Flippin) intentionally have competitor.google_place_id=None
+    # because their Place IDs live in CompetitorLocation rows — exclude those.
+    competitors = (
+        db.query(Competitor)
+        .filter(
+            Competitor.active == True,
+            Competitor.google_place_id == None,
         )
+        .all()
+    )
+    for c in competitors:
+        has_location_place_id = any(
+            loc.google_place_id for loc in c.locations
+        )
+        if not has_location_place_id:
+            logger.warning(
+                f"Competitor '{c.name}' (config_id={c.config_id}) has no google_place_id — "
+                "review tracking and rankings matching will be skipped for this firm. "
+                "Add google_place_id to competitors.yaml."
+            )
 
     total = db.query(Competitor).filter(Competitor.active == True).count()
     own_count = db.query(Competitor).filter(Competitor.is_own_firm == True).count()
