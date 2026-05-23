@@ -266,6 +266,43 @@ competitors:
           - "Lynn Coleman"
           - "L Coleman"
 
+  - id: comp_050
+    name: "Ferguson Hayes Hawkins, PLLC"
+    google_place_id: ""   # TODO: Concord NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - greensboro
+      - high_point
+    attorneys:
+      - name: "Brian Hayes"
+        aliases:
+          - "Brian P. Hayes"
+          - "B Hayes"
+
+  - id: comp_051
+    name: "Daniel L. Hawkins, P.A."
+    google_place_id: ""   # TODO: Graham NC (Alamance Co.) — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - greensboro
+    attorneys:
+      - name: "Daniel L. Hawkins"
+        aliases:
+          - "Daniel Hawkins"
+          - "D Hawkins"
+
+  - id: comp_052
+    name: "Law Office of William V. Bost"
+    google_place_id: ""   # TODO: Salisbury NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - salisbury
+    attorneys:
+      - name: "William V. Bost"
+        aliases:
+          - "William Bost"
+          - "W Bost"
+
   - id: comp_044
     name: "Rowland & Yauger"
     google_place_id: ""   # TODO: Carthage/Asheboro NC — find via Place ID Finder
