@@ -19,6 +19,23 @@
 </div>
 {% endif %}
 
+<!-- War room status strip -->
+<div class="war-strip">
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <span class="pulse-dot" style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;flex-shrink:0;"></span>
+    <span style="font-size:13px;font-weight:600;color:var(--text-2);">Systems Active</span>
+    {% if last_job and last_job.started_at %}
+    <span style="font-size:13px;color:var(--muted);">· Last scan <span id="war-ago" style="font-weight:600;color:var(--text-2);"></span></span>
+    {% endif %}
+  </div>
+  <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+    <span style="font-size:13px;font-weight:600;color:{% if unacked_alerts == 0 %}var(--green-dark){% else %}var(--red-dark){% endif %};">
+      {% if unacked_alerts == 0 %}✓ All clear{% else %}⚠ {{ unacked_alerts }} alert{{ 's' if unacked_alerts != 1 else '' }}{% endif %}
+    </span>
+    <span id="war-clock" style="font-size:13px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;min-width:88px;text-align:right;letter-spacing:.01em;"></span>
+  </div>
+</div>
+
 <!-- Hero insight card -->
 {% set ns = namespace(total_in=0, total_kw=0) %}
 {% if scorecard %}
@@ -206,8 +223,10 @@
       <div style="font-size:18px;font-weight:800;color:{{ val_color }};letter-spacing:-.02em;line-height:1;margin-bottom:3px;">{{ m.in_pack }}/{{ m.total }}</div>
       <div style="font-size:15px;color:var(--muted);margin-bottom:6px;">in 3-pack</div>
       {% if m.total > 0 %}
-      <div style="height:5px;background:rgba(0,0,0,.07);border-radius:3px;margin-bottom:{% if m.reviews is not none %}6px{% else %}0{% endif %};">
-        <div style="height:100%;width:{{ (m.in_pack / m.total * 100)|int }}%;background:{{ dot }};border-radius:3px;transition:width .4s ease;"></div>
+      <div style="display:flex;gap:5px;margin-bottom:{% if m.reviews is not none %}6px{% else %}0{% endif %};">
+        {% for i in range(m.total) %}
+        <div style="width:9px;height:9px;border-radius:50%;background:{% if loop.index0 < m.in_pack %}{{ dot }}{% else %}rgba(0,0,0,.1){% endif %};flex-shrink:0;"></div>
+        {% endfor %}
       </div>
       {% endif %}
       {% if m.reviews is not none %}
@@ -277,7 +296,12 @@
       <td>
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="firm-badge">{{ c.name[:2] | upper }}</div>
-          <strong>{{ c.name }}</strong>
+          <strong class="firm-hover"
+            data-name="{{ c.name }}"
+            data-initials="{{ c.name[:2] | upper }}"
+            data-attorneys="{{ c.attorneys | length }}"
+            data-place="{{ '✓ Set' if c.google_place_id else 'Missing' }}"
+            data-bbb="{{ 'Set' if c.bbb_url else 'None' }}">{{ c.name }}</strong>
         </div>
       </td>
       <td style="color:var(--muted);">{{ c.attorneys | length }}</td>
@@ -366,6 +390,30 @@
 </div>
 
 <script>
+// War room clock + relative last-scan time
+(function() {
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function tick() {
+    var d = new Date(), h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+    var ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    var el = document.getElementById('war-clock');
+    if (el) el.textContent = h + ':' + pad(m) + ':' + pad(s) + ' ' + ap;
+  }
+  tick(); setInterval(tick, 1000);
+
+  {% if last_job and last_job.started_at %}
+  var scanTime = new Date('{{ last_job.started_at.isoformat() }}');
+  function updateAgo() {
+    var diff = Math.round((Date.now() - scanTime) / 1000);
+    var t = diff < 60 ? diff + 's' : diff < 3600 ? Math.floor(diff/60) + 'm' : diff < 86400 ? Math.floor(diff/3600) + 'h' : Math.floor(diff/86400) + 'd';
+    var el = document.getElementById('war-ago');
+    if (el) el.textContent = t + ' ago';
+  }
+  updateAgo(); setInterval(updateAgo, 30000);
+  {% endif %}
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
   const els = document.querySelectorAll('.stat-card .value');
   const dur = 650;

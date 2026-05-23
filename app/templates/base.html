@@ -984,6 +984,113 @@
       .hero-mkt-panel { display: none; }
     }
 
+    /* ─── Collapsible sidebar ───────────────────────────────── */
+
+    nav  { transition: width .22s var(--ease); }
+    main { transition: margin-left .22s var(--ease); }
+
+    nav.collapsed { width: 64px; }
+    nav.collapsed ~ main { margin-left: 64px; }
+
+    nav.collapsed .nav-logo-text,
+    nav.collapsed .nav-section,
+    nav.collapsed .nav-label,
+    nav.collapsed .nav-user-info,
+    nav.collapsed .nav-alert-badge,
+    nav.collapsed #nav-kcmd { display: none; }
+
+    nav.collapsed .nav-logo { justify-content: center; gap: 8px; padding: 22px 10px 18px; }
+    nav.collapsed a          { justify-content: center; padding: 10px; }
+    nav.collapsed .nav-user  { justify-content: center; padding: 14px 8px; }
+
+    nav.collapsed a[data-label]::after {
+      content: attr(data-label);
+      position: absolute;
+      left: calc(100% + 8px);
+      top: 50%;
+      transform: translateY(-50%) translateX(-4px);
+      background: #1E293B;
+      color: #F8FAFC;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      padding: 5px 10px;
+      border-radius: 7px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .14s ease, transform .14s ease;
+      z-index: 9999;
+      box-shadow: 0 4px 12px rgba(0,0,0,.25);
+    }
+    nav.collapsed a[data-label]:hover::after { opacity: 1; transform: translateY(-50%) translateX(0); }
+
+    #nav-collapse-btn {
+      margin-left: auto;
+      width: 24px; height: 24px;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 7px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,.55);
+      flex-shrink: 0;
+      transition: background var(--dur) var(--ease), color var(--dur) var(--ease), transform .22s var(--ease);
+    }
+    #nav-collapse-btn:hover { background: rgba(255,255,255,.2); color: #fff; }
+    nav.collapsed #nav-collapse-btn { transform: rotate(180deg); margin-left: 0; }
+
+    /* ─── Scroll progress bar ───────────────────────────────── */
+
+    #scroll-prog {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent);
+      transform-origin: left;
+      transform: scaleX(0);
+      z-index: 9999;
+      transition: transform .04s linear;
+      pointer-events: none;
+    }
+
+    /* ─── Firm spotlight card ───────────────────────────────── */
+
+    #firm-spc {
+      display: none;
+      position: fixed;
+      z-index: 8000;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      box-shadow: var(--shadow-md);
+      padding: 14px 16px;
+      width: 224px;
+      pointer-events: none;
+      animation: fadeSlideIn .14s var(--ease) both;
+    }
+
+    .fsp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .fsp-lbl  { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+    .fsp-val  { font-size: 14px; font-weight: 600; color: var(--text); }
+
+    /* ─── War room status strip ─────────────────────────────── */
+
+    .war-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 9px 16px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-sm);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
     @media (max-width: 768px) {
       nav { transform: translateX(-100%); transition: transform var(--dur) var(--ease); }
       nav.nav-open { transform: translateX(0); }
@@ -1018,50 +1125,53 @@
       <strong>Duncan Law</strong>
       <small>SEO Intelligence</small>
     </div>
+    <button id="nav-collapse-btn" aria-label="Collapse sidebar">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
   </div>
 
   <div class="nav-section">Intelligence</div>
 
-  <a href="/dashboard" class="{% if active_page == 'dashboard' %}active{% endif %}">
+  <a href="/dashboard" class="{% if active_page == 'dashboard' %}active{% endif %}" data-label="Overview">
     <span class="nav-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
     </span>
-    Overview
+    <span class="nav-label">Overview</span>
   </a>
 
-  <a href="/rankings" class="{% if active_page == 'rankings' %}active{% endif %}">
+  <a href="/rankings" class="{% if active_page == 'rankings' %}active{% endif %}" data-label="Rankings">
     <span class="nav-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     </span>
-    Rankings
+    <span class="nav-label">Rankings</span>
   </a>
 
-  <a href="/reviews" class="{% if active_page == 'reviews' %}active{% endif %}">
+  <a href="/reviews" class="{% if active_page == 'reviews' %}active{% endif %}" data-label="Reviews">
     <span class="nav-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     </span>
-    Reviews
+    <span class="nav-label">Reviews</span>
   </a>
 
-  <a href="/filings" class="{% if active_page == 'filings' %}active{% endif %}">
+  <a href="/filings" class="{% if active_page == 'filings' %}active{% endif %}" data-label="PACER Filings">
     <span class="nav-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
     </span>
-    PACER Filings
+    <span class="nav-label">PACER Filings</span>
   </a>
 
-  <a href="/competitors" class="{% if active_page == 'competitors' %}active{% endif %}">
+  <a href="/competitors" class="{% if active_page == 'competitors' %}active{% endif %}" data-label="Competitors">
     <span class="nav-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     </span>
-    Competitors
+    <span class="nav-label">Competitors</span>
   </a>
 
-  <a href="/alerts" class="{% if active_page == 'alerts' %}active{% endif %}">
+  <a href="/alerts" class="{% if active_page == 'alerts' %}active{% endif %}" data-label="Alerts">
     <span class="nav-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
     </span>
-    Alerts
+    <span class="nav-label">Alerts</span>
     {% if unacked_alerts is defined and unacked_alerts > 0 %}
     <span class="nav-alert-badge">{{ unacked_alerts }}</span>
     {% endif %}
@@ -1069,7 +1179,7 @@
 
   <div class="nav-spacer"></div>
 
-  <button onclick="cpOpen()" style="display:flex;align-items:center;gap:8px;margin:0 10px 6px;padding:8px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);color:rgba(255,255,255,.45);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;transition:background .15s,color .15s;width:calc(100% - 20px);" onmouseenter="this.style.background='rgba(255,255,255,.11)';this.style.color='rgba(255,255,255,.75)'" onmouseleave="this.style.background='rgba(255,255,255,.06)';this.style.color='rgba(255,255,255,.45)'">
+  <button id="nav-kcmd" onclick="cpOpen()" style="display:flex;align-items:center;gap:8px;margin:0 10px 6px;padding:8px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);color:rgba(255,255,255,.45);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;transition:background .15s,color .15s;width:calc(100% - 20px);" onmouseenter="this.style.background='rgba(255,255,255,.11)';this.style.color='rgba(255,255,255,.75)'" onmouseleave="this.style.background='rgba(255,255,255,.06)';this.style.color='rgba(255,255,255,.45)'">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     Quick navigate
     <kbd style="margin-left:auto;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:4px;padding:1px 6px;font-size:11px;font-family:monospace;color:rgba(255,255,255,.4);">⌘K</kbd>
@@ -1083,6 +1193,20 @@
     </div>
   </div>
 </nav>
+
+<div id="scroll-prog"></div>
+
+<div id="firm-spc">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div id="fsp-badge" style="width:36px;height:36px;border-radius:10px;background:var(--accent-mid);color:var(--accent-dark);font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;"></div>
+    <div id="fsp-name" style="font-size:15px;font-weight:700;line-height:1.3;color:var(--text);"></div>
+  </div>
+  <div class="fsp-grid">
+    <div><div class="fsp-lbl">Attorneys</div><div id="fsp-attorneys" class="fsp-val"></div></div>
+    <div><div class="fsp-lbl">Google ID</div><div id="fsp-place" class="fsp-val"></div></div>
+    <div><div class="fsp-lbl">BBB Profile</div><div id="fsp-bbb" class="fsp-val"></div></div>
+  </div>
+</div>
 
 <main>
   {% block content %}{% endblock %}
@@ -1116,6 +1240,59 @@
     function close() { nav.classList.remove('nav-open'); overlay.classList.remove('nav-open'); }
     toggle.addEventListener('click', function() { nav.classList.contains('nav-open') ? close() : open(); });
     overlay.addEventListener('click', close);
+  }
+
+  // Collapsible sidebar
+  var colBtn = document.getElementById('nav-collapse-btn');
+  if (colBtn && nav) {
+    var isCol = localStorage.getItem('nav-c') === '1';
+    if (isCol) nav.classList.add('collapsed');
+    colBtn.addEventListener('click', function() {
+      isCol = !isCol;
+      localStorage.setItem('nav-c', isCol ? '1' : '0');
+      nav.classList.toggle('collapsed', isCol);
+    });
+  }
+
+  // Scroll progress bar
+  var prog = document.getElementById('scroll-prog');
+  if (prog) {
+    window.addEventListener('scroll', function() {
+      var s = document.documentElement.scrollTop || document.body.scrollTop;
+      var t = document.documentElement.scrollHeight - window.innerHeight;
+      prog.style.transform = t > 0 ? 'scaleX(' + (s / t) + ')' : 'scaleX(0)';
+    }, { passive: true });
+  }
+
+  // Firm spotlight hover card
+  var spc = document.getElementById('firm-spc');
+  if (spc) {
+    var curEl = null;
+    function showCard(el, e) {
+      document.getElementById('fsp-badge').textContent     = el.dataset.initials || '??';
+      document.getElementById('fsp-name').textContent      = el.dataset.name     || '';
+      document.getElementById('fsp-attorneys').textContent = el.dataset.attorneys|| '—';
+      document.getElementById('fsp-place').textContent     = el.dataset.place    || '—';
+      document.getElementById('fsp-bbb').textContent       = el.dataset.bbb      || '—';
+      spc.style.display = 'block';
+      posCard(e);
+    }
+    function posCard(e) {
+      var x = e.clientX + 16, y = e.clientY - 10;
+      var cw = spc.offsetWidth, ch = spc.offsetHeight;
+      if (x + cw > window.innerWidth  - 10) x = e.clientX - cw - 12;
+      if (y + ch > window.innerHeight - 10) y = window.innerHeight - ch - 10;
+      spc.style.left = x + 'px';
+      spc.style.top  = y + 'px';
+    }
+    document.addEventListener('mouseover', function(e) {
+      var el = e.target.closest ? e.target.closest('.firm-hover') : null;
+      if (el && el !== curEl) { curEl = el; showCard(el, e); }
+      else if (!el)           { curEl = null; spc.style.display = 'none'; }
+    });
+    document.addEventListener('mousemove', function(e) {
+      if (spc.style.display !== 'none') posCard(e);
+    });
   }
 
   var PAGES = [
