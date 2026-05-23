@@ -133,6 +133,7 @@
 
 {% macro district_table(groups, district_name) %}
 {% set d = district_name[:4] %}
+{% set ncols = 6 if prior_period else 5 %}
 <div class="card" style="margin-bottom:24px;">
   <div style="margin-bottom:16px;">
     <div class="section-title" style="margin-bottom:3px;">
@@ -159,7 +160,10 @@
     <tbody>
     {% for g in groups %}
     {% set fid = d ~ loop.index %}
-    <tr onclick="toggleFirm('{{ fid }}')" style="cursor:pointer;user-select:none;{% if g.is_own_firm %}background:rgba(37,99,235,.04);{% endif %}">
+    {% set is_extra_firm = loop.index0 > 5 %}
+    <tr onclick="toggleFirm('{{ fid }}')"
+        class="{% if is_extra_firm %}firm-extra-{{ d }}{% endif %}"
+        style="cursor:pointer;user-select:none;{% if g.is_own_firm %}background:rgba(37,99,235,.04);{% endif %}{% if is_extra_firm %}display:none;{% endif %}">
       <td style="{% if g.is_own_firm %}border-left:3px solid var(--accent);padding-left:11px;{% endif %}">
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="firm-badge" style="{% if g.is_own_firm %}background:var(--accent-mid);color:var(--accent-dark);{% else %}background:var(--surface-3);color:var(--muted);{% endif %}">
@@ -208,7 +212,11 @@
       {% endif %}
     </tr>
     {% for r in g.attorneys %}
+    {% if loop.index0 < 5 %}
     <tr class="atty-{{ fid }}" style="display:none;background:var(--surface-2);">
+    {% else %}
+    <tr class="atty-extra-{{ fid }}" style="display:none;background:var(--surface-2);">
+    {% endif %}
       <td style="padding-left:52px;font-size:15px;color:var(--muted);">
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="width:5px;height:5px;border-radius:50%;background:var(--border-2);flex-shrink:0;display:inline-block;"></span>
@@ -222,7 +230,25 @@
       {% if prior_period %}<td style="text-align:right;">{{ pct_chip(r.pct_change) }}</td>{% endif %}
     </tr>
     {% endfor %}
+    {% if g.attorneys|length > 5 %}
+    <tr class="atty-{{ fid }} atty-more-btn-{{ fid }}" style="display:none;">
+      <td colspan="{{ ncols }}" style="padding:8px 52px;background:var(--surface-2);border-bottom:1px solid var(--border);">
+        <button onclick="event.stopPropagation();showAllAttorneys('{{ fid }}')" class="btn btn-ghost btn-sm" style="width:100%;">
+          ↓ Show {{ g.attorneys|length - 5 }} more attorney{{ 's' if g.attorneys|length - 5 != 1 else '' }}
+        </button>
+      </td>
+    </tr>
+    {% endif %}
     {% endfor %}
+    {% if groups|length > 6 %}
+    <tr id="show-more-firms-{{ d }}">
+      <td colspan="{{ ncols }}" style="text-align:center;padding:12px 14px;border-bottom:none;background:var(--surface-2);">
+        <button onclick="showAllFirms('{{ d }}')" class="btn btn-ghost btn-sm">
+          ↓ Show {{ groups|length - 6 }} more firm{{ 's' if groups|length - 6 != 1 else '' }}
+        </button>
+      </td>
+    </tr>
+    {% endif %}
     </tbody>
   </table>
   {% else %}
@@ -233,83 +259,79 @@
 
 {% macro discovery_section(discovery, district, district_label, tracked_names) %}
 {% set slug = district | lower %}
-{% if discovery %}
 <div class="card" style="margin-bottom:24px;">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;gap:16px;">
+  <div onclick="toggleDiscovery('{{ slug }}')" style="cursor:pointer;user-select:none;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
     <div>
       <div class="section-title" style="margin-bottom:3px;">
         <span class="section-icon teal">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </span>
-        {{ district_label }} New Filings — {{ discovery.period }}
+        {% if discovery %}{{ district_label }} New Filings — {{ discovery.period }}{% else %}{{ district_label }} New Filings — Discovery{% endif %}
       </div>
-      <div style="font-size:14px;color:var(--muted);margin-left:36px;">{{ discovery.total_found }} debtor attorney lines parsed from CaseFiled-Rpt.pl</div>
+      <div style="font-size:14px;color:var(--muted);margin-left:36px;">
+        {% if discovery %}{{ discovery.total_found }} attorney lines — click to expand{% else %}Pull CaseFiled-Rpt.pl to discover untracked attorneys — click to expand{% endif %}
+      </div>
     </div>
-    <form method="post" action="/admin/discover/{{ slug }}" style="margin:0;flex-shrink:0;">
-      <button type="submit" class="btn btn-ghost btn-sm"
-              onclick="this.disabled=true;this.textContent='Running…';this.form.submit();">Refresh</button>
-    </form>
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <form method="post" action="/admin/discover/{{ slug }}" style="margin:0;" onclick="event.stopPropagation()">
+        {% if discovery %}
+        <button type="submit" class="btn btn-ghost btn-sm"
+                onclick="this.disabled=true;this.textContent='Running…';this.form.submit();">Refresh</button>
+        {% else %}
+        <button type="submit" class="btn btn-primary btn-sm"
+                onclick="this.disabled=true;this.innerHTML='<span class=\'spin\'></span> Starting…';this.form.submit();">Run Discovery</button>
+        {% endif %}
+      </form>
+      <span id="disc-chev-{{ slug }}" style="display:inline-flex;transition:transform .2s ease;color:var(--muted-2);flex-shrink:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </span>
+    </div>
   </div>
-  {% if discovery.error %}
-  <div style="font-size:15px;color:var(--red-dark);background:var(--red-light);padding:10px 14px;border-radius:var(--r-sm);margin-bottom:12px;">Error: {{ discovery.error }}</div>
-  {% endif %}
-  {% if discovery.top_filers %}
-  <p style="font-size:14px;color:var(--muted);margin-bottom:12px;line-height:1.7;">
-    Use this to <strong style="color:var(--text);">discover untracked attorneys</strong> by name. Counts here come from
-    CaseFiled-Rpt.pl and may differ from the PACER table above. Add new attorneys to <code>config/competitors.yaml</code>, then Sync Config + Collect PACER.
-  </p>
-  <table>
-    <thead><tr>
-      <th style="width:44px;">#</th>
-      <th>Attorney (as appears in PACER)</th>
-      <th>In Config?</th>
-    </tr></thead>
-    <tbody>
-    {% for filer in discovery.top_filers %}
-    {% set filer_last = filer.attorney.split()[-1] | lower %}
-    <tr>
-      <td style="color:var(--muted);font-size:14px;font-weight:600;">{{ loop.index }}</td>
-      <td style="font-size:15px;">{{ filer.attorney }}</td>
-      {% if filer_last in tracked_names %}
-      <td><span class="chip chip-green">✓ Tracked</span></td>
-      {% else %}
-      <td style="color:var(--muted-2);font-size:14px;">—</td>
-      {% endif %}
-    </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p style="font-size:15px;color:var(--muted);">
-    No attorney data found yet.
-    {% if discovery.result_snippet %}
-    <br><strong style="color:var(--text);">Response preview:</strong>
-    <pre style="font-size:15px;color:var(--muted);white-space:pre-wrap;max-height:150px;overflow:auto;margin-top:8px;background:var(--surface-2);padding:10px;border-radius:var(--r-sm);">{{ discovery.result_snippet[:600] }}</pre>
+  <div id="disc-body-{{ slug }}" style="display:none;margin-top:16px;">
+    {% if discovery %}
+    {% if discovery.error %}
+    <div style="font-size:15px;color:var(--red-dark);background:var(--red-light);padding:10px 14px;border-radius:var(--r-sm);margin-bottom:12px;">Error: {{ discovery.error }}</div>
     {% endif %}
-  </p>
-  {% endif %}
-</div>
-{% else %}
-<div class="card" style="margin-bottom:24px;">
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
-    <div>
-      <div class="section-title" style="margin-bottom:3px;">
-        <span class="section-icon teal">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        </span>
-        {{ district_label }} New Filings — Discovery
-      </div>
-      <div style="font-size:14px;color:var(--muted);margin-left:36px;">Pull CaseFiled-Rpt.pl to get exact new-case counts per attorney.</div>
-    </div>
-    <form method="post" action="/admin/discover/{{ slug }}" style="margin:0;flex-shrink:0;">
-      <button type="submit" class="btn btn-primary btn-sm"
-              onclick="this.disabled=true;this.innerHTML='<span class=\'spin\'></span> Starting…';this.form.submit();">
-        Run Discovery
-      </button>
-    </form>
+    {% if discovery.top_filers %}
+    <p style="font-size:14px;color:var(--muted);margin-bottom:12px;line-height:1.7;">
+      Use this to <strong style="color:var(--text);">discover untracked attorneys</strong> by name. Counts here come from
+      CaseFiled-Rpt.pl and may differ from the PACER table above. Add new attorneys to <code>config/competitors.yaml</code>, then Sync Config + Collect PACER.
+    </p>
+    <table>
+      <thead><tr>
+        <th style="width:44px;">#</th>
+        <th>Attorney (as appears in PACER)</th>
+        <th>In Config?</th>
+      </tr></thead>
+      <tbody>
+      {% for filer in discovery.top_filers %}
+      {% set filer_last = filer.attorney.split()[-1] | lower %}
+      <tr>
+        <td style="color:var(--muted);font-size:14px;font-weight:600;">{{ loop.index }}</td>
+        <td style="font-size:15px;">{{ filer.attorney }}</td>
+        {% if filer_last in tracked_names %}
+        <td><span class="chip chip-green">✓ Tracked</span></td>
+        {% else %}
+        <td style="color:var(--muted-2);font-size:14px;">—</td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="font-size:15px;color:var(--muted);">
+      No attorney data found yet.
+      {% if discovery.result_snippet %}
+      <br><strong style="color:var(--text);">Response preview:</strong>
+      <pre style="font-size:15px;color:var(--muted);white-space:pre-wrap;max-height:150px;overflow:auto;margin-top:8px;background:var(--surface-2);padding:10px;border-radius:var(--r-sm);">{{ discovery.result_snippet[:600] }}</pre>
+      {% endif %}
+    </p>
+    {% endif %}
+    {% else %}
+    <p style="font-size:15px;color:var(--muted);padding-bottom:4px;">No discovery data yet. Click Run Discovery to pull the latest filing data from CaseFiled-Rpt.pl.</p>
+    {% endif %}
   </div>
 </div>
-{% endif %}
 {% endmacro %}
 
 {{ district_table(mdnc_rows, "MDNC — Middle District of NC") }}
@@ -348,7 +370,32 @@ function toggleFirm(fid) {
   var rows = document.querySelectorAll('.atty-' + fid);
   var chev = document.getElementById('chev-' + fid);
   var isOpen = rows.length > 0 && rows[0].style.display !== 'none';
-  rows.forEach(function(r) { r.style.display = isOpen ? 'none' : 'table-row'; });
+  if (isOpen) {
+    rows.forEach(function(r) { r.style.display = 'none'; });
+    document.querySelectorAll('.atty-extra-' + fid).forEach(function(r) { r.style.display = 'none'; });
+    if (chev) chev.style.transform = '';
+  } else {
+    rows.forEach(function(r) { r.style.display = 'table-row'; });
+    if (chev) chev.style.transform = 'rotate(180deg)';
+  }
+}
+
+function showAllFirms(d) {
+  document.querySelectorAll('.firm-extra-' + d).forEach(function(r) { r.style.display = 'table-row'; });
+  var btn = document.getElementById('show-more-firms-' + d);
+  if (btn) btn.style.display = 'none';
+}
+
+function showAllAttorneys(fid) {
+  document.querySelectorAll('.atty-extra-' + fid).forEach(function(r) { r.style.display = 'table-row'; });
+  document.querySelectorAll('.atty-more-btn-' + fid).forEach(function(r) { r.style.display = 'none'; });
+}
+
+function toggleDiscovery(slug) {
+  var body = document.getElementById('disc-body-' + slug);
+  var chev = document.getElementById('disc-chev-' + slug);
+  var isOpen = body && body.style.display !== 'none';
+  if (body) body.style.display = isOpen ? 'none' : 'block';
   if (chev) chev.style.transform = isOpen ? '' : 'rotate(180deg)';
 }
 </script>
