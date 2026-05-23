@@ -163,6 +163,16 @@ def filings(
         for g in rows:
             g["market_share"] = round(g["total"] / district_total * 100) if district_total else 0
 
+    # Build set of last names tracked in EDNC — used by discovery "In Config?" column
+    from app.services.pacer import MARKET_TO_DISTRICT
+    ednc_tracked_last_names: set = set()
+    for comp in comp_map.values():
+        if any(MARKET_TO_DISTRICT.get(loc.market) == "EDNC" for loc in comp.locations):
+            for atty in comp.attorneys:
+                parts = atty.attorney_name.strip().split()
+                if parts:
+                    ednc_tracked_last_names.add(parts[-1].lower())
+
     return templates.TemplateResponse("filings.html", {
         "request": request,
         "user": user,
@@ -174,4 +184,5 @@ def filings(
         "wdnc_rows":      wdnc_rows,
         "ednc_rows":      ednc_rows,
         "ednc_discovery": ednc_discovery,
+        "ednc_tracked_last_names": ednc_tracked_last_names,
     })

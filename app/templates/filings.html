@@ -219,13 +219,17 @@
       <th style="text-align:right;">Cases</th>
       <th>In Config?</th>
     </tr>
-    {% set tracked_names = [] %}
     {% for filer in ednc_discovery.top_filers %}
+    {% set filer_last = filer.attorney.split()[-1] | lower %}
     <tr>
       <td style="color:var(--muted);font-size:12px;">{{ loop.index }}</td>
       <td style="font-size:13px;">{{ filer.attorney }}</td>
       <td style="text-align:right;font-weight:600;">{{ filer.cases }}</td>
+      {% if filer_last in ednc_tracked_last_names %}
+      <td style="font-size:12px;color:var(--green);">✓ Tracked</td>
+      {% else %}
       <td style="font-size:12px;color:var(--muted);">—</td>
+      {% endif %}
     </tr>
     {% endfor %}
   </table>
