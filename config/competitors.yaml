@@ -280,11 +280,10 @@ competitors:
 
   - id: comp_050
     name: "Ferguson Hayes Hawkins, PLLC"
-    google_place_id: ""   # TODO: Concord NC — find via Place ID Finder
+    google_place_id: "ChIJBS6cRFcOVIgR4Vdmc2MkfQU"   # 45 Church St S, Concord NC
     bbb_url: ""
     markets:
-      - greensboro
-      - high_point
+      - concord
     attorneys:
       - name: "Brian Hayes"
         aliases:
@@ -293,10 +292,10 @@ competitors:
 
   - id: comp_051
     name: "Daniel L. Hawkins, P.A."
-    google_place_id: ""   # TODO: Graham NC (Alamance Co.) — find via Place ID Finder
+    google_place_id: "ChIJ1TXsu0ErU4gR8tjyZvgTDlo"   # 112 W Harden St, Graham NC
     bbb_url: ""
     markets:
-      - greensboro
+      - graham
     attorneys:
       - name: "Daniel L. Hawkins"
         aliases:
@@ -304,8 +303,8 @@ competitors:
           - "D Hawkins"
 
   - id: comp_052
-    name: "Law Office of William V. Bost"
-    google_place_id: ""   # TODO: Salisbury NC — find via Place ID Finder
+    name: "Bost Law Firm"
+    google_place_id: "ChIJrdfZr9nyU4gRbBpASmxOO2s"   # 207 W Kerr St, Salisbury NC
     bbb_url: ""
     markets:
       - salisbury
@@ -317,11 +316,13 @@ competitors:
 
   - id: comp_044
     name: "Rowland & Yauger"
-    google_place_id: ""   # TODO: Carthage/Asheboro NC — find via Place ID Finder
     bbb_url: ""
-    markets:
-      - greensboro
-      - high_point
+    # Two offices — Carthage (primary) and Asheboro. Place IDs decoded from Maps URLs.
+    locations:
+      - market: carthage
+        google_place_id: "ChIJMb7zzI2sVIhad4o4f2gz5g"   # 107 Monroe St, Carthage NC
+      - market: asheboro
+        google_place_id: "ChIJ02-IpyNpU4giq7ho239LsQ"   # Asheboro office
     attorneys:
       - name: "Brett Smith Yauger"
         aliases:
@@ -330,11 +331,10 @@ competitors:
 
   - id: comp_045
     name: "Bunch, Robins & Stubblefield, LLP"
-    google_place_id: ""   # TODO: Asheboro NC — find via Place ID Finder
+    google_place_id: "ChIJW7RLnCZpU4gRkBynR8nxZ20"   # 117 Sunset Ave, Asheboro NC
     bbb_url: ""
     markets:
-      - greensboro
-      - high_point
+      - asheboro
     attorneys:
       - name: "Julie C. Hatchel"
         aliases:
@@ -537,11 +537,10 @@ competitors:
 
   - id: comp_049
     name: "Law Office of Christopher D. Lane"
-    google_place_id: ""   # TODO: Clemmons NC — find via Place ID Finder
+    google_place_id: "ChIJPYELfr25U4jGW2u77bSIuA"   # 3802A Clemmons Rd, Clemmons NC — decoded from Maps URL
     bbb_url: ""
     markets:
       - winston_salem  # Clemmons/Forsyth Co — MDNC territory
-      - charlotte      # Also files in WDNC
     attorneys:
       - name: "Christopher D. Lane"
         aliases:
@@ -619,11 +618,10 @@ competitors:
 
   - id: comp_039
     name: "Farmer & Morris Law, PLLC"
-    google_place_id: ""   # TODO: Rutherfordton NC — find via Place ID Finder
+    google_place_id: ""   # 187 N Washington St, Rutherfordton NC — CID 17535123081898744898 (maps.google.com/?cid=17535123081898744898); ChIJ Place ID TODO
     bbb_url: ""
     markets:
-      - charlotte
-      - asheville
+      - asheville   # Rutherfordton, Rutherford County — WDNC
     attorneys:
       - name: "Caleb J. Farmer"
         aliases:
@@ -631,11 +629,11 @@ competitors:
           - "C Farmer"
 
   - id: comp_040
-    name: "Willcox Law Firm"
-    google_place_id: ""   # TODO: Morganton NC — find via Place ID Finder
+    name: "Willcox Law Firm PLLC"
+    google_place_id: "ChIJIbWfsdDRUIgRm2fHXE64Kkw"   # 122 W Union St, Morganton NC
     bbb_url: ""
     markets:
-      - asheville
+      - morganton
     attorneys:
       - name: "Roderick H. Willcox, Jr."
         aliases:
@@ -664,8 +662,8 @@ competitors:
           - "Cort E. Walker"
 
   - id: comp_024
-    name: "Law Office of Palmer Huffstetler"   # TODO: confirm firm name
-    google_place_id: ""
+    name: "Sosna & Huffstetler Law Offices, PLLC"
+    google_place_id: ""   # offices in Rocky Mount, Ahoskie, Roanoke Rapids — TODO: find Place IDs
     bbb_url: ""
     markets:
       - ednc
@@ -676,8 +674,8 @@ competitors:
           - "P Huffstetler"
 
   - id: comp_025
-    name: "Law Office of Edwin Hardy"   # TODO: confirm firm name
-    google_place_id: ""
+    name: "Edwin M. Hardy, P.C."
+    google_place_id: ""   # Washington NC (primary), Greenville NC — TODO: find Place IDs
     bbb_url: ""
     markets:
       - ednc
@@ -688,11 +686,11 @@ competitors:
           - "E Hardy"
 
   - id: comp_026
-    name: "Law Office of Richard Preston Cook"   # TODO: confirm firm name
-    google_place_id: ""
+    name: "Cape Fear Debt Relief"
+    google_place_id: ""   # 7036 Wrightsville Ave, Wilmington NC — TODO: find Place ID
     bbb_url: ""
     markets:
-      - ednc
+      - wilmington
     attorneys:
       - name: "Richard Preston Cook"
         aliases:
@@ -700,22 +698,22 @@ competitors:
           - "R Cook"
 
   - id: comp_027
-    name: "Law Office of Brent Wootton"   # TODO: confirm firm name
+    name: "Wootton & Wootton, P.C."
     google_place_id: "ChIJN4MuDEfhrIkRCWRh9eL0zrE"
     bbb_url: ""
     markets:
-      - ednc
+      - ednc   # files in EDNC; Durham + Henderson NC offices
     attorneys:
       - name: "Brent Wootton"
         aliases:
           - "B Wootton"
 
   - id: comp_028
-    name: "Law Office of Erich Fabricius"   # TODO: confirm firm name
-    google_place_id: ""
+    name: "Fabricius & Fabricius PLLC"
+    google_place_id: ""   # 106 N First Ave, Knightdale NC — TODO: find Place ID
     bbb_url: ""
     markets:
-      - ednc
+      - raleigh   # Knightdale is Wake County, EDNC (Raleigh metro)
     attorneys:
       - name: "Erich M. Fabricius"
         aliases:
@@ -723,8 +721,8 @@ competitors:
           - "E Fabricius"
 
   - id: comp_029
-    name: "Law Office of Lindsay Parker"   # TODO: confirm firm name
-    google_place_id: ""
+    name: "Gillespie & Murphy, P.A."
+    google_place_id: ""   # primary: 320 Middle St, New Bern NC; also Wilmington, Jacksonville, Greenville
     bbb_url: ""
     markets:
       - ednc
@@ -735,11 +733,11 @@ competitors:
           - "L Parker"
 
   - id: comp_030
-    name: "Law Office of Christopher Vonderau"   # TODO: confirm firm name
-    google_place_id: ""
+    name: "Law Offices of Chris Vonderau, PLLC"
+    google_place_id: ""   # 4022 Shipyard Blvd, Wilmington NC — TODO: find Place ID
     bbb_url: ""
     markets:
-      - ednc
+      - wilmington
     attorneys:
       - name: "Christopher T. Vonderau"
         aliases:
@@ -747,11 +745,11 @@ competitors:
           - "C Vonderau"
 
   - id: comp_031
-    name: "Law Office of William Berggren"   # TODO: confirm firm name
-    google_place_id: ""
+    name: "Berggren Law Offices, PLLC"
+    google_place_id: ""   # 4000 Blue Ridge Rd, Raleigh NC — TODO: find Place ID
     bbb_url: ""
     markets:
-      - ednc
+      - raleigh
     attorneys:
       - name: "William G. Berggren"
         aliases:
@@ -771,10 +769,10 @@ competitors:
 
   - id: comp_042
     name: "Cameron Bankruptcy Law"
-    google_place_id: ""   # TODO: Raleigh NC — find via Place ID Finder
+    google_place_id: "ChIJrRwLBTVRrImjiI-rDiFewQ"   # 8019 Atamasco Cir, Raleigh — decoded from Maps URL
     bbb_url: ""
     markets:
-      - ednc
+      - raleigh
     attorneys:
       - name: "Sheree Cameron"
         aliases:
@@ -782,10 +780,10 @@ competitors:
 
   - id: comp_043
     name: "Harris Debt Relief"
-    google_place_id: ""   # TODO: Fayetteville NC — find via Place ID Finder
+    google_place_id: ""   # 309 Person St, Fayetteville — no standalone GBP found; may be listed under parent firm
     bbb_url: ""
     markets:
-      - ednc
+      - fayetteville
     attorneys:
       - name: "Mark M. Harris"
         aliases:
@@ -812,6 +810,22 @@ markets:
     state: NC
   durham:
     display_name: "Durham"
+    district: MDNC
+    state: NC
+  concord:
+    display_name: "Concord"
+    district: MDNC
+    state: NC
+  graham:
+    display_name: "Graham"
+    district: MDNC
+    state: NC
+  carthage:
+    display_name: "Carthage"
+    district: MDNC
+    state: NC
+  asheboro:
+    display_name: "Asheboro"
     district: MDNC
     state: NC
   # ── WDNC — Western District of North Carolina ─────────────────────────────
@@ -841,6 +855,10 @@ markets:
     state: NC
   north_wilkesboro:
     display_name: "North Wilkesboro"
+    district: WDNC
+    state: NC
+  morganton:
+    display_name: "Morganton"
     district: WDNC
     state: NC
   # ── EDNC — Eastern District of North Carolina ─────────────────────────────

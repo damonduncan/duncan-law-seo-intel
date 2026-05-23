@@ -40,6 +40,10 @@ MARKET_TO_DISTRICT = {
     "high_point":    "MDNC",
     "salisbury":     "MDNC",
     "durham":        "MDNC",
+    "concord":       "MDNC",
+    "graham":        "MDNC",
+    "carthage":      "MDNC",
+    "asheboro":      "MDNC",
     # WDNC — Western District of North Carolina
     "charlotte":        "WDNC",
     "asheville":        "WDNC",
@@ -48,6 +52,7 @@ MARKET_TO_DISTRICT = {
     "mooresville":      "WDNC",
     "elkin":            "WDNC",
     "north_wilkesboro": "WDNC",
+    "morganton":        "WDNC",
     # EDNC — Eastern District of North Carolina
     "ednc":          "EDNC",   # legacy catch-all tag
     "raleigh":       "EDNC",
