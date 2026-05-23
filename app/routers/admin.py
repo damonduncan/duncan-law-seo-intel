@@ -24,6 +24,43 @@ def clear_filings(request: Request, user: dict = Depends(auth_required), db: Ses
     )
 
 
+@router.post("/admin/clean-pacer-dupes")
+def clean_pacer_dupes(request: Request, user: dict = Depends(auth_required), db: Session = Depends(get_db)):
+    """
+    Remove duplicate FilingSnapshot rows — keeps the highest case_count per
+    (competitor_id, attorney_id, district, chapter, period_start) combination.
+    Fixes the 0-row / real-count-row display issue.
+    """
+    from app.models.filings import FilingSnapshot
+    from sqlalchemy import func
+
+    # Find all duplicates and keep only the row with the highest case_count
+    all_snaps = db.query(FilingSnapshot).all()
+    seen: dict = {}
+    to_delete = []
+    for s in all_snaps:
+        key = (s.competitor_id, s.attorney_id, s.district, s.chapter, s.period_start)
+        if key not in seen:
+            seen[key] = s
+        else:
+            # Keep whichever has the higher count; mark the other for deletion
+            if s.case_count > seen[key].case_count:
+                to_delete.append(seen[key].id)
+                seen[key] = s
+            else:
+                to_delete.append(s.id)
+
+    deleted = 0
+    for snap_id in to_delete:
+        db.query(FilingSnapshot).filter(FilingSnapshot.id == snap_id).delete()
+        deleted += 1
+    db.commit()
+    return RedirectResponse(
+        url="/filings?msg=removed_{d}_duplicate_rows".format(d=deleted),
+        status_code=303,
+    )
+
+
 @router.post("/admin/sync-config")
 def sync_config(request: Request, user: dict = Depends(auth_required)):
     from app.database import SessionLocal

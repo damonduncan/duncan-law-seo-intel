@@ -63,9 +63,12 @@ def filings(
     }
 
     # Build: (competitor_id, attorney_id, district, chapter, period) → count
+    # Use MAX when duplicates exist (stale 0-rows from partial previous runs)
     counts: dict = {}
     for s in snapshots:
-        counts[(s.competitor_id, s.attorney_id, s.district, s.chapter, s.period_start)] = s.case_count
+        key = (s.competitor_id, s.attorney_id, s.district, s.chapter, s.period_start)
+        if key not in counts or s.case_count > counts[key]:
+            counts[key] = s.case_count
 
     def make_firm_groups(district: str) -> list:
         """
