@@ -11,7 +11,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 own_firm:
-  name: "Duncan Law"
+  name: "Duncan Law, LLP"
   domain: "duncanlawonline.com"
   bbb_url: ""                   # Optional: your BBB profile URL
   attorneys:
