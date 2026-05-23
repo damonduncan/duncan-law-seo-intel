@@ -157,6 +157,12 @@ def filings(
     ednc_rows      = make_firm_groups("EDNC")
     ednc_discovery = get_cached_results(db)
 
+    # Add market-share % (share of tracked-firm cases in that district)
+    for rows in (mdnc_rows, wdnc_rows, ednc_rows):
+        district_total = sum(g["total"] for g in rows)
+        for g in rows:
+            g["market_share"] = round(g["total"] / district_total * 100) if district_total else 0
+
     return templates.TemplateResponse("filings.html", {
         "request": request,
         "user": user,

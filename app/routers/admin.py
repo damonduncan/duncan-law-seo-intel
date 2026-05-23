@@ -582,6 +582,44 @@ def pacer_status(request: Request, user: dict = Depends(auth_required)):
         db.close()
 
 
+@router.post("/admin/clean-district-mismatch")
+def clean_district_mismatch(
+    request: Request,
+    user: dict = Depends(auth_required),
+    db: Session = Depends(get_db),
+):
+    """
+    Remove FilingSnapshot rows for districts a firm has no markets in.
+    Fixes Triad-only firms (MDNC) appearing in the WDNC table because of
+    stale rows from earlier collection runs that searched all firms in all districts.
+    """
+    from app.models.filings import FilingSnapshot
+    from app.models.competitor import Competitor
+    from app.services.pacer import MARKET_TO_DISTRICT
+
+    valid_districts: dict = {}
+    for comp in db.query(Competitor).all():
+        districts = set()
+        for loc in comp.locations:
+            d = MARKET_TO_DISTRICT.get(loc.market)
+            if d:
+                districts.add(d)
+        valid_districts[comp.id] = districts
+
+    deleted = 0
+    for s in db.query(FilingSnapshot).all():
+        comp_valid = valid_districts.get(s.competitor_id, set())
+        if comp_valid and s.district not in comp_valid:
+            db.delete(s)
+            deleted += 1
+
+    db.commit()
+    return RedirectResponse(
+        url="/filings?msg=removed_{d}_district_mismatch_rows".format(d=deleted),
+        status_code=303,
+    )
+
+
 @router.post("/admin/run-job/daily")
 def trigger_daily(request: Request, user: dict = Depends(auth_required)):
     from app.jobs.daily import run_daily_job
