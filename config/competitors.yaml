@@ -224,7 +224,7 @@ competitors:
 
   - id: comp_032
     name: "Law Office of Stephen E. Robertson PLLC"
-    google_place_id: ""   # TODO: Greensboro + Durham offices — find via Place ID Finder
+    google_place_id: "ChIJ5ev38AoZU4gRHKiLq1anhlU"
     bbb_url: ""
     markets:
       - greensboro
@@ -242,7 +242,7 @@ competitors:
 
   - id: comp_033
     name: "Law Office of Wendy H. James, PLLC"
-    google_place_id: ""   # TODO: Kernersville NC — find via Place ID Finder
+    google_place_id: "ChIJIywsW8kAU4gR4yaYiQNcrH8"
     bbb_url: ""
     markets:
       - greensboro
@@ -255,7 +255,7 @@ competitors:
 
   - id: comp_034
     name: "Law Office of Lynn E. Coleman"
-    google_place_id: ""   # TODO: Kernersville NC — find via Place ID Finder
+    google_place_id: "ChIJa_G5BMkBU4gRV7xbBCPslnM"
     bbb_url: ""
     markets:
       - greensboro
@@ -435,7 +435,7 @@ competitors:
 
   - id: comp_035
     name: "JA Debt Law PLLC"
-    google_place_id: ""   # TODO: Charlotte NC — find via Place ID Finder
+    google_place_id: "ChIJ1wuJXAObVogRDcNIN8_nZsU"
     bbb_url: ""
     markets:
       - charlotte
@@ -447,7 +447,7 @@ competitors:
 
   - id: comp_036
     name: "Nardone Law Firm"
-    google_place_id: ""   # TODO: Concord NC — find via Place ID Finder
+    google_place_id: "ChIJYYfm0PcOVIgRmqvAeMwdsFg"
     bbb_url: ""
     markets:
       - charlotte
@@ -459,7 +459,7 @@ competitors:
 
   - id: comp_037
     name: "Law Office of Barbara L. White"
-    google_place_id: ""   # TODO: Charlotte NC — find via Place ID Finder
+    google_place_id: "ChIJLZZKIoefVogR0FkGQCth-Rk"
     bbb_url: ""
     markets:
       - charlotte
@@ -471,7 +471,7 @@ competitors:
 
   - id: comp_038
     name: "Law Office of Geoffrey A. Planer"
-    google_place_id: ""   # TODO: Gastonia NC — find via Place ID Finder
+    google_place_id: "ChIJQQWpIhTAVogRMUI_nudW-Jk"
     bbb_url: ""
     markets:
       - charlotte
@@ -483,7 +483,7 @@ competitors:
 
   - id: comp_046
     name: "Law Offices of Robert H. Gourley Jr., P.A."
-    google_place_id: ""   # TODO: Statesville NC — find via Place ID Finder
+    google_place_id: "ChIJu4W4TRxVUYgR8roBMqddmtY"  # secondary: ChIJOfh9tsFUUYgRUGLQvMC8ILI
     bbb_url: ""
     markets:
       - charlotte
@@ -495,7 +495,7 @@ competitors:
 
   - id: comp_047
     name: "Dowless Law Firm, P.C."
-    google_place_id: ""   # TODO: Concord NC — find via Place ID Finder
+    google_place_id: "ChIJ0VyP31MOVIgRKi6cNI3wVAA"
     bbb_url: ""
     markets:
       - charlotte
@@ -507,7 +507,7 @@ competitors:
 
   - id: comp_048
     name: "Law Offices of Thomas C. Flippin, P.C."
-    google_place_id: ""   # TODO: Elkin NC — find via Place ID Finder
+    google_place_id: "ChIJvRYTWi2AUYgRL5HFSXYPozA"  # secondary: ChIJG8AWciRzUYgRFxWR2Xsp7T0, ChIJ7f_p6zlZUYgRTEiUQp0bd4w
     bbb_url: ""
     markets:
       - charlotte    # Surry/Wilkes/Yadkin counties — WDNC foothills
@@ -621,7 +621,7 @@ competitors:
 
   - id: comp_023
     name: "Sasser Law Firm"
-    google_place_id: ""   # TODO: Cary NC — find via Place ID Finder
+    google_place_id: "ChIJFZjiWdSMrIkRk-Shvk4_KNw"
     bbb_url: ""
     markets:
       - ednc
@@ -675,7 +675,7 @@ competitors:
 
   - id: comp_027
     name: "Law Office of Brent Wootton"   # TODO: confirm firm name
-    google_place_id: ""
+    google_place_id: "ChIJN4MuDEfhrIkRCWRh9eL0zrE"
     bbb_url: ""
     markets:
       - ednc
@@ -734,7 +734,7 @@ competitors:
 
   - id: comp_041
     name: "Weik Law Office"
-    google_place_id: ""   # TODO: Raleigh NC — find via Place ID Finder
+    google_place_id: "ChIJLWWvzWdYrIkRj5eAUPN2fMM"
     bbb_url: ""
     markets:
       - ednc
