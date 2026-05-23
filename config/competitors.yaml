@@ -663,7 +663,7 @@ competitors:
 
   - id: comp_024
     name: "Sosna & Huffstetler Law Offices, PLLC"
-    google_place_id: ""   # offices in Rocky Mount, Ahoskie, Roanoke Rapids — TODO: find Place IDs
+    google_place_id: "ChIJGfyuY8qArokRbwQxpTqJjX0"   # Rocky Mount NC office
     bbb_url: ""
     markets:
       - ednc
@@ -687,7 +687,7 @@ competitors:
 
   - id: comp_026
     name: "Cape Fear Debt Relief"
-    google_place_id: ""   # 7036 Wrightsville Ave, Wilmington NC — TODO: find Place ID
+    google_place_id: "ChIJKdA7Zmf1qYkR2eCKA4z3eCI"   # 7036 Wrightsville Ave, Wilmington NC
     bbb_url: ""
     markets:
       - wilmington
@@ -746,7 +746,7 @@ competitors:
 
   - id: comp_031
     name: "Berggren Law Offices, PLLC"
-    google_place_id: ""   # 4000 Blue Ridge Rd, Raleigh NC — TODO: find Place ID
+    google_place_id: "ChIJ4XEygRX2rIkRdwGa3bj5Rlw"   # 4000 Blue Ridge Rd, Raleigh NC
     bbb_url: ""
     markets:
       - raleigh
