@@ -215,7 +215,6 @@
     <tr>
       <th style="width:40px;">#</th>
       <th>Attorney (as appears in PACER)</th>
-      <th style="text-align:right;">New Cases</th>
       <th>In Config?</th>
     </tr>
     {% for filer in discovery.top_filers %}
@@ -223,7 +222,6 @@
     <tr>
       <td style="color:var(--muted);font-size:12px;">{{ loop.index }}</td>
       <td style="font-size:13px;">{{ filer.attorney }}</td>
-      <td style="text-align:right;font-weight:600;">{{ filer.cases }}</td>
       {% if filer_last in tracked_names %}
       <td style="font-size:12px;color:var(--green);">✓ Tracked</td>
       {% else %}
