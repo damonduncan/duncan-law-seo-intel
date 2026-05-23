@@ -125,6 +125,44 @@
 </div>
 {% endif %}
 
+<!-- Rating comparison bars -->
+{% if comp_rows %}
+{% set has_ratings = namespace(val=false) %}
+{% for r in comp_rows %}{% if r.google_rating %}{% set has_ratings.val = true %}{% endif %}{% endfor %}
+{% if has_ratings.val %}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title">
+    <span class="section-icon teal">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    </span>
+    Google Rating Comparison
+  </div>
+  <div style="display:flex;flex-direction:column;gap:5px;">
+    {% if own_avg_rating %}
+    <div style="display:grid;grid-template-columns:180px 1fr 44px;gap:12px;align-items:center;padding:7px 10px;background:var(--accent-light);border-radius:var(--r-sm);">
+      <div style="font-size:13px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">★ Duncan Law</div>
+      <div style="height:8px;background:rgba(37,99,235,.15);border-radius:4px;overflow:hidden;">
+        <div style="height:100%;width:{{ (own_avg_rating|float / 5 * 100)|int }}%;background:var(--accent);border-radius:4px;"></div>
+      </div>
+      <div style="font-size:13px;font-weight:800;color:var(--accent);text-align:right;">{{ own_avg_rating }}</div>
+    </div>
+    {% endif %}
+    {% for r in comp_rows %}
+    {% if r.google_rating %}
+    <div style="display:grid;grid-template-columns:180px 1fr 44px;gap:12px;align-items:center;padding:5px 10px;border-radius:var(--r-sm);">
+      <div style="font-size:13px;font-weight:500;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</div>
+      <div style="height:7px;background:var(--surface-3);border-radius:4px;overflow:hidden;">
+        <div style="height:100%;width:{{ (r.google_rating|float / 5 * 100)|int }}%;background:{% if r.google_rating >= 4.5 %}var(--green){% elif r.google_rating >= 4.0 %}var(--yellow){% else %}var(--red){% endif %};border-radius:4px;"></div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:{% if r.google_rating >= 4.5 %}var(--green-dark){% elif r.google_rating >= 4.0 %}var(--yellow-dark){% else %}var(--red-dark){% endif %};text-align:right;">{{ "%.1f"|format(r.google_rating|float) }}</div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endif %}
+
 <!-- Own firm by market -->
 {% if own_google_snaps %}
 <div class="card" style="margin-bottom:24px;">
@@ -173,6 +211,8 @@
     Competitor Review Profiles
   </div>
   {% if comp_rows %}
+  {% set ns_max = namespace(val=1) %}
+  {% for r in comp_rows %}{% if r.google_count and r.google_count > ns_max.val %}{% set ns_max.val = r.google_count %}{% endif %}{% endfor %}
   <table>
     <thead><tr>
       <th>Firm</th>
@@ -204,7 +244,12 @@
       </td>
       <td>
         {% if r.google_count is not none %}
-        <span style="font-weight:600;">{{ "{:,}".format(r.google_count) }}</span>
+        <div style="display:flex;align-items:center;gap:8px;min-width:100px;">
+          <div style="flex:1;height:5px;background:var(--surface-3);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:{{ (r.google_count / ns_max.val * 100)|int }}%;background:var(--accent);border-radius:3px;"></div>
+          </div>
+          <span style="font-weight:600;font-size:14px;white-space:nowrap;">{{ "{:,}".format(r.google_count) }}</span>
+        </div>
         {% else %}<span style="color:var(--muted);">—</span>{% endif %}
       </td>
       <td>
