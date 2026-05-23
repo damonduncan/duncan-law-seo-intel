@@ -20,14 +20,6 @@
 {% endif %}
 
 <!-- Hero insight card -->
-<div class="hero-card">
-  <div class="hero-label">Competitive Intelligence Active</div>
-  <h2>Duncan Law SEO Command Center</h2>
-  <p>Monitoring Google 3-pack rankings, competitor reviews, and PACER filing volume across Greensboro, Winston-Salem, High Point, Charlotte, Salisbury, and Asheville.</p>
-  <a href="/rankings" class="hero-btn">
-    View Rankings
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-  </a>
 {% set ns = namespace(total_in=0, total_kw=0) %}
 {% if scorecard %}
 {% for m in scorecard if m.status != 'no_data' %}
@@ -35,33 +27,81 @@
   {% set ns.total_kw = ns.total_kw + m.total %}
 {% endfor %}
 {% endif %}
-  <div class="hero-stats">
-    {% if scorecard %}
-    <div class="hero-stat">
-      <span class="hero-stat-val">{{ ns.total_in }}/{{ ns.total_kw }}</span>
-      <span class="hero-stat-lbl">Keywords in 3-pack</span>
-      {% if ns.total_kw > 0 %}
-      <div style="margin-top:5px;width:72px;height:3px;background:rgba(255,255,255,.2);border-radius:2px;">
-        <div style="height:100%;width:{{ (ns.total_in / ns.total_kw * 100)|int }}%;background:rgba(255,255,255,.75);border-radius:2px;"></div>
+<div class="hero-card">
+  <div class="hero-two-col">
+
+    <!-- Left: headline + stats -->
+    <div style="flex:1;min-width:0;">
+      <div class="hero-label">Competitive Intelligence Active</div>
+      <h2>Duncan Law SEO Command Center</h2>
+      <p>Monitoring Google 3-pack rankings, competitor reviews, and PACER filing volume across Greensboro, Winston-Salem, High Point, Charlotte, Salisbury, and Asheville.</p>
+      <a href="/rankings" class="hero-btn">
+        View Rankings
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+      <div class="hero-stats" style="margin-top:20px;">
+        {% if scorecard %}
+        <div class="hero-stat">
+          <span class="hero-stat-val">{{ ns.total_in }}/{{ ns.total_kw }}</span>
+          <span class="hero-stat-lbl">Keywords in 3-pack</span>
+          {% if ns.total_kw > 0 %}
+          <div style="margin-top:5px;width:72px;height:3px;background:rgba(255,255,255,.2);border-radius:2px;">
+            <div style="height:100%;width:{{ (ns.total_in / ns.total_kw * 100)|int }}%;background:rgba(255,255,255,.75);border-radius:2px;"></div>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+        <div class="hero-stat">
+          <span class="hero-stat-val">{{ competitors | length }}</span>
+          <span class="hero-stat-lbl">Competitors tracked</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-val">6</span>
+          <span class="hero-stat-lbl">Markets monitored</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-val" style="color:{% if unacked_alerts > 0 %}#FCA5A5{% else %}#6EE7B7{% endif %};">{{ unacked_alerts }}</span>
+          <span class="hero-stat-lbl">Active alerts</span>
+        </div>
       </div>
-      {% endif %}
+    </div>
+
+    <!-- Right: per-market status panel -->
+    {% if scorecard %}
+    <div class="hero-mkt-panel">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.38);margin-bottom:10px;">Market Status</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
+        {% for m in scorecard %}
+        {% if m.status == 'strong' %}
+          {% set mc = '#6EE7B7' %}{% set mb = 'rgba(110,231,183,.15)' %}{% set mbd = 'rgba(110,231,183,.25)' %}
+        {% elif m.status == 'ok' %}
+          {% set mc = '#FCD34D' %}{% set mb = 'rgba(252,211,77,.12)' %}{% set mbd = 'rgba(252,211,77,.25)' %}
+        {% elif m.status == 'no_data' %}
+          {% set mc = 'rgba(255,255,255,.3)' %}{% set mb = 'rgba(255,255,255,.04)' %}{% set mbd = 'rgba(255,255,255,.1)' %}
+        {% else %}
+          {% set mc = '#FCA5A5' %}{% set mb = 'rgba(252,165,165,.15)' %}{% set mbd = 'rgba(252,165,165,.25)' %}
+        {% endif %}
+        <div style="background:{{ mb }};border:1px solid {{ mbd }};border-radius:10px;padding:10px 11px;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);margin-bottom:5px;">{{ m.display }}</div>
+          {% if m.status == 'no_data' %}
+          <div style="font-size:12px;color:rgba(255,255,255,.28);font-weight:500;">No data</div>
+          {% else %}
+          <div style="font-size:20px;font-weight:800;color:{{ mc }};line-height:1;letter-spacing:-.02em;">{{ m.in_pack }}/{{ m.total }}</div>
+          {% if m.total > 0 %}
+          <div style="height:3px;background:rgba(255,255,255,.12);border-radius:2px;margin-top:7px;">
+            <div style="height:100%;width:{{ (m.in_pack / m.total * 100)|int }}%;background:{{ mc }};border-radius:2px;"></div>
+          </div>
+          {% endif %}
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
     </div>
     {% endif %}
-    <div class="hero-stat">
-      <span class="hero-stat-val">{{ competitors | length }}</span>
-      <span class="hero-stat-lbl">Competitors tracked</span>
-    </div>
-    <div class="hero-stat">
-      <span class="hero-stat-val">6</span>
-      <span class="hero-stat-lbl">Markets monitored</span>
-    </div>
-    <div class="hero-stat">
-      <span class="hero-stat-val" style="color:{% if unacked_alerts > 0 %}#FCA5A5{% else %}#6EE7B7{% endif %};">{{ unacked_alerts }}</span>
-      <span class="hero-stat-lbl">Active alerts</span>
-    </div>
+
   </div>
 
-  <!-- Intelligence ticker -->
+  <!-- Intelligence ticker — full width -->
   <div style="border-top:1px solid rgba(255,255,255,.12);margin-top:20px;padding-top:12px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 48px,#000 calc(100% - 48px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 48px,#000 calc(100% - 48px),transparent 100%);">
     <div style="display:flex;white-space:nowrap;animation:ticker 38s linear infinite;" onmouseenter="this.style.animationPlayState='paused'" onmouseleave="this.style.animationPlayState='running'">
       {% for _ in range(2) %}

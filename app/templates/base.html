@@ -969,6 +969,21 @@
       line-height: 1.6;
     }
 
+    .hero-two-col {
+      display: flex;
+      gap: 28px;
+      align-items: flex-start;
+    }
+
+    .hero-mkt-panel {
+      flex-shrink: 0;
+      width: 252px;
+    }
+
+    @media (max-width: 960px) {
+      .hero-mkt-panel { display: none; }
+    }
+
     @media (max-width: 768px) {
       nav { transform: translateX(-100%); transition: transform var(--dur) var(--ease); }
       nav.nav-open { transform: translateX(0); }
