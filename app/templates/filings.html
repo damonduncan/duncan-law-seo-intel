@@ -160,13 +160,16 @@
     {% for g in groups %}
     {% set fid = d ~ loop.index %}
     <tr onclick="toggleFirm('{{ fid }}')" style="cursor:pointer;user-select:none;{% if g.is_own_firm %}background:rgba(37,99,235,.04);{% endif %}">
-      <td>
+      <td style="{% if g.is_own_firm %}border-left:3px solid var(--accent);padding-left:11px;{% endif %}">
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="firm-badge" style="{% if g.is_own_firm %}background:var(--accent-mid);color:var(--accent-dark);{% else %}background:var(--surface-3);color:var(--muted);{% endif %}">
             {{ g.firm[:2] | upper }}
           </div>
           <div>
-            <div style="font-weight:700;font-size:15px;{% if g.is_own_firm %}color:var(--accent);{% endif %}">{{ g.firm }}</div>
+            <div style="font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;{% if g.is_own_firm %}color:var(--accent);{% endif %}">
+              {{ g.firm }}
+              {% if g.is_own_firm %}<span class="chip chip-blue" style="font-size:11px;padding:2px 8px;font-weight:800;">You</span>{% endif %}
+            </div>
             <div style="font-size:14px;color:var(--muted-2);">
               {{ g.attorneys|length }} attorney{{ 's' if g.attorneys|length != 1 else '' }} — click to expand
             </div>
@@ -187,7 +190,22 @@
           <span style="font-size:14px;font-weight:700;color:{% if g.is_own_firm %}var(--accent){% else %}var(--muted){% endif %};min-width:34px;text-align:right;">{{ g.market_share }}%</span>
         </div>
       </td>
-      {% if prior_period %}<td style="text-align:right;">{{ pct_chip(g.pct_change) }}</td>{% endif %}
+      {% if prior_period %}
+      <td style="text-align:right;">
+        {% if g.pct_change is not none and g.total_prior is not none %}
+        {% set max_v = [g.total, g.total_prior, 1]|max %}
+        <div style="display:flex;align-items:flex-end;justify-content:flex-end;gap:6px;">
+          <div style="display:flex;align-items:flex-end;gap:2px;height:26px;" title="Prior: {{ g.total_prior }} → Current: {{ g.total }}">
+            <div style="width:10px;height:{{ ([g.total_prior / max_v * 26, 4]|max)|int }}px;background:var(--surface-3);border:1px solid var(--border-2);border-radius:2px 2px 0 0;"></div>
+            <div style="width:10px;height:{{ ([g.total / max_v * 26, 4]|max)|int }}px;background:{% if g.pct_change > 5 %}var(--red){% elif g.pct_change < -5 %}var(--green-dark){% else %}var(--muted-2){% endif %};border-radius:2px 2px 0 0;"></div>
+          </div>
+          {{ pct_chip(g.pct_change) }}
+        </div>
+        {% else %}
+        {{ pct_chip(g.pct_change) }}
+        {% endif %}
+      </td>
+      {% endif %}
     </tr>
     {% for r in g.attorneys %}
     <tr class="atty-{{ fid }}" style="display:none;background:var(--surface-2);">
