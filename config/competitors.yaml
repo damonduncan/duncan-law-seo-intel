@@ -134,6 +134,10 @@ competitors:
         aliases:
           - "Samantha Brumbaugh"
           - "S Brumbaugh"
+      - name: "Dirk W. Siegmund"
+        aliases:
+          - "Dirk Siegmund"
+          - "D Siegmund"
 
   - id: comp_004
     name: "Tennant & Jarvis, P.C."
@@ -217,6 +221,50 @@ competitors:
         aliases:
           - "Cathy Stroupe"
           - "C Stroupe"
+
+  - id: comp_032
+    name: "Law Office of Stephen E. Robertson PLLC"
+    google_place_id: ""   # TODO: Greensboro + Durham offices — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - greensboro
+      - winston_salem
+      - high_point
+    attorneys:
+      - name: "Stephen E. Robertson"
+        aliases:
+          - "Stephen Robertson"
+          - "S Robertson"
+      - name: "Jennifer Adams Ledford"
+        aliases:
+          - "Jennifer Ledford"
+          - "J Ledford"
+
+  - id: comp_033
+    name: "Law Office of Wendy H. James, PLLC"
+    google_place_id: ""   # TODO: Kernersville NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - greensboro
+      - winston_salem
+    attorneys:
+      - name: "Wendy H. James"
+        aliases:
+          - "Wendy James"
+          - "W James"
+
+  - id: comp_034
+    name: "Law Office of Lynn E. Coleman"
+    google_place_id: ""   # TODO: Kernersville NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - greensboro
+      - winston_salem
+    attorneys:
+      - name: "Lynn Ellen Coleman"
+        aliases:
+          - "Lynn Coleman"
+          - "L Coleman"
 
   # ── HIGH POINT ────────────────────────────────────────────────────────────
 
