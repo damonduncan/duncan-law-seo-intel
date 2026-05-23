@@ -675,7 +675,7 @@ competitors:
 
   - id: comp_025
     name: "Edwin M. Hardy, P.C."
-    google_place_id: ""   # Washington NC (primary), Greenville NC — TODO: find Place IDs
+    google_place_id: "ChIJtwSsPdfCrokRCteAvLD-gfc"   # 2011 W 15th St, Washington NC
     bbb_url: ""
     markets:
       - ednc
@@ -710,7 +710,7 @@ competitors:
 
   - id: comp_028
     name: "Fabricius & Fabricius PLLC"
-    google_place_id: ""   # 106 N First Ave, Knightdale NC — TODO: find Place ID
+    google_place_id: "ChIJTdvVj65crIkRDEBq9BR9PHc"   # 106 N First Ave, Knightdale NC
     bbb_url: ""
     markets:
       - raleigh   # Knightdale is Wake County, EDNC (Raleigh metro)
@@ -722,10 +722,12 @@ competitors:
 
   - id: comp_029
     name: "Gillespie & Murphy, P.A."
-    google_place_id: ""   # primary: 320 Middle St, New Bern NC; also Wilmington, Jacksonville, Greenville
     bbb_url: ""
-    markets:
-      - ednc
+    locations:
+      - market: ednc
+        google_place_id: "ChIJJ_mfAZbRqIkRjRFY09emTRA"   # 320 Middle St, New Bern NC
+      - market: wilmington
+        google_place_id: "ChIJoQuTwMAfqokRkutCYE42BgU"   # 321 N Front St, Wilmington NC
     attorneys:
       - name: "Lindsay M. Parker"
         aliases:
@@ -734,7 +736,7 @@ competitors:
 
   - id: comp_030
     name: "Law Offices of Chris Vonderau, PLLC"
-    google_place_id: ""   # 4022 Shipyard Blvd, Wilmington NC — TODO: find Place ID
+    google_place_id: "ChIJo29vsrn1qYkRY5Ec_n4xeRc"   # 4022 Shipyard Blvd, Wilmington NC
     bbb_url: ""
     markets:
       - wilmington
@@ -780,7 +782,7 @@ competitors:
 
   - id: comp_043
     name: "Harris Debt Relief"
-    google_place_id: ""   # 309 Person St, Fayetteville — no standalone GBP found; may be listed under parent firm
+    google_place_id: "ChIJBSFrldISq4kR0RJbiaASj1g"   # 309 Person St, Fayetteville NC
     bbb_url: ""
     markets:
       - fayetteville
