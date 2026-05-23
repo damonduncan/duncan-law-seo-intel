@@ -41,8 +41,12 @@ MARKET_TO_DISTRICT = {
     "salisbury":     "MDNC",
     "durham":        "MDNC",
     # WDNC — Western District of North Carolina
-    "charlotte":     "WDNC",
-    "asheville":     "WDNC",
+    "charlotte":        "WDNC",
+    "asheville":        "WDNC",
+    "statesville":      "WDNC",
+    "mooresville":      "WDNC",
+    "elkin":            "WDNC",
+    "north_wilkesboro": "WDNC",
     # EDNC — Eastern District of North Carolina
     "ednc":          "EDNC",   # legacy catch-all tag
     "raleigh":       "EDNC",

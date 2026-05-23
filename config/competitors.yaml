@@ -499,10 +499,12 @@ competitors:
 
   - id: comp_046
     name: "Law Offices of Robert H. Gourley Jr., P.A."
-    google_place_id: "ChIJu4W4TRxVUYgR8roBMqddmtY"  # secondary: ChIJOfh9tsFUUYgRUGLQvMC8ILI
     bbb_url: ""
-    markets:
-      - charlotte
+    locations:
+      - market: statesville
+        google_place_id: "ChIJu4W4TRxVUYgR8roBMqddmtY"
+      - market: mooresville
+        google_place_id: "ChIJOfh9tsFUUYgRUGLQvMC8ILI"
     attorneys:
       - name: "Robert H. Gourley, Jr."
         aliases:
@@ -523,10 +525,14 @@ competitors:
 
   - id: comp_048
     name: "Law Offices of Thomas C. Flippin, P.C."
-    google_place_id: "ChIJvRYTWi2AUYgRL5HFSXYPozA"  # secondary: ChIJG8AWciRzUYgRFxWR2Xsp7T0, ChIJ7f_p6zlZUYgRTEiUQp0bd4w
     bbb_url: ""
-    markets:
-      - charlotte    # Surry/Wilkes/Yadkin counties — WDNC foothills
+    locations:
+      - market: elkin
+        google_place_id: "ChIJvRYTWi2AUYgRL5HFSXYPozA"
+      - market: north_wilkesboro
+        google_place_id: "ChIJG8AWciRzUYgRFxWR2Xsp7T0"
+      - market: statesville
+        google_place_id: "ChIJ7f_p6zlZUYgRTEiUQp0bd4w"
     attorneys:
       - name: "Thomas C. Flippin"
         aliases:
@@ -811,6 +817,22 @@ markets:
     state: NC
   asheville:
     display_name: "Asheville"
+    district: WDNC
+    state: NC
+  statesville:
+    display_name: "Statesville"
+    district: WDNC
+    state: NC
+  mooresville:
+    display_name: "Mooresville"
+    district: WDNC
+    state: NC
+  elkin:
+    display_name: "Elkin"
+    district: WDNC
+    state: NC
+  north_wilkesboro:
+    display_name: "North Wilkesboro"
     district: WDNC
     state: NC
   # ── EDNC — Eastern District of North Carolina ─────────────────────────────
