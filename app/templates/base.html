@@ -575,7 +575,8 @@
     /* ─── Hero gradient card ─────────────────────────────────── */
 
     .hero-card {
-      background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 55%, #3B82F6 100%);
+      background: linear-gradient(-45deg, #1E3A8A, #1D4ED8, #2563EB, #1E40AF, #3B82F6, #1E3A8A);
+      background-size: 400% 400%;
       border-radius: var(--r-lg);
       padding: 28px 32px;
       color: #fff;
@@ -740,8 +741,29 @@
       to   { opacity: 1; transform: translateY(0); }
     }
 
+    @keyframes meshDrift {
+      0%, 100% { background-position: 0% 50%; }
+      50%       { background-position: 100% 50%; }
+    }
+
+    @keyframes statusPulse {
+      0%   { transform: scale(1);   opacity: 1; }
+      50%  { transform: scale(1.5); opacity: .4; }
+      100% { transform: scale(1);   opacity: 1; }
+    }
+
+    .pulse-dot { animation: statusPulse 2.4s ease-in-out infinite; }
+
+    @keyframes ticker {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    .t-item { font-size: 13px; color: rgba(255,255,255,.65); font-weight: 500; flex-shrink: 0; }
+    .t-sep  { margin: 0 16px; color: rgba(255,255,255,.25); font-size: 13px; flex-shrink: 0; }
+
     .hero-card {
-      animation: fadeSlideIn .38s var(--ease) 0ms both;
+      animation: fadeSlideIn .38s var(--ease) 0ms both, meshDrift 14s ease .6s infinite;
     }
 
     .card-grid .stat-card:nth-child(1) { animation: fadeSlideIn .38s var(--ease)  60ms both; }
@@ -843,6 +865,110 @@
       backdrop-filter: blur(2px);
     }
 
+    /* ─── Command palette ───────────────────────────────────── */
+
+    #cmdpal-ov {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.65);
+      backdrop-filter: blur(6px);
+      z-index: 9000;
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 13vh;
+    }
+    #cmdpal-ov.open { display: flex; }
+
+    #cmdpal {
+      width: 520px;
+      max-width: calc(100vw - 32px);
+      background: var(--surface);
+      border-radius: var(--r-lg);
+      box-shadow: var(--shadow-lg), 0 0 0 1px rgba(37,99,235,.1);
+      overflow: hidden;
+      animation: fadeSlideIn .18s var(--ease) both;
+    }
+
+    #cmdpal-inp-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #cmdpal-inp {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 17px;
+      font-family: inherit;
+      color: var(--text);
+      background: transparent;
+    }
+    #cmdpal-inp::placeholder { color: var(--muted-2); }
+
+    #cmdpal-list { padding: 6px; max-height: 300px; overflow-y: auto; }
+
+    .cpi {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 9px 11px;
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      transition: background var(--dur) var(--ease);
+      text-decoration: none;
+      color: var(--text);
+    }
+    .cpi:hover, .cpi.on { background: var(--accent-light); }
+    .cpi.on .cp-lbl      { color: var(--accent); }
+
+    .cp-ico {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      background: var(--surface-3);
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+    }
+    .cpi.on .cp-ico { background: var(--accent-mid); color: var(--accent); }
+
+    .cp-lbl  { font-size: 15px; font-weight: 600; }
+    .cp-hint { font-size: 13px; color: var(--muted); margin-top: 1px; }
+
+    #cmdpal-empty {
+      padding: 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 15px;
+      display: none;
+    }
+
+    #cmdpal-foot {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 9px 14px;
+      border-top: 1px solid var(--border);
+      background: var(--surface-2);
+    }
+    .ck { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+    .ck kbd {
+      background: var(--surface);
+      border: 1px solid var(--border-2);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
     @media (max-width: 768px) {
       nav { transform: translateX(-100%); transition: transform var(--dur) var(--ease); }
       nav.nav-open { transform: translateX(0); }
@@ -928,6 +1054,12 @@
 
   <div class="nav-spacer"></div>
 
+  <button onclick="cpOpen()" style="display:flex;align-items:center;gap:8px;margin:0 10px 6px;padding:8px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);color:rgba(255,255,255,.45);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;transition:background .15s,color .15s;width:calc(100% - 20px);" onmouseenter="this.style.background='rgba(255,255,255,.11)';this.style.color='rgba(255,255,255,.75)'" onmouseleave="this.style.background='rgba(255,255,255,.06)';this.style.color='rgba(255,255,255,.45)'">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    Quick navigate
+    <kbd style="margin-left:auto;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:4px;padding:1px 6px;font-size:11px;font-family:monospace;color:rgba(255,255,255,.4);">⌘K</kbd>
+  </button>
+
   <div class="nav-user">
     <div class="nav-user-avatar">{{ (user.name[0] if user and user.name else 'D') | upper }}</div>
     <div class="nav-user-info">
@@ -941,16 +1073,89 @@
   {% block content %}{% endblock %}
 </main>
 
+<!-- Command palette -->
+<div id="cmdpal-ov" onclick="if(event.target===this)cpClose()">
+  <div id="cmdpal">
+    <div id="cmdpal-inp-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--muted-2);flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="cmdpal-inp" type="text" placeholder="Go to page…" autocomplete="off" spellcheck="false">
+      <span style="font-size:12px;color:var(--muted-2);white-space:nowrap;">Esc to close</span>
+    </div>
+    <div id="cmdpal-list"></div>
+    <div id="cmdpal-empty">No results</div>
+    <div id="cmdpal-foot">
+      <span class="ck"><kbd>↑↓</kbd> navigate</span>
+      <span class="ck"><kbd>↵</kbd> open</span>
+      <span class="ck"><kbd>⌘K</kbd> toggle</span>
+    </div>
+  </div>
+</div>
+
 <script>
 (function() {
   var toggle  = document.getElementById('navToggle');
   var nav     = document.getElementById('nav');
   var overlay = document.getElementById('navOverlay');
-  if (!toggle) return;
-  function open()  { nav.classList.add('nav-open');    overlay.classList.add('nav-open'); }
-  function close() { nav.classList.remove('nav-open'); overlay.classList.remove('nav-open'); }
-  toggle.addEventListener('click', function() { nav.classList.contains('nav-open') ? close() : open(); });
-  overlay.addEventListener('click', close);
+  if (toggle) {
+    function open()  { nav.classList.add('nav-open');    overlay.classList.add('nav-open'); }
+    function close() { nav.classList.remove('nav-open'); overlay.classList.remove('nav-open'); }
+    toggle.addEventListener('click', function() { nav.classList.contains('nav-open') ? close() : open(); });
+    overlay.addEventListener('click', close);
+  }
+
+  var PAGES = [
+    { l:'Overview',      h:'Dashboard & competitive summary',        url:'/dashboard',   i:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },
+    { l:'Rankings',      h:'Google 3-pack rank tracking by keyword', url:'/rankings',    i:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
+    { l:'Reviews',       h:'Competitor Google & BBB review data',    url:'/reviews',     i:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' },
+    { l:'PACER Filings', h:'Bankruptcy filing volume by firm',       url:'/filings',     i:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>' },
+    { l:'Competitors',   h:'Tracked firms and attorney roster',      url:'/competitors', i:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
+    { l:'Alerts',        h:'Intelligence events & notifications',    url:'/alerts',      i:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>' },
+  ];
+
+  var ov  = document.getElementById('cmdpal-ov');
+  var inp = document.getElementById('cmdpal-inp');
+  var lst = document.getElementById('cmdpal-list');
+  var emp = document.getElementById('cmdpal-empty');
+  var idx = 0, vis = [];
+
+  function paint() {
+    if (!vis.length) { lst.innerHTML = ''; emp.style.display = 'block'; return; }
+    emp.style.display = 'none';
+    lst.innerHTML = vis.map(function(p, i) {
+      return '<a class="cpi' + (i===idx?' on':'') + '" href="' + p.url + '">'
+        + '<div class="cp-ico">' + p.i + '</div>'
+        + '<div><div class="cp-lbl">' + p.l + '</div><div class="cp-hint">' + p.h + '</div></div>'
+        + '</a>';
+    }).join('');
+  }
+
+  function render(q) {
+    vis = q ? PAGES.filter(function(p){ return (p.l+' '+p.h).toLowerCase().includes(q.toLowerCase()); }) : PAGES.slice();
+    idx = 0;
+    paint();
+  }
+
+  window.cpOpen = function() {
+    inp.value = ''; render('');
+    ov.classList.add('open');
+    setTimeout(function(){ inp.focus(); }, 30);
+  };
+
+  window.cpClose = function() { ov.classList.remove('open'); };
+
+  inp.addEventListener('input', function(){ render(this.value); });
+
+  inp.addEventListener('keydown', function(e) {
+    if      (e.key==='ArrowDown')  { idx = Math.min(idx+1, vis.length-1); paint(); e.preventDefault(); }
+    else if (e.key==='ArrowUp')    { idx = Math.max(idx-1, 0);            paint(); e.preventDefault(); }
+    else if (e.key==='Enter'  && vis[idx]) { location.href = vis[idx].url; }
+    else if (e.key==='Escape') { cpClose(); }
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if ((e.metaKey||e.ctrlKey) && e.key==='k') { e.preventDefault(); ov.classList.contains('open') ? cpClose() : cpOpen(); }
+    else if (e.key==='Escape' && ov.classList.contains('open')) { cpClose(); }
+  });
 })();
 </script>
 

@@ -28,13 +28,15 @@
     View Rankings
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
   </a>
+{% set ns = namespace(total_in=0, total_kw=0) %}
+{% if scorecard %}
+{% for m in scorecard if m.status != 'no_data' %}
+  {% set ns.total_in = ns.total_in + m.in_pack %}
+  {% set ns.total_kw = ns.total_kw + m.total %}
+{% endfor %}
+{% endif %}
   <div class="hero-stats">
     {% if scorecard %}
-    {% set ns = namespace(total_in=0, total_kw=0) %}
-    {% for m in scorecard if m.status != 'no_data' %}
-      {% set ns.total_in = ns.total_in + m.in_pack %}
-      {% set ns.total_kw = ns.total_kw + m.total %}
-    {% endfor %}
     <div class="hero-stat">
       <span class="hero-stat-val">{{ ns.total_in }}/{{ ns.total_kw }}</span>
       <span class="hero-stat-lbl">Keywords in 3-pack</span>
@@ -56,6 +58,36 @@
     <div class="hero-stat">
       <span class="hero-stat-val" style="color:{% if unacked_alerts > 0 %}#FCA5A5{% else %}#6EE7B7{% endif %};">{{ unacked_alerts }}</span>
       <span class="hero-stat-lbl">Active alerts</span>
+    </div>
+  </div>
+
+  <!-- Intelligence ticker -->
+  <div style="border-top:1px solid rgba(255,255,255,.12);margin-top:20px;padding-top:12px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 48px,#000 calc(100% - 48px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 48px,#000 calc(100% - 48px),transparent 100%);">
+    <div style="display:flex;white-space:nowrap;animation:ticker 38s linear infinite;" onmouseenter="this.style.animationPlayState='paused'" onmouseleave="this.style.animationPlayState='running'">
+      {% for _ in range(2) %}
+      <span style="display:inline-flex;align-items:center;flex-shrink:0;">
+        <span class="t-item">{{ competitors | length }} competitors monitored</span>
+        <span class="t-sep">|</span>
+        <span class="t-item">6 markets tracked</span>
+        {% if ns.total_kw > 0 %}
+        <span class="t-sep">|</span>
+        <span class="t-item">{{ ns.total_in }}/{{ ns.total_kw }} keywords in 3-pack</span>
+        {% endif %}
+        <span class="t-sep">|</span>
+        {% if unacked_alerts == 0 %}
+        <span class="t-item">All systems clear</span>
+        {% else %}
+        <span class="t-item">{{ unacked_alerts }} alert{{ 's' if unacked_alerts != 1 else '' }} need attention</span>
+        {% endif %}
+        <span class="t-sep">|</span>
+        <span class="t-item">Greensboro · Winston-Salem · High Point · Charlotte · Salisbury · Asheville</span>
+        {% if last_job and last_job.started_at %}
+        <span class="t-sep">|</span>
+        <span class="t-item">Last collection {{ last_job.started_at.strftime('%b %d, %Y') }}</span>
+        {% endif %}
+        <span style="display:inline-block;width:56px;flex-shrink:0;"></span>
+      </span>
+      {% endfor %}
     </div>
   </div>
 </div>
@@ -125,7 +157,7 @@
     {% endif %}
     <div style="background:{{ bg }};border:1px solid {{ border_c }};border-radius:var(--r);padding:14px 16px;">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
-        <span style="width:7px;height:7px;border-radius:50%;background:{{ dot }};flex-shrink:0;"></span>
+        <span class="{% if m.status not in ('strong', 'no_data') %}pulse-dot{% endif %}" style="width:7px;height:7px;border-radius:50%;background:{{ dot }};flex-shrink:0;display:inline-block;"></span>
         <span style="font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">{{ m.display }}</span>
       </div>
       {% if m.status == 'no_data' %}
