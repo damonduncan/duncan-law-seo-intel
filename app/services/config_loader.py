@@ -123,11 +123,12 @@ def _upsert_competitor(
 
     # Sync locations (own firm has per-market entries; competitors use google_place_id per market)
     yaml_locations: List[Dict] = data.get("locations", [])
-    if not yaml_locations and data.get("google_place_id"):
-        # Competitor with a single place_id — create one location per listed market
+    if not yaml_locations and data.get("markets"):
+        # Create one location per listed market. google_place_id may be empty for
+        # PACER-only firms (e.g. EDNC competitors without a verified Google listing).
         markets_list: List[str] = data.get("markets", [])
         yaml_locations = [
-            {"market": m, "google_place_id": data["google_place_id"]}
+            {"market": m, "google_place_id": data.get("google_place_id") or None}
             for m in markets_list
         ]
 
