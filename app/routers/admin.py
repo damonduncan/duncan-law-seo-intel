@@ -129,6 +129,114 @@ def discover_district(
     )
 
 
+@router.get("/admin/debug/casefiled")
+def debug_casefiled(
+    request: Request,
+    district: str = "MDNC",
+    year: int = 2026,
+    month: int = 4,
+    user: dict = Depends(auth_required),
+):
+    """
+    Synchronously hit CaseFiled-Rpt.pl for any district and return the raw
+    page text, form fields, and parsed attorney lines — used to debug why
+    MDNC/WDNC discovery finds no attorneys.
+    """
+    from playwright.sync_api import sync_playwright
+    from datetime import date
+    import calendar as cal
+
+    COURT_BASES = {
+        "MDNC": "https://ecf.ncmb.uscourts.gov",
+        "WDNC": "https://ecf.ncwb.uscourts.gov",
+        "EDNC": "https://ecf.nceb.uscourts.gov",
+    }
+    court_base = COURT_BASES.get(district.upper(), COURT_BASES["MDNC"])
+    report_url = f"{court_base}/cgi-bin/CaseFiled-Rpt.pl"
+
+    period_start = date(year, month, 1)
+    period_end   = date(year, month, cal.monthrange(year, month)[1])
+
+    result: dict = {
+        "district": district, "report_url": report_url,
+        "login_ok": False, "court_ok": False,
+        "report_title": None, "form_fields": [],
+        "date_from_filled": False, "date_to_filled": False,
+        "body_length": 0, "body_snippet": None,
+        "attorney_for_debtor_lines": [],
+        "error": None,
+    }
+
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"])
+            page = browser.new_page()
+            page.set_default_timeout(45_000)
+
+            page.goto("https://pacer.login.uscourts.gov/csologin/login.jsf", wait_until="domcontentloaded")
+            page.fill('[name="loginForm:loginName"]', settings.pacer_username)
+            page.fill('[name="loginForm:password"]',  settings.pacer_password)
+            page.click('[id$="fbtnLogin"]')
+            page.wait_for_timeout(4_000)
+            result["login_ok"] = True
+
+            page.goto(f"{court_base}/cgi-bin/login.pl", wait_until="domcontentloaded")
+            court_title = page.title()
+            result["court_title"] = court_title
+            result["court_ok"] = "Login" not in court_title
+
+            page.goto(report_url, wait_until="domcontentloaded")
+            result["report_title"] = page.title()
+            result["form_fields"] = page.eval_on_selector_all(
+                "input, select",
+                "els => els.map(e => ({name: e.name, id: e.id, type: e.type, value: e.value}))"
+            )[:30]
+
+            date_from_str = period_start.strftime("%m/%d/%Y")
+            date_to_str   = period_end.strftime("%m/%d/%Y")
+            for fname in ["filed_start_dt", "date_from", "Sdate", "start_date", "filed_from", "DateFiled_from"]:
+                try:
+                    page.fill(f'[name="{fname}"]', date_from_str, timeout=1_000)
+                    result["date_from_filled"] = fname
+                    break
+                except Exception:
+                    pass
+            for fname in ["filed_end_dt", "date_to", "Edate", "end_date", "filed_to", "DateFiled_to"]:
+                try:
+                    page.fill(f'[name="{fname}"]', date_to_str, timeout=1_000)
+                    result["date_to_filled"] = fname
+                    break
+                except Exception:
+                    pass
+
+            for sel in ['input[type="submit"]', '[name="button1"]', 'button[type="submit"]',
+                        'input[value="Run Report"]', 'input[value="Submit"]']:
+                try:
+                    page.click(sel, timeout=3_000)
+                    page.wait_for_load_state("domcontentloaded")
+                    break
+                except Exception:
+                    pass
+
+            body = page.inner_text("body")
+            result["body_length"] = len(body)
+            result["body_snippet"] = body[:4000]
+
+            # Show every line that contains "Attorney"
+            atty_lines = [
+                line.strip() for line in body.split("\n")
+                if "attorney" in line.lower() or "Attorney" in line
+            ]
+            result["attorney_for_debtor_lines"] = atty_lines[:40]
+
+            browser.close()
+
+    except Exception as e:
+        result["error"] = str(e)
+
+    return JSONResponse(result)
+
+
 @router.get("/admin/discover/ednc-filers")
 def discover_ednc_filers(
     request: Request,

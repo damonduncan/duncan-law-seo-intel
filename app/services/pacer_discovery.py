@@ -41,7 +41,10 @@ DISTRICT_CONFIG = {
 
 
 def _cache_key(district: str) -> str:
-    return f"top_filers_{district.lower()}"
+    # EDNC keeps its legacy key so existing cached results are not lost
+    if district.upper() == "EDNC":
+        return "ednc_top_filers"
+    return f"{district.lower()}_top_filers"
 
 
 def run_district_discovery(db: Session, district: str, year: int, month: int) -> dict:
