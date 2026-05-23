@@ -55,6 +55,36 @@ def run_weekly_job() -> None:
             from app.services.alert_engine import check_pacer_trends
             check_pacer_trends(db)
 
+            # Discovery for all 3 districts — runs for the month that just closed.
+            # Each district takes ~10 min (Playwright), so run in daemon threads
+            # mirroring the /admin/discover/{district} endpoint pattern.
+            import threading as _threading
+            from app.database import SessionLocal as _SessionLocal
+            from app.services.pacer_discovery import run_district_discovery as _run_district_discovery
+
+            _today = date.today()
+            disc_month = _today.month - 1 if _today.month > 1 else 12
+            disc_year  = _today.year      if _today.month > 1 else _today.year - 1
+
+            def _discover(district: str, year: int, month: int) -> None:
+                _db = _SessionLocal()
+                try:
+                    _run_district_discovery(_db, district=district, year=year, month=month)
+                except Exception as _e:
+                    logger.error(f"Discovery thread failed for {district}: {_e}", exc_info=True)
+                finally:
+                    _db.close()
+
+            for _district in ("MDNC", "WDNC", "EDNC"):
+                _threading.Thread(
+                    target=_discover,
+                    args=(_district, disc_year, disc_month),
+                    daemon=True,
+                ).start()
+            logger.info(
+                f"PACER discovery threads started for {disc_year}-{disc_month:02d}: MDNC, WDNC, EDNC"
+            )
+
         # Phase 5: Send weekly digest
         from app.services.email_digest import build_and_send_digest
         build_and_send_digest(db)

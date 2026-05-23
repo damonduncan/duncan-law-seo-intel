@@ -247,20 +247,24 @@ def check_review_gaps(db: Session) -> None:
         if s.market not in own_by_market:
             own_by_market[s.market] = s.review_count or 0
 
-    # Latest competitor review counts
+    # Latest competitor review count per (competitor_id, market).
+    # Snapshots are stored with market=CompetitorLocation.market (not None),
+    # so key by (competitor_id, market) and fall back to (competitor_id, None)
+    # for any legacy rows that pre-date per-location storage.
     comp_snaps = (
         db.query(ReviewSnapshot)
         .filter(
+            ReviewSnapshot.competitor_id != own_firm.id,
             ReviewSnapshot.source == "google",
-            ReviewSnapshot.market == None,
         )
         .order_by(ReviewSnapshot.snapped_at.desc())
         .all()
     )
-    comp_count_by_id: dict = {}
+    comp_count_by_comp_market: dict = {}
     for s in comp_snaps:
-        if s.competitor_id not in comp_count_by_id:
-            comp_count_by_id[s.competitor_id] = s.review_count or 0
+        key = (s.competitor_id, s.market)
+        if key not in comp_count_by_comp_market:
+            comp_count_by_comp_market[key] = s.review_count or 0
 
     # Check each market
     one_month_ago = date.today() - timedelta(days=28)
@@ -276,7 +280,10 @@ def check_review_gaps(db: Session) -> None:
             .all()
         )
         for loc in locs:
-            comp_count = comp_count_by_id.get(loc.competitor_id, 0)
+            comp_count = comp_count_by_comp_market.get(
+                (loc.competitor_id, market),
+                comp_count_by_comp_market.get((loc.competitor_id, None), 0),
+            )
             if comp_count < own_count * 2:
                 continue
 
