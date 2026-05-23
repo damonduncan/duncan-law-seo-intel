@@ -207,8 +207,9 @@
   {% endif %}
   {% if discovery.top_filers %}
   <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">
-    These are <strong>new bankruptcy cases filed</strong> in {{ discovery.period }} — more accurate than the iquery.pl counts above.
-    Add untracked attorneys to <code>config/competitors.yaml</code>, then Sync Config + Collect PACER.
+    Use this to <strong>discover untracked attorneys</strong> by name. Case counts here come from
+    CaseFiled-Rpt.pl and may differ from the PACER table above — use the table counts for
+    competitive analysis. Add new attorneys to <code>config/competitors.yaml</code>, then Sync Config + Collect PACER.
   </p>
   <table>
     <tr>
