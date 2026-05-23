@@ -194,20 +194,29 @@ def debug_casefiled(
 
             date_from_str = period_start.strftime("%m/%d/%Y")
             date_to_str   = period_end.strftime("%m/%d/%Y")
-            for fname in ["filed_start_dt", "date_from", "Sdate", "start_date", "filed_from", "DateFiled_from"]:
+            for fname in ["StartDate", "filed_start_dt", "date_from", "Sdate",
+                          "start_date", "filed_from", "DateFiled_from"]:
                 try:
                     page.fill(f'[name="{fname}"]', date_from_str, timeout=1_000)
                     result["date_from_filled"] = fname
                     break
                 except Exception:
                     pass
-            for fname in ["filed_end_dt", "date_to", "Edate", "end_date", "filed_to", "DateFiled_to"]:
+            for fname in ["EndDate", "filed_end_dt", "date_to", "Edate",
+                          "end_date", "filed_to", "DateFiled_to"]:
                 try:
                     page.fill(f'[name="{fname}"]', date_to_str, timeout=1_000)
                     result["date_to_filled"] = fname
                     break
                 except Exception:
                     pass
+
+            # Check party_information so attorney names appear in output
+            try:
+                if not page.is_checked('[id="party_information"]'):
+                    page.check('[id="party_information"]', timeout=1_500)
+            except Exception:
+                pass
 
             for sel in ['input[type="submit"]', '[name="button1"]', 'button[type="submit"]',
                         'input[value="Run Report"]', 'input[value="Submit"]']:

@@ -115,24 +115,32 @@ def run_district_discovery(db: Session, district: str, year: int, month: int) ->
             logger.info(f"{district} form fields: {result['form_fields']}")
 
             # Fill date range — try every naming convention seen across CM/ECF courts
+            # NCMB/NCWB use StartDate/EndDate; NCEB uses filed_start_dt
             date_from_str = period_start.strftime("%m/%d/%Y")
             date_to_str   = period_end.strftime("%m/%d/%Y")
-            for fname in ["filed_start_dt", "date_from", "Sdate", "start_date",
-                          "filed_from", "DateFiled_from", "start_dt"]:
+            for fname in ["StartDate", "filed_start_dt", "date_from", "Sdate",
+                          "start_date", "filed_from", "DateFiled_from", "start_dt"]:
                 try:
                     page.fill(f'[name="{fname}"]', date_from_str, timeout=1_000)
                     logger.info(f"Filled date_from via [{fname}]")
                     break
                 except Exception:
                     pass
-            for fname in ["filed_end_dt", "date_to", "Edate", "end_date",
-                          "filed_to", "DateFiled_to", "end_dt"]:
+            for fname in ["EndDate", "filed_end_dt", "date_to", "Edate",
+                          "end_date", "filed_to", "DateFiled_to", "end_dt"]:
                 try:
                     page.fill(f'[name="{fname}"]', date_to_str, timeout=1_000)
                     logger.info(f"Filled date_to via [{fname}]")
                     break
                 except Exception:
                     pass
+
+            # Ensure party_information is checked so attorney names appear in output
+            try:
+                if not page.is_checked('[id="party_information"]'):
+                    page.check('[id="party_information"]', timeout=1_500)
+            except Exception:
+                pass
 
             # Submit
             for sel in ['input[type="submit"]', '[name="button1"]',
