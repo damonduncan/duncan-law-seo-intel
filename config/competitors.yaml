@@ -266,6 +266,32 @@ competitors:
           - "Lynn Coleman"
           - "L Coleman"
 
+  - id: comp_044
+    name: "Rowland & Yauger"
+    google_place_id: ""   # TODO: Carthage/Asheboro NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - greensboro
+      - high_point
+    attorneys:
+      - name: "Brett Smith Yauger"
+        aliases:
+          - "Brett Yauger"
+          - "B Yauger"
+
+  - id: comp_045
+    name: "Bunch, Robins & Stubblefield, LLP"
+    google_place_id: ""   # TODO: Asheboro NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - greensboro
+      - high_point
+    attorneys:
+      - name: "Julie C. Hatchel"
+        aliases:
+          - "Julie Hatchel"
+          - "J Hatchel"
+
   # ── HIGH POINT ────────────────────────────────────────────────────────────
 
   - id: comp_010
@@ -417,6 +443,55 @@ competitors:
         aliases:
           - "Geoffrey Planer"
           - "G Planer"
+
+  - id: comp_046
+    name: "Law Offices of Robert H. Gourley Jr., P.A."
+    google_place_id: ""   # TODO: Statesville NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - charlotte
+    attorneys:
+      - name: "Robert H. Gourley, Jr."
+        aliases:
+          - "Robert Gourley"
+          - "R Gourley"
+
+  - id: comp_047
+    name: "Dowless Law Firm, P.C."
+    google_place_id: ""   # TODO: Concord NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - charlotte
+    attorneys:
+      - name: "Ann-Charlotte Dowless"
+        aliases:
+          - "Ann Charlotte Dowless"
+          - "A Dowless"
+
+  - id: comp_048
+    name: "Law Offices of Thomas C. Flippin, P.C."
+    google_place_id: ""   # TODO: Elkin NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - charlotte    # Surry/Wilkes/Yadkin counties — WDNC foothills
+    attorneys:
+      - name: "Thomas C. Flippin"
+        aliases:
+          - "Thomas Flippin"
+          - "T Flippin"
+
+  - id: comp_049
+    name: "Law Office of Christopher D. Lane"
+    google_place_id: ""   # TODO: Clemmons NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - winston_salem  # Clemmons/Forsyth Co — MDNC territory
+      - charlotte      # Also files in WDNC
+    attorneys:
+      - name: "Christopher D. Lane"
+        aliases:
+          - "Christopher Lane"
+          - "C Lane"
 
   # ── ASHEVILLE / WESTERN FOOTHILLS ─────────────────────────────────────────
 
