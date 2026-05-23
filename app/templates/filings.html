@@ -207,7 +207,7 @@
         {% if g.pct_change is not none and g.total_prior is not none %}
         {% set max_v = [g.total, g.total_prior, 1]|max %}
         <div style="display:flex;align-items:flex-end;justify-content:flex-end;gap:6px;">
-          <div style="display:flex;align-items:flex-end;gap:2px;height:26px;" title="Prior: {{ g.total_prior }} → Current: {{ g.total }}">
+          <div style="display:flex;align-items:flex-end;gap:2px;height:26px;" data-tip="Prior: {{ g.total_prior }} → Current: {{ g.total }}">
             <div style="width:10px;height:{{ ([g.total_prior / max_v * 26, 4]|max)|int }}px;background:var(--surface-3);border:1px solid var(--border-2);border-radius:2px 2px 0 0;"></div>
             <div style="width:10px;height:{{ ([g.total / max_v * 26, 4]|max)|int }}px;background:{% if g.pct_change > 5 %}var(--red){% elif g.pct_change < -5 %}var(--green-dark){% else %}var(--muted-2){% endif %};border-radius:2px 2px 0 0;"></div>
           </div>
