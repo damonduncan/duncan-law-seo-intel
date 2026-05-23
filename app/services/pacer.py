@@ -43,6 +43,7 @@ MARKET_TO_DISTRICT = {
     # WDNC — Western District of North Carolina
     "charlotte":        "WDNC",
     "asheville":        "WDNC",
+    "waynesville":      "WDNC",
     "statesville":      "WDNC",
     "mooresville":      "WDNC",
     "elkin":            "WDNC",

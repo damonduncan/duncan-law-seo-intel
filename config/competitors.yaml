@@ -552,10 +552,18 @@ competitors:
 
   - id: comp_017
     name: "Matney Mosley, P.C."
-    google_place_id: "ChIJOxwaRqb0WYgRvdF0ENnhULU"   # TODO: verify Place ID is for Matney Mosley, P.C. listing
     bbb_url: "https://www.bbb.org/us/nc/asheville/profile/debt-relief-services/mosley-law-firm-pc-0473-92031590"
-    markets:
-      - asheville
+    # Rebranding firm — three active Google profiles at two locations:
+    #   Asheville (53 S French Broad Ave): two profiles (Mosley Law Firm 60 reviews +
+    #     Matney Mosley 7 reviews). Currently tracking the primary 60-review profile.
+    #     Second profile ChIJ9cng0lnzWYgRMUAlqFJoV2w tracked when multi-Place-ID
+    #     per market is supported.
+    #   Waynesville office: ChIJqfPlttJ2WYhDT7XzpCCVQQ (TODO: verify Place ID)
+    locations:
+      - market: asheville
+        google_place_id: "ChIJOxwaRqb0WYgRvdF0ENnhULU"    # Mosley Law Firm, P.C. — primary (60 reviews)
+      - market: waynesville
+        google_place_id: "ChIJqfPlttJ2WYhDT7XzpCCVQQ"     # Mosley Law Firm, P.C. — 9 reviews (TODO: verify Place ID)
     attorneys:
       - name: "R. Todd Mosley"
         aliases:
@@ -813,6 +821,10 @@ markets:
     state: NC
   asheville:
     display_name: "Asheville"
+    district: WDNC
+    state: NC
+  waynesville:
+    display_name: "Waynesville"
     district: WDNC
     state: NC
   statesville:
