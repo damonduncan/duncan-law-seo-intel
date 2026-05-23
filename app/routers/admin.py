@@ -529,8 +529,13 @@ def pacer_status(request: Request, user: dict = Depends(auth_required)):
 
         now = datetime.now(timezone.utc)
         elapsed = int((now - job.started_at.replace(tzinfo=timezone.utc)).total_seconds())
+        # If still "running" after 25 min the browser likely crashed silently
+        status = job.status
+        if status == "running" and elapsed > 1500:
+            status = "stalled"
+
         return JSONResponse({
-            "status":            job.status,
+            "status":            status,
             "started_at":        job.started_at.isoformat(),
             "elapsed_seconds":   elapsed,
             "records_processed": job.records_processed,

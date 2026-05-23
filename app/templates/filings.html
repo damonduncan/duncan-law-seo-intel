@@ -52,13 +52,17 @@
           txt.textContent = 'Collection complete — ' + (d.records_processed||0) + ' filing snapshots saved.';
           sub.textContent = 'Reloading page…';
           setTimeout(function(){ window.location.href = '/filings'; }, 1500);
-        } else if (d.status === 'failed') {
+        } else if (d.status === 'failed' || d.status === 'stalled') {
           spin.style.display = 'none';
           bar.style.background = 'rgba(239,68,68,.1)';
           bar.style.borderColor = 'rgba(239,68,68,.3)';
           bar.style.color = 'var(--red)';
-          txt.textContent = 'Collection failed.';
-          sub.textContent = d.error || 'Check Railway logs for details.';
+          txt.textContent = d.status === 'stalled'
+            ? 'Collection appears to have stalled (> 25 min). The browser likely ran out of memory.'
+            : 'Collection failed.';
+          sub.textContent = d.status === 'stalled'
+            ? 'The run is now split into one browser per district to fix this. Click Collect PACER Now to retry.'
+            : (d.error || 'Check Railway logs for details.');
         } else {
           setTimeout(poll, 20000);  // poll every 20s while running
         }

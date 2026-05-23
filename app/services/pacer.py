@@ -70,66 +70,63 @@ def collect_filing_snapshots(db: Session) -> int:
     period_start = date(period_end.year, period_end.month, 1)
     logger.info(f"PACER collection period: {period_start} → {period_end}")
 
-    from playwright.sync_api import sync_playwright
+    # Group attorneys by district up front
+    by_district: dict = {"MDNC": [], "WDNC": [], "EDNC": []}
+    for comp in db.query(Competitor).filter(Competitor.active == True).all():
+        for attorney in comp.attorneys:
+            name = _parse_name(attorney.attorney_name)
+            if not name:
+                continue
+            for district in _districts_for_competitor(comp):
+                by_district[district].append((comp, attorney, name))
 
     records = 0
-    with sync_playwright() as pw:
-        browser = pw.chromium.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-dev-shm-usage"],
-        )
-        ctx  = browser.new_context()
-        page = ctx.new_page()
-        page.set_default_timeout(NAV_TIMEOUT)
+
+    # ── One fresh browser per district ───────────────────────────────────────
+    # Opening a new Playwright session per district keeps peak memory usage
+    # low — Chromium is fully released before the next district starts.
+    from playwright.sync_api import sync_playwright
+
+    for district, attorney_list in by_district.items():
+        if not attorney_list:
+            continue
+
+        court_code = DISTRICT_TO_COURT[district]
+        court_base = f"https://ecf.{court_code}.uscourts.gov"
+        logger.info(f"Starting {district} ({len(attorney_list)} attorneys) …")
 
         try:
-            # Group attorneys by district
-            by_district: dict = {"MDNC": [], "WDNC": [], "EDNC": []}
-            for comp in db.query(Competitor).filter(Competitor.active == True).all():
-                for attorney in comp.attorneys:
-                    name = _parse_name(attorney.attorney_name)
-                    if not name:
-                        continue
-                    for district in _districts_for_competitor(comp):
-                        by_district[district].append((comp, attorney, name))
+            with sync_playwright() as pw:
+                browser = pw.chromium.launch(
+                    headless=True,
+                    args=["--no-sandbox", "--disable-dev-shm-usage"],
+                )
+                page = browser.new_context().new_page()
+                page.set_default_timeout(NAV_TIMEOUT)
 
-            # Login to PACER central ONCE
-            if not _login(page):
-                logger.error("PACER central login failed — aborting collection")
-                return 0
-
-            # Establish all court sessions NOW while the PACER session is fresh —
-            # doing this before any searches avoids the session expiring mid-run
-            court_auth: dict = {}
-            for district, attorney_list in by_district.items():
-                if not attorney_list:
+                # Central login
+                if not _login(page):
+                    logger.error(f"PACER login failed for {district} — skipping")
+                    browser.close()
                     continue
-                court_code = DISTRICT_TO_COURT[district]
-                court_base = f"https://ecf.{court_code}.uscourts.gov"
+
+                # Court-specific handoff
                 try:
-                    page.goto(
-                        f"{court_base}/cgi-bin/login.pl",
-                        wait_until="domcontentloaded",
-                        timeout=NAV_TIMEOUT,
-                    )
+                    page.goto(f"{court_base}/cgi-bin/login.pl",
+                              wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
                     court_title = page.title()
-                    ok = "Login" not in court_title and bool(court_title)
-                    court_auth[district] = ok
-                    logger.info(f"Court handoff {court_code}: {court_title!r} — {'OK' if ok else 'FAILED'}")
+                    if "Login" in court_title:
+                        logger.error(f"Court auth failed for {district}: {court_title!r}")
+                        browser.close()
+                        continue
+                    logger.info(f"Court auth OK: {court_code} — {court_title!r}")
                 except Exception as e:
-                    court_auth[district] = False
                     logger.error(f"Court handoff error {court_code}: {e}")
-
-            for district, attorney_list in by_district.items():
-                if not attorney_list:
+                    browser.close()
                     continue
-                if not court_auth.get(district):
-                    logger.error(f"Skipping {district} — court auth failed")
-                    continue
-                court_code = DISTRICT_TO_COURT[district]
 
+                # Run all attorney searches for this district
                 for comp, attorney, name in attorney_list:
-                    # One search per attorney — chapter counts parsed from results
                     chapter_counts = _search(
                         page,
                         last_name=name["last"],
@@ -158,13 +155,16 @@ def collect_filing_snapshots(db: Session) -> int:
                         )
                     time.sleep(SEARCH_DELAY)
 
-        except Exception as e:
-            logger.error(f"PACER collection error: {e}", exc_info=True)
-        finally:
-            browser.close()
+                browser.close()
 
-    db.commit()
-    logger.info(f"PACER: saved {records} filing snapshots")
+        except Exception as e:
+            logger.error(f"PACER {district} collection error: {e}", exc_info=True)
+
+        # Commit after each district so partial results are always saved
+        db.commit()
+        logger.info(f"{district} done — {records} total snapshots so far")
+
+    logger.info(f"PACER collection complete: {records} snapshots saved")
     return records
 
 
