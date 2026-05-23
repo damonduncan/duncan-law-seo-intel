@@ -370,7 +370,55 @@ competitors:
         aliases:
           - "Marcus Crow"
 
-  # ── ASHEVILLE ─────────────────────────────────────────────────────────────
+  - id: comp_035
+    name: "JA Debt Law PLLC"
+    google_place_id: ""   # TODO: Charlotte NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - charlotte
+    attorneys:
+      - name: "Jeanne Ann Pennebaker"
+        aliases:
+          - "Jeanne Pennebaker"
+          - "J Pennebaker"
+
+  - id: comp_036
+    name: "Nardone Law Firm"
+    google_place_id: ""   # TODO: Concord NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - charlotte
+    attorneys:
+      - name: "Kristen Scott Nardone"
+        aliases:
+          - "Kristen Nardone"
+          - "K Nardone"
+
+  - id: comp_037
+    name: "Law Office of Barbara L. White"
+    google_place_id: ""   # TODO: Charlotte NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - charlotte
+    attorneys:
+      - name: "Barbara L. White"
+        aliases:
+          - "Barbara White"
+          - "B White"
+
+  - id: comp_038
+    name: "Law Office of Geoffrey A. Planer"
+    google_place_id: ""   # TODO: Gastonia NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - charlotte
+    attorneys:
+      - name: "Geoffrey A. Planer"
+        aliases:
+          - "Geoffrey Planer"
+          - "G Planer"
+
+  # ── ASHEVILLE / WESTERN FOOTHILLS ─────────────────────────────────────────
 
   - id: comp_017
     name: "Mosley Law Firm, P.C."
@@ -430,6 +478,31 @@ competitors:
         aliases:
           - "Robert Lutz"
           - "R Lutz"
+
+  - id: comp_039
+    name: "Farmer & Morris Law, PLLC"
+    google_place_id: ""   # TODO: Rutherfordton NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - charlotte
+      - asheville
+    attorneys:
+      - name: "Caleb J. Farmer"
+        aliases:
+          - "Caleb Farmer"
+          - "C Farmer"
+
+  - id: comp_040
+    name: "Willcox Law Firm"
+    google_place_id: ""   # TODO: Morganton NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - asheville
+    attorneys:
+      - name: "Roderick H. Willcox, Jr."
+        aliases:
+          - "Roderick Willcox"
+          - "R Willcox"
 
   # ── EASTERN DISTRICT (EDNC) ───────────────────────────────────────────────
   # Discovered via NCEB CaseFiled-Rpt.pl for April 2026
@@ -546,6 +619,40 @@ competitors:
         aliases:
           - "William Berggren"
           - "W Berggren"
+
+  - id: comp_041
+    name: "Weik Law Office"
+    google_place_id: ""   # TODO: Raleigh NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - ednc
+    attorneys:
+      - name: "Teresa Weik"
+        aliases:
+          - "T Weik"
+
+  - id: comp_042
+    name: "Cameron Bankruptcy Law"
+    google_place_id: ""   # TODO: Raleigh NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - ednc
+    attorneys:
+      - name: "Sheree Cameron"
+        aliases:
+          - "S Cameron"
+
+  - id: comp_043
+    name: "Harris Debt Relief"
+    google_place_id: ""   # TODO: Fayetteville NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - ednc
+    attorneys:
+      - name: "Mark M. Harris"
+        aliases:
+          - "Mark Harris"
+          - "M Harris"
 
 markets:
   greensboro:
