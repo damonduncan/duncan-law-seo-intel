@@ -54,40 +54,40 @@
           <span style="width:22px;height:22px;border-radius:6px;background:var(--red-light);color:var(--red-dark);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
           </span>
-          <span style="font-size:12px;font-weight:500;">Own firm dropped from 3-pack</span>
+          <span style="font-size:14px;font-weight:500;">Own firm dropped from 3-pack</span>
           {% elif alert.alert_type == 'competitor_pack_entry' %}
           <span style="width:22px;height:22px;border-radius:6px;background:var(--orange-light);color:var(--orange);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
           </span>
-          <span style="font-size:12px;font-weight:500;">Competitor entered 3-pack</span>
+          <span style="font-size:14px;font-weight:500;">Competitor entered 3-pack</span>
           {% elif alert.alert_type == 'review_gap' %}
           <span style="width:22px;height:22px;border-radius:6px;background:var(--yellow-light);color:var(--yellow-dark);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           </span>
-          <span style="font-size:12px;font-weight:500;">Competitor review gap</span>
+          <span style="font-size:14px;font-weight:500;">Competitor review gap</span>
           {% elif alert.alert_type == 'pacer_volume_spike' %}
           <span style="width:22px;height:22px;border-radius:6px;background:var(--purple-light);color:var(--purple);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
           </span>
-          <span style="font-size:12px;font-weight:500;">PACER volume spike</span>
+          <span style="font-size:14px;font-weight:500;">PACER volume spike</span>
           {% else %}
-          <span style="font-size:12px;color:var(--muted);">{{ alert.alert_type }}</span>
+          <span style="font-size:14px;color:var(--muted);">{{ alert.alert_type }}</span>
           {% endif %}
         </div>
       </td>
-      <td style="font-size:12px;">
+      <td style="font-size:14px;">
         {% if alert.market %}<div style="font-weight:500;">{{ alert.market }}</div>{% endif %}
         {% if alert.keyword %}<div style="color:var(--muted);">{{ alert.keyword }}</div>{% endif %}
         {% if not alert.market and not alert.keyword %}<span style="color:var(--muted);">—</span>{% endif %}
       </td>
-      <td style="font-size:12px;max-width:220px;">
+      <td style="font-size:14px;max-width:220px;">
         {% if alert.detail %}
           {% for k, v in alert.detail.items() %}
           <div style="padding:1px 0;"><span style="color:var(--muted);">{{ k }}:</span> <span style="font-weight:500;">{{ v }}</span></div>
           {% endfor %}
         {% else %}<span style="color:var(--muted);">—</span>{% endif %}
       </td>
-      <td style="font-size:12px;color:var(--muted);white-space:nowrap;">
+      <td style="font-size:14px;color:var(--muted);white-space:nowrap;">
         {{ alert.triggered_at.strftime('%b %d, %I:%M %p') if alert.triggered_at else '—' }}
       </td>
       <td>
@@ -122,7 +122,7 @@
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
     </div>
     <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px;">No alerts — all clear</div>
-    <p style="color:var(--muted);font-size:13px;line-height:1.8;max-width:540px;">
+    <p style="color:var(--muted);font-size:15px;line-height:1.8;max-width:540px;">
       Alerts are generated automatically during daily and weekly data collection jobs.<br><br>
       <strong style="color:var(--text);">Immediate alerts</strong> fire when your firm drops from the Google 3-pack or a competitor newly enters it.<br>
       <strong style="color:var(--text);">Digest alerts</strong> flag competitors whose PACER filing volume has increased 20%+ over a 90-day window.

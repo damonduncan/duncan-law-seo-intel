@@ -54,7 +54,7 @@
     </span>
     Collect Review Data
   </div>
-  <p style="color:var(--muted);font-size:13px;line-height:1.8;margin-bottom:16px;">
+  <p style="color:var(--muted);font-size:15px;line-height:1.8;margin-bottom:16px;">
     No review snapshots collected yet. Click below to run collection — this will call the Google Places API
     for all {{ competitor_count }} tracked firms.
   </p>
@@ -118,7 +118,7 @@
         {% endif %}
         {{ 'High' if r.priority == 'high' else 'Medium' }}
       </span>
-      <span style="font-size:13px;line-height:1.6;color:var(--text-2);">{{ r.text }}</span>
+      <span style="font-size:15px;line-height:1.6;color:var(--text-2);">{{ r.text }}</span>
     </div>
     {% endfor %}
   </div>
@@ -151,12 +151,12 @@
           <span style="color:var(--yellow);font-size:14px;letter-spacing:1px;">
             {% for i in range(5) %}{% if loop.index <= s.rating | int %}★{% else %}☆{% endif %}{% endfor %}
           </span>
-          <strong style="font-size:13px;color:var(--yellow-dark);">{{ "%.1f"|format(s.rating|float) }}</strong>
+          <strong style="font-size:15px;color:var(--yellow-dark);">{{ "%.1f"|format(s.rating|float) }}</strong>
         </div>
         {% else %}<span style="color:var(--muted);">—</span>{% endif %}
       </td>
       <td style="font-weight:600;">{{ s.review_count if s.review_count else "—" }}</td>
-      <td style="font-size:12px;color:var(--muted);">{{ s.snapped_at.strftime('%b %d, %Y') if s.snapped_at else "—" }}</td>
+      <td style="font-size:14px;color:var(--muted);">{{ s.snapped_at.strftime('%b %d, %Y') if s.snapped_at else "—" }}</td>
     </tr>
     {% endfor %}
     </tbody>
@@ -193,10 +193,10 @@
       <td>
         {% if r.google_rating is not none %}
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:var(--yellow);font-size:13px;letter-spacing:.5px;">
+          <span style="color:var(--yellow);font-size:15px;letter-spacing:.5px;">
             {% for i in range(5) %}{% if loop.index <= r.google_rating | int %}★{% else %}☆{% endif %}{% endfor %}
           </span>
-          <strong style="font-size:13px;{% if r.google_rating >= 4.5 %}color:var(--green-dark){% elif r.google_rating >= 4.0 %}color:var(--yellow-dark){% else %}color:var(--red-dark){% endif %};">
+          <strong style="font-size:15px;{% if r.google_rating >= 4.5 %}color:var(--green-dark){% elif r.google_rating >= 4.0 %}color:var(--yellow-dark){% else %}color:var(--red-dark){% endif %};">
             {{ "%.1f"|format(r.google_rating) }}
           </strong>
         </div>
@@ -213,21 +213,21 @@
           {{ r.bbb_grade }}
         </span>
         {% if r.bbb_complaint_count %}
-        <span style="font-size:11px;color:var(--muted);margin-left:6px;">{{ r.bbb_complaint_count }} complaint{{ 's' if r.bbb_complaint_count != 1 }}</span>
+        <span style="font-size:15px;color:var(--muted);margin-left:6px;">{{ r.bbb_complaint_count }} complaint{{ 's' if r.bbb_complaint_count != 1 }}</span>
         {% endif %}
         {% elif r.has_bbb_url %}
-        <span style="color:var(--muted-2);font-size:12px;">pending</span>
+        <span style="color:var(--muted-2);font-size:14px;">pending</span>
         {% else %}
         <span style="color:var(--muted);">—</span>
         {% endif %}
       </td>
-      <td style="font-size:12px;color:var(--muted);">{{ r.last_updated.strftime('%b %d, %Y') if r.last_updated else "—" }}</td>
+      <td style="font-size:14px;color:var(--muted);">{{ r.last_updated.strftime('%b %d, %Y') if r.last_updated else "—" }}</td>
     </tr>
     {% endfor %}
     </tbody>
   </table>
   {% else %}
-  <p style="color:var(--muted);font-size:13px;">No competitor review data collected yet.</p>
+  <p style="color:var(--muted);font-size:15px;">No competitor review data collected yet.</p>
   {% endif %}
 </div>
 

@@ -12,7 +12,7 @@
     </span>
     No Rankings Data Yet
   </div>
-  <p style="color:var(--muted);font-size:13px;line-height:1.8;margin-bottom:16px;">
+  <p style="color:var(--muted);font-size:15px;line-height:1.8;margin-bottom:16px;">
     Click below to run the first collection now — it will fetch your current 3-pack positions across all 24 keyword/city combinations.<br>
     <strong style="color:var(--text);">Note:</strong> Make sure your Google Place IDs are set in <code>config/competitors.yaml</code> under <code>own_firm → locations</code>.
   </p>
@@ -70,7 +70,7 @@
     {% endif %}
     {% set ns.prev_kw = keyword %}
     <tr>
-      <td style="font-size:12px;color:var(--muted);font-weight:500;">{{ keyword }}</td>
+      <td style="font-size:14px;color:var(--muted);font-weight:500;">{{ keyword }}</td>
       <td style="font-weight:600;">{{ city }}</td>
       <td>
         {% if r.in_pack %}
@@ -87,7 +87,7 @@
           <span class="rank-badge rank-out">Not ranked</span>
         {% endif %}
       </td>
-      <td style="font-size:12px;color:var(--muted);">
+      <td style="font-size:14px;color:var(--muted);">
         {{ r.scraped_at.strftime('%b %d, %I:%M %p') if r.scraped_at else '—' }}
       </td>
     </tr>
@@ -98,11 +98,11 @@
 
 <!-- Rank legend -->
 <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px;align-items:center;">
-  <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Position key:</span>
-  <span class="rank-badge rank-gold">#1</span><span style="font-size:12px;color:var(--muted);">Gold — Top position</span>
-  <span class="rank-badge rank-top">#2–3</span><span style="font-size:12px;color:var(--muted);">Green — In pack</span>
-  <span class="rank-badge rank-mid">#4–7</span><span style="font-size:12px;color:var(--muted);">Amber — Competitive</span>
-  <span class="rank-badge rank-low">#8+</span><span style="font-size:12px;color:var(--muted);">Red — Watch</span>
+  <span style="font-size:15px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Position key:</span>
+  <span class="rank-badge rank-gold">#1</span><span style="font-size:14px;color:var(--muted);">Gold — Top position</span>
+  <span class="rank-badge rank-top">#2–3</span><span style="font-size:14px;color:var(--muted);">Green — In pack</span>
+  <span class="rank-badge rank-mid">#4–7</span><span style="font-size:14px;color:var(--muted);">Amber — Competitive</span>
+  <span class="rank-badge rank-low">#8+</span><span style="font-size:14px;color:var(--muted);">Red — Watch</span>
 </div>
 
 <!-- Trend charts -->
@@ -117,7 +117,7 @@
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;">
     {% for market, data in chart_data.items() %}
     <div style="background:var(--surface-2);border-radius:var(--r);padding:16px;">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;">
+      <div style="font-size:15px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;">
         {{ market | replace('_', ' ') | title }}
       </div>
       <div class="chart-wrap" style="height:140px;">
@@ -203,8 +203,8 @@ new Chart(document.getElementById('chart_{{ market }}'), {
     <tbody>
     {% for r in current_pack %}
     <tr {% if r.is_own_firm %}style="background:rgba(37,99,235,.04);"{% endif %}>
-      <td style="font-size:12px;color:var(--muted);">{{ r.market | replace('_', ' ') | title }}</td>
-      <td style="font-size:12px;color:var(--muted);">{{ r.keyword }}</td>
+      <td style="font-size:14px;color:var(--muted);">{{ r.market | replace('_', ' ') | title }}</td>
+      <td style="font-size:14px;color:var(--muted);">{{ r.keyword }}</td>
       <td>
         {% if r.rank_position == 1 %}
           <span class="rank-badge rank-gold">#1</span>
@@ -219,7 +219,7 @@ new Chart(document.getElementById('chart_{{ market }}'), {
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="firm-badge" style="background:var(--accent-mid);color:var(--accent-dark);">DL</div>
             <strong style="color:var(--accent);">Duncan Law</strong>
-            <span class="chip chip-blue" style="font-size:10px;">You</span>
+            <span class="chip chip-blue" style="font-size:14px;">You</span>
           </div>
         {% elif r.result_data %}
           {% set firm_name = r.result_data.get('title', '—') %}

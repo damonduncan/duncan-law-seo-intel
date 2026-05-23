@@ -121,21 +121,21 @@
     <div style="background:{{ bg }};border:1px solid {{ border_c }};border-radius:var(--r);padding:14px 16px;">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
         <span style="width:7px;height:7px;border-radius:50%;background:{{ dot }};flex-shrink:0;"></span>
-        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">{{ m.display }}</span>
+        <span style="font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">{{ m.display }}</span>
       </div>
       {% if m.status == 'no_data' %}
-      <div style="font-size:12px;color:var(--muted-2);">No data yet</div>
+      <div style="font-size:14px;color:var(--muted-2);">No data yet</div>
       {% else %}
       <div style="font-size:18px;font-weight:800;color:{{ val_color }};letter-spacing:-.02em;line-height:1;margin-bottom:3px;">{{ m.in_pack }}/{{ m.total }}</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:{% if m.reviews is not none %}3px{% else %}0{% endif %};">in 3-pack</div>
+      <div style="font-size:15px;color:var(--muted);margin-bottom:{% if m.reviews is not none %}3px{% else %}0{% endif %};">in 3-pack</div>
       {% if m.reviews is not none %}
-      <div style="font-size:11px;color:var(--muted);">{{ m.reviews }} reviews</div>
+      <div style="font-size:15px;color:var(--muted);">{{ m.reviews }} reviews</div>
       {% endif %}
       {% endif %}
     </div>
     {% endfor %}
   </div>
-  <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:14px;font-size:11px;color:var(--muted);">
+  <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:14px;font-size:15px;color:var(--muted);">
     <span><span style="color:var(--green);">●</span> Strong</span>
     <span><span style="color:var(--yellow);">●</span> Competitive</span>
     <span><span style="color:var(--red);">●</span> Needs attention</span>
@@ -171,7 +171,7 @@
     </tr></tbody>
   </table>
   {% else %}
-  <p style="color:var(--muted);font-size:13px;">Own firm not yet configured. Add your details to <code>config/competitors.yaml</code> and redeploy.</p>
+  <p style="color:var(--muted);font-size:15px;">Own firm not yet configured. Add your details to <code>config/competitors.yaml</code> and redeploy.</p>
   {% endif %}
 </div>
 
@@ -184,7 +184,7 @@
       </span>
       Tracked Competitors
     </div>
-    <a href="/competitors" style="font-size:12px;color:var(--accent);font-weight:600;text-decoration:none;">View all →</a>
+    <a href="/competitors" style="font-size:14px;color:var(--accent);font-weight:600;text-decoration:none;">View all →</a>
   </div>
   {% if competitors %}
   <table>
@@ -212,7 +212,7 @@
     </tbody>
   </table>
   {% else %}
-  <p style="color:var(--muted);font-size:13px;">No competitors configured yet. Add them to <code>config/competitors.yaml</code> and redeploy.</p>
+  <p style="color:var(--muted);font-size:15px;">No competitors configured yet. Add them to <code>config/competitors.yaml</code> and redeploy.</p>
   {% endif %}
 </div>
 
@@ -239,7 +239,7 @@
     </tr></tbody>
   </table>
   {% else %}
-  <p style="color:var(--muted);font-size:13px;padding-bottom:4px;">No jobs have run yet. Data collection starts automatically on the next scheduled window.</p>
+  <p style="color:var(--muted);font-size:15px;padding-bottom:4px;">No jobs have run yet. Data collection starts automatically on the next scheduled window.</p>
   {% endif %}
 
   <div class="admin-actions">

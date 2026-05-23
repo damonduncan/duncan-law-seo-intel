@@ -11,7 +11,7 @@
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
   <div>
     <strong>{{ disc_district }} discovery is running in the background.</strong><br>
-    <span style="font-size:12px;opacity:.8;">Pulling the CaseFiled-Rpt.pl report — takes 2–3 minutes. Refresh this page when done.</span>
+    <span style="font-size:14px;opacity:.8;">Pulling the CaseFiled-Rpt.pl report — takes 2–3 minutes. Refresh this page when done.</span>
   </div>
 </div>
 {% endif %}
@@ -21,8 +21,8 @@
   <div id="pacer-spinner" class="spin" style="flex-shrink:0;margin-top:1px;"></div>
   <div>
     <strong id="pacer-status-text">PACER collection is running…</strong>
-    <span id="pacer-elapsed" style="margin-left:10px;font-size:12px;opacity:.7;"></span>
-    <div id="pacer-sub" style="font-size:12px;margin-top:2px;opacity:.8;">Searching MDNC and WDNC for all tracked attorneys. Typical run: 5–8 minutes.</div>
+    <span id="pacer-elapsed" style="margin-left:10px;font-size:14px;opacity:.7;"></span>
+    <div id="pacer-sub" style="font-size:14px;margin-top:2px;opacity:.8;">Searching MDNC and WDNC for all tracked attorneys. Typical run: 5–8 minutes.</div>
   </div>
 </div>
 <script>
@@ -106,7 +106,7 @@
     </span>
     Collect PACER Data
   </div>
-  <p style="color:var(--muted);font-size:13px;line-height:1.8;margin-bottom:16px;">
+  <p style="color:var(--muted);font-size:15px;line-height:1.8;margin-bottom:16px;">
     No filing data collected yet. Click below to run the first collection — it will query PACER for last month's
     Chapter 7 and Chapter 13 filings for all tracked attorneys in MDNC, WDNC, and EDNC.<br><br>
     <strong style="color:var(--text);">Required:</strong>
@@ -125,10 +125,10 @@
 {% macro pct_chip(pct) %}
   {% if pct is not none %}
     {% if pct > 20 %}<span class="chip chip-red">▲ {{ pct }}%</span>
-    {% elif pct > 0 %}<span style="color:var(--yellow-dark);font-size:12px;font-weight:700;">+{{ pct }}%</span>
-    {% elif pct < 0 %}<span style="color:var(--green-dark);font-size:12px;font-weight:700;">{{ pct }}%</span>
-    {% else %}<span style="color:var(--muted);font-size:12px;">—</span>{% endif %}
-  {% else %}<span style="color:var(--muted-2);font-size:12px;">new</span>{% endif %}
+    {% elif pct > 0 %}<span style="color:var(--yellow-dark);font-size:14px;font-weight:700;">+{{ pct }}%</span>
+    {% elif pct < 0 %}<span style="color:var(--green-dark);font-size:14px;font-weight:700;">{{ pct }}%</span>
+    {% else %}<span style="color:var(--muted);font-size:14px;">—</span>{% endif %}
+  {% else %}<span style="color:var(--muted-2);font-size:14px;">new</span>{% endif %}
 {% endmacro %}
 
 {% macro district_table(groups, district_name) %}
@@ -140,7 +140,7 @@
       </span>
       {{ district_name }}
     </div>
-    <div style="font-size:12px;color:var(--muted);margin-left:36px;">
+    <div style="font-size:14px;color:var(--muted);margin-left:36px;">
       {{ current_period.strftime('%B %Y') if current_period else '—' }}
       {% if prior_period %} vs {{ prior_period.strftime('%B %Y') }}{% endif %}
     </div>
@@ -164,9 +164,9 @@
             {{ g.firm[:2] | upper }}
           </div>
           <div>
-            <div style="font-weight:700;font-size:13px;{% if g.is_own_firm %}color:var(--accent);{% endif %}">{{ g.firm }}</div>
+            <div style="font-weight:700;font-size:15px;{% if g.is_own_firm %}color:var(--accent);{% endif %}">{{ g.firm }}</div>
             {% if g.attorneys|length > 1 %}
-            <div style="font-size:11px;color:var(--muted);">{{ g.attorneys|length }} attorneys</div>
+            <div style="font-size:15px;color:var(--muted);">{{ g.attorneys|length }} attorneys</div>
             {% endif %}
           </div>
         </div>
@@ -179,17 +179,17 @@
           <div class="progress-wrap" style="flex:1;">
             <div class="progress-fill" style="width:{{ [g.market_share|float, 100]|min }}%;background:{% if g.is_own_firm %}var(--accent){% else %}var(--green){% endif %};"></div>
           </div>
-          <span style="font-size:12px;font-weight:700;color:{% if g.is_own_firm %}var(--accent){% else %}var(--muted){% endif %};min-width:34px;text-align:right;">{{ g.market_share }}%</span>
+          <span style="font-size:14px;font-weight:700;color:{% if g.is_own_firm %}var(--accent){% else %}var(--muted){% endif %};min-width:34px;text-align:right;">{{ g.market_share }}%</span>
         </div>
       </td>
       {% if prior_period %}<td style="text-align:right;">{{ pct_chip(g.pct_change) }}</td>{% endif %}
     </tr>
     {% for r in g.attorneys %}
     <tr style="opacity:.75;">
-      <td style="padding-left:52px;font-size:12px;color:var(--muted);">{{ r.attorney }}</td>
-      <td style="text-align:right;font-size:12px;">{{ r.ch7 }}</td>
-      <td style="text-align:right;font-size:12px;">{{ r.ch13 }}</td>
-      <td style="text-align:right;font-size:12px;font-weight:600;">{{ r.total }}</td>
+      <td style="padding-left:52px;font-size:14px;color:var(--muted);">{{ r.attorney }}</td>
+      <td style="text-align:right;font-size:14px;">{{ r.ch7 }}</td>
+      <td style="text-align:right;font-size:14px;">{{ r.ch13 }}</td>
+      <td style="text-align:right;font-size:14px;font-weight:600;">{{ r.total }}</td>
       <td></td>
       {% if prior_period %}<td style="text-align:right;">{{ pct_chip(r.pct_change) }}</td>{% endif %}
     </tr>
@@ -198,7 +198,7 @@
     </tbody>
   </table>
   {% else %}
-  <p style="color:var(--muted);font-size:13px;">No filings recorded for this district.</p>
+  <p style="color:var(--muted);font-size:15px;">No filings recorded for this district.</p>
   {% endif %}
 </div>
 {% endmacro %}
@@ -215,7 +215,7 @@
         </span>
         {{ district_label }} New Filings — {{ discovery.period }}
       </div>
-      <div style="font-size:12px;color:var(--muted);margin-left:36px;">{{ discovery.total_found }} debtor attorney lines parsed from CaseFiled-Rpt.pl</div>
+      <div style="font-size:14px;color:var(--muted);margin-left:36px;">{{ discovery.total_found }} debtor attorney lines parsed from CaseFiled-Rpt.pl</div>
     </div>
     <form method="post" action="/admin/discover/{{ slug }}" style="margin:0;flex-shrink:0;">
       <button type="submit" class="btn btn-ghost btn-sm"
@@ -223,10 +223,10 @@
     </form>
   </div>
   {% if discovery.error %}
-  <div style="font-size:13px;color:var(--red-dark);background:var(--red-light);padding:10px 14px;border-radius:var(--r-sm);margin-bottom:12px;">Error: {{ discovery.error }}</div>
+  <div style="font-size:15px;color:var(--red-dark);background:var(--red-light);padding:10px 14px;border-radius:var(--r-sm);margin-bottom:12px;">Error: {{ discovery.error }}</div>
   {% endif %}
   {% if discovery.top_filers %}
-  <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.7;">
+  <p style="font-size:14px;color:var(--muted);margin-bottom:12px;line-height:1.7;">
     Use this to <strong style="color:var(--text);">discover untracked attorneys</strong> by name. Counts here come from
     CaseFiled-Rpt.pl and may differ from the PACER table above. Add new attorneys to <code>config/competitors.yaml</code>, then Sync Config + Collect PACER.
   </p>
@@ -240,23 +240,23 @@
     {% for filer in discovery.top_filers %}
     {% set filer_last = filer.attorney.split()[-1] | lower %}
     <tr>
-      <td style="color:var(--muted);font-size:12px;font-weight:600;">{{ loop.index }}</td>
-      <td style="font-size:13px;">{{ filer.attorney }}</td>
+      <td style="color:var(--muted);font-size:14px;font-weight:600;">{{ loop.index }}</td>
+      <td style="font-size:15px;">{{ filer.attorney }}</td>
       {% if filer_last in tracked_names %}
       <td><span class="chip chip-green">✓ Tracked</span></td>
       {% else %}
-      <td style="color:var(--muted-2);font-size:12px;">—</td>
+      <td style="color:var(--muted-2);font-size:14px;">—</td>
       {% endif %}
     </tr>
     {% endfor %}
     </tbody>
   </table>
   {% else %}
-  <p style="font-size:13px;color:var(--muted);">
+  <p style="font-size:15px;color:var(--muted);">
     No attorney data found yet.
     {% if discovery.result_snippet %}
     <br><strong style="color:var(--text);">Response preview:</strong>
-    <pre style="font-size:11px;color:var(--muted);white-space:pre-wrap;max-height:150px;overflow:auto;margin-top:8px;background:var(--surface-2);padding:10px;border-radius:var(--r-sm);">{{ discovery.result_snippet[:600] }}</pre>
+    <pre style="font-size:15px;color:var(--muted);white-space:pre-wrap;max-height:150px;overflow:auto;margin-top:8px;background:var(--surface-2);padding:10px;border-radius:var(--r-sm);">{{ discovery.result_snippet[:600] }}</pre>
     {% endif %}
   </p>
   {% endif %}
@@ -271,7 +271,7 @@
         </span>
         {{ district_label }} New Filings — Discovery
       </div>
-      <div style="font-size:12px;color:var(--muted);margin-left:36px;">Pull CaseFiled-Rpt.pl to get exact new-case counts per attorney.</div>
+      <div style="font-size:14px;color:var(--muted);margin-left:36px;">Pull CaseFiled-Rpt.pl to get exact new-case counts per attorney.</div>
     </div>
     <form method="post" action="/admin/discover/{{ slug }}" style="margin:0;flex-shrink:0;">
       <button type="submit" class="btn btn-primary btn-sm"
@@ -312,7 +312,7 @@
       Fix District Mismatch
     </button>
   </form>
-  <span style="font-size:12px;color:var(--muted);">Collect runs in background — refresh in 5–10 min</span>
+  <span style="font-size:14px;color:var(--muted);">Collect runs in background — refresh in 5–10 min</span>
 </div>
 
 {% endif %}
