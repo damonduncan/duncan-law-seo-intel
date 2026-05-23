@@ -41,16 +41,32 @@ competitors:
 
   - id: comp_001
     name: "Law Offices of John T. Orcutt"
-    google_place_id: "ChIJJTUCiP0bU4gRamiZpP1Sl_Q"
     bbb_url: "https://www.bbb.org/us/nc/greensboro/profile/bankruptcy-attorney/law-offices-of-john-t-orcutt-pc-0503-33061541"
-    markets:
-      - greensboro
-      - winston_salem
-      - high_point
-      - charlotte
-      - salisbury
-      - asheville
-      - ednc        # Orcutt has Raleigh offices — tracks Eastern District filings
+    # Multi-office statewide firm — one Place ID per confirmed office location.
+    # Markets with no confirmed office still appear for PACER district tracking.
+    locations:
+      - market: greensboro
+        google_place_id: "ChIJJTUCiP0bU4gRamiZpP1Sl_Q"
+      - market: winston_salem
+        google_place_id:                                    # no confirmed WS office
+      - market: high_point
+        google_place_id:                                    # no confirmed HP office
+      - market: charlotte
+        google_place_id:                                    # no confirmed Charlotte office
+      - market: salisbury
+        google_place_id:                                    # no confirmed Salisbury office
+      - market: asheville
+        google_place_id:                                    # no confirmed Asheville office
+      - market: durham
+        google_place_id: "ChIJMxDpFFzhrIkRnO_7agBZslc"
+      - market: raleigh
+        google_place_id: "ChIJmWWmbGxYrIkRyyvNjjt8gm8"    # Raleigh (North) office
+      - market: fayetteville
+        google_place_id: "ChIJBxzFZ6YUq4kRGUtt8RaYTss"
+      - market: wilson
+        google_place_id: "ChIJE6awQ_adrokRZDL9ZBK9lhI"
+      - market: wilmington
+        google_place_id: "ChIJqQz7JksHqokR7uCMzTBuSQE"    # also covers Southport office
     attorneys:
       - name: "John T. Orcutt"
         aliases:
@@ -767,6 +783,7 @@ competitors:
           - "M Harris"
 
 markets:
+  # ── MDNC — Middle District of North Carolina ──────────────────────────────
   greensboro:
     display_name: "Greensboro"
     district: MDNC
@@ -783,6 +800,11 @@ markets:
     display_name: "Salisbury"
     district: MDNC
     state: NC
+  durham:
+    display_name: "Durham"
+    district: MDNC
+    state: NC
+  # ── WDNC — Western District of North Carolina ─────────────────────────────
   charlotte:
     display_name: "Charlotte"
     district: WDNC
@@ -790,4 +812,25 @@ markets:
   asheville:
     display_name: "Asheville"
     district: WDNC
+    state: NC
+  # ── EDNC — Eastern District of North Carolina ─────────────────────────────
+  ednc:
+    display_name: "Eastern NC"
+    district: EDNC
+    state: NC
+  raleigh:
+    display_name: "Raleigh"
+    district: EDNC
+    state: NC
+  fayetteville:
+    display_name: "Fayetteville"
+    district: EDNC
+    state: NC
+  wilson:
+    display_name: "Wilson"
+    district: EDNC
+    state: NC
+  wilmington:
+    display_name: "Wilmington"
+    district: EDNC
     state: NC

@@ -34,14 +34,21 @@ PCL_SEARCH_URL  = "https://pcl.uscourts.gov/pcl/pages/search/findParty.jsf"
 DISTRICT_TO_COURT = {"MDNC": "ncmb", "WDNC": "ncwb", "EDNC": "nceb"}
 
 MARKET_TO_DISTRICT = {
+    # MDNC — Middle District of North Carolina
     "greensboro":    "MDNC",
     "winston_salem": "MDNC",
     "high_point":    "MDNC",
     "salisbury":     "MDNC",
+    "durham":        "MDNC",
+    # WDNC — Western District of North Carolina
     "charlotte":     "WDNC",
     "asheville":     "WDNC",
-    # Eastern NC market tag — used for competitors with EDNC presence
-    "ednc":          "EDNC",
+    # EDNC — Eastern District of North Carolina
+    "ednc":          "EDNC",   # legacy catch-all tag
+    "raleigh":       "EDNC",
+    "fayetteville":  "EDNC",
+    "wilson":        "EDNC",
+    "wilmington":    "EDNC",
 }
 
 NAV_TIMEOUT    = 45_000   # ms — per navigation
