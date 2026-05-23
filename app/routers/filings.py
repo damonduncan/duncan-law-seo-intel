@@ -152,10 +152,13 @@ def filings(
         groups.sort(key=lambda g: (not g["is_own_firm"], -g["total"]))
         return groups
 
-    mdnc_rows      = make_firm_groups("MDNC")
-    wdnc_rows      = make_firm_groups("WDNC")
-    ednc_rows      = make_firm_groups("EDNC")
-    ednc_discovery = get_cached_results(db)
+    mdnc_rows = make_firm_groups("MDNC")
+    wdnc_rows = make_firm_groups("WDNC")
+    ednc_rows = make_firm_groups("EDNC")
+
+    mdnc_discovery = get_cached_results(db, "MDNC")
+    wdnc_discovery = get_cached_results(db, "WDNC")
+    ednc_discovery = get_cached_results(db, "EDNC")
 
     # Add market-share % (share of tracked-firm cases in that district)
     for rows in (mdnc_rows, wdnc_rows, ednc_rows):
@@ -163,26 +166,32 @@ def filings(
         for g in rows:
             g["market_share"] = round(g["total"] / district_total * 100) if district_total else 0
 
-    # Build set of last names tracked in EDNC — used by discovery "In Config?" column
+    # Build per-district tracked attorney last-name sets for "In Config?" column
     from app.services.pacer import MARKET_TO_DISTRICT
-    ednc_tracked_last_names: set = set()
+    tracked_last_names: dict = {"MDNC": set(), "WDNC": set(), "EDNC": set()}
     for comp in comp_map.values():
-        if any(MARKET_TO_DISTRICT.get(loc.market) == "EDNC" for loc in comp.locations):
-            for atty in comp.attorneys:
-                parts = atty.attorney_name.strip().split()
-                if parts:
-                    ednc_tracked_last_names.add(parts[-1].lower())
+        for loc in comp.locations:
+            d = MARKET_TO_DISTRICT.get(loc.market)
+            if d in tracked_last_names:
+                for atty in comp.attorneys:
+                    parts = atty.attorney_name.strip().split()
+                    if parts:
+                        tracked_last_names[d].add(parts[-1].lower())
 
     return templates.TemplateResponse("filings.html", {
-        "request": request,
-        "user": user,
-        "active_page": "filings",
-        "has_data": True,
+        "request":        request,
+        "user":           user,
+        "active_page":    "filings",
+        "has_data":       True,
         "current_period": current_period,
-        "prior_period": prior_period,
+        "prior_period":   prior_period,
         "mdnc_rows":      mdnc_rows,
         "wdnc_rows":      wdnc_rows,
         "ednc_rows":      ednc_rows,
+        "mdnc_discovery": mdnc_discovery,
+        "wdnc_discovery": wdnc_discovery,
         "ednc_discovery": ednc_discovery,
-        "ednc_tracked_last_names": ednc_tracked_last_names,
+        "mdnc_tracked":   tracked_last_names["MDNC"],
+        "wdnc_tracked":   tracked_last_names["WDNC"],
+        "ednc_tracked":   tracked_last_names["EDNC"],
     })

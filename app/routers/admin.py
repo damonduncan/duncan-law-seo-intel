@@ -98,27 +98,35 @@ def run_reviews(
     })
 
 
-@router.post("/admin/discover/ednc")
-def discover_ednc(
+@router.post("/admin/discover/{district}")
+def discover_district(
+    district: str,
     request: Request,
     user: dict = Depends(auth_required),
     year: int = 2026,
     month: int = 4,
 ):
-    """Start EDNC top-filer discovery in background. Results stored in DB."""
+    """Start CaseFiled-Rpt.pl discovery for any district in background."""
+    district = district.upper()
+    if district not in ("MDNC", "WDNC", "EDNC"):
+        return RedirectResponse(url="/filings?msg=unknown_district", status_code=303)
+
     from app.database import SessionLocal
-    from app.services.pacer_discovery import run_ednc_discovery
+    from app.services.pacer_discovery import run_district_discovery
 
     def _run():
         db = SessionLocal()
         try:
-            run_ednc_discovery(db, year=year, month=month)
+            run_district_discovery(db, district=district, year=year, month=month)
         finally:
             db.close()
 
     thread = threading.Thread(target=_run, daemon=True)
     thread.start()
-    return RedirectResponse(url="/filings?msg=discovery_running", status_code=303)
+    return RedirectResponse(
+        url=f"/filings?msg=discovery_running_{district.lower()}",
+        status_code=303,
+    )
 
 
 @router.get("/admin/discover/ednc-filers")
