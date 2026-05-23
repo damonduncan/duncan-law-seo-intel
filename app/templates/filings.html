@@ -132,6 +132,7 @@
 {% endmacro %}
 
 {% macro district_table(groups, district_name) %}
+{% set d = district_name[:4] %}
 <div class="card" style="margin-bottom:24px;">
   <div style="margin-bottom:16px;">
     <div class="section-title" style="margin-bottom:3px;">
@@ -157,7 +158,8 @@
     </tr></thead>
     <tbody>
     {% for g in groups %}
-    <tr style="{% if g.is_own_firm %}background:rgba(37,99,235,.04);{% endif %}">
+    {% set fid = d ~ loop.index %}
+    <tr onclick="toggleFirm('{{ fid }}')" style="cursor:pointer;user-select:none;{% if g.is_own_firm %}background:rgba(37,99,235,.04);{% endif %}">
       <td>
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="firm-badge" style="{% if g.is_own_firm %}background:var(--accent-mid);color:var(--accent-dark);{% else %}background:var(--surface-3);color:var(--muted);{% endif %}">
@@ -165,10 +167,13 @@
           </div>
           <div>
             <div style="font-weight:700;font-size:15px;{% if g.is_own_firm %}color:var(--accent);{% endif %}">{{ g.firm }}</div>
-            {% if g.attorneys|length > 1 %}
-            <div style="font-size:15px;color:var(--muted);">{{ g.attorneys|length }} attorneys</div>
-            {% endif %}
+            <div style="font-size:14px;color:var(--muted-2);">
+              {{ g.attorneys|length }} attorney{{ 's' if g.attorneys|length != 1 else '' }} — click to expand
+            </div>
           </div>
+          <span id="chev-{{ fid }}" style="margin-left:auto;display:inline-flex;transition:transform .2s ease;color:var(--muted-2);flex-shrink:0;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </span>
         </div>
       </td>
       <td style="text-align:right;font-weight:600;">{{ g.ch7 }}</td>
@@ -185,11 +190,16 @@
       {% if prior_period %}<td style="text-align:right;">{{ pct_chip(g.pct_change) }}</td>{% endif %}
     </tr>
     {% for r in g.attorneys %}
-    <tr style="opacity:.75;">
-      <td style="padding-left:52px;font-size:14px;color:var(--muted);">{{ r.attorney }}</td>
-      <td style="text-align:right;font-size:14px;">{{ r.ch7 }}</td>
-      <td style="text-align:right;font-size:14px;">{{ r.ch13 }}</td>
-      <td style="text-align:right;font-size:14px;font-weight:600;">{{ r.total }}</td>
+    <tr class="atty-{{ fid }}" style="display:none;background:var(--surface-2);">
+      <td style="padding-left:52px;font-size:15px;color:var(--muted);">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:5px;height:5px;border-radius:50%;background:var(--border-2);flex-shrink:0;display:inline-block;"></span>
+          {{ r.attorney }}
+        </div>
+      </td>
+      <td style="text-align:right;font-size:15px;">{{ r.ch7 }}</td>
+      <td style="text-align:right;font-size:15px;">{{ r.ch13 }}</td>
+      <td style="text-align:right;font-size:15px;font-weight:600;">{{ r.total }}</td>
       <td></td>
       {% if prior_period %}<td style="text-align:right;">{{ pct_chip(r.pct_change) }}</td>{% endif %}
     </tr>
@@ -314,6 +324,16 @@
   </form>
   <span style="font-size:14px;color:var(--muted);">Collect runs in background — refresh in 5–10 min</span>
 </div>
+
+<script>
+function toggleFirm(fid) {
+  var rows = document.querySelectorAll('.atty-' + fid);
+  var chev = document.getElementById('chev-' + fid);
+  var isOpen = rows.length > 0 && rows[0].style.display !== 'none';
+  rows.forEach(function(r) { r.style.display = isOpen ? 'none' : 'table-row'; });
+  if (chev) chev.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+</script>
 
 {% endif %}
 {% endblock %}
