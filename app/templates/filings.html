@@ -231,13 +231,28 @@
     {% endfor %}
   </table>
   {% else %}
-  <p style="font-size:13px;color:var(--muted);">
-    No attorney data found yet.
+  <div style="font-size:13px;color:var(--muted);">
+    <strong style="color:var(--text);">No attorney names parsed.</strong>
+    {% if discovery.error %}<div style="color:var(--red);margin-top:6px;">Error: {{ discovery.error }}</div>{% endif %}
+    <div style="margin-top:8px;font-size:12px;line-height:1.7;">
+      {% if discovery.party_checkbox_found is defined %}
+        Party/attorney checkbox: <strong style="color:{% if discovery.party_checkbox_found %}var(--green){% else %}var(--red){% endif %};">
+          {% if discovery.party_checkbox_found %}found &amp; checked{% else %}NOT found — attorney names will be absent from output{% endif %}
+        </strong><br>
+      {% endif %}
+      {% if discovery.trigger_lines_found is defined %}
+        "Attorney for Debtor" trigger lines in body: <strong>{{ discovery.trigger_lines_found }}</strong>
+        {% if discovery.trigger_sample %} (e.g. "{{ discovery.trigger_sample[0] }}"){% endif %}<br>
+      {% endif %}
+      Body length: <strong>{{ discovery.result_snippet | length if discovery.result_snippet else 0 }} chars (preview)</strong>
+    </div>
     {% if discovery.result_snippet %}
-    <br><strong>Response preview:</strong>
-    <pre style="font-size:11px;color:var(--muted);white-space:pre-wrap;max-height:150px;overflow:auto;">{{ discovery.result_snippet[:600] }}</pre>
+    <details style="margin-top:10px;">
+      <summary style="cursor:pointer;color:var(--accent);font-size:12px;">Show raw response (first 600 chars)</summary>
+      <pre style="font-size:11px;color:var(--muted);white-space:pre-wrap;max-height:150px;overflow:auto;margin-top:6px;">{{ discovery.result_snippet[:600] }}</pre>
+    </details>
     {% endif %}
-  </p>
+  </div>
   {% endif %}
 </div>
 {% else %}

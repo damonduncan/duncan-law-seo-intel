@@ -52,13 +52,24 @@ _FIRM_SUFFIX_RE = re.compile(
     r'\b(PLLC|LLC|LLP|P\.A\.|P\.C\.|Inc\.|Corp\.|Associates|Group|Partners|Foundation)\b',
     re.IGNORECASE,
 )
+_FIRM_ENDING_RE = re.compile(
+    r'\b(Law|Firm|Office|Center|Legal|Counsel)\s*$',
+    re.IGNORECASE,
+)
 _DIGITS_RE   = re.compile(r'\d{3,}')            # phone numbers, zip codes, street numbers
 _STATE_ZIP   = re.compile(r',\s*[A-Z]{2}\s+\d') # "Greensboro, NC 2"
 _SKIP_PREFIX = re.compile(
-    r'^(Role:|Filed:|Entered:|Office:|Chapter:|Lead BK:|PACER|U\.S\.|Case No\.)',
+    r'^(Role:|Filed:|Entered:|Office:|Chapter:|Lead BK:|PACER|U\.S\.|Case No\.|Debtor:|Case:)',
     re.IGNORECASE,
 )
 _SKIP_EXACT  = {"pro se", "all", "open", "closed", ""}
+
+# Matches "Attorney for Debtor", "Attorneys for Debtor", "Attorney for Debtor(s)",
+# "Attorney for Joint Debtor", "Attorneys for Joint Debtors", etc.
+_ATTY_ROLE_RE = re.compile(
+    r'^Attorneys?\s+for\s+(?:Joint\s+)?Debtors?',
+    re.IGNORECASE,
+)
 
 
 def _is_person_name(s: str) -> bool:
@@ -72,7 +83,9 @@ def _is_person_name(s: str) -> bool:
         return False
     if _DIGITS_RE.search(s):        # any 3+ digit run → address/phone/zip
         return False
-    if _FIRM_SUFFIX_RE.search(s):   # firm indicator
+    if _FIRM_SUFFIX_RE.search(s):   # firm indicators (PLLC, LLC, etc.)
+        return False
+    if _FIRM_ENDING_RE.search(s):   # name ends in Law, Firm, Office, etc.
         return False
     if _STATE_ZIP.search(s):        # "City, NC 27401"
         return False
@@ -109,13 +122,19 @@ def _parse_backward(body: str, judges: set) -> list:
     """
     NCMB/NCWB format: attorney name appears on the line(s) above the role label.
     Scan backwards from each 'Attorney for Debtor' label to find the name.
+    Handles role label variations: "Attorneys for Debtor(s)", "Attorney for Joint Debtors", etc.
     """
     lines = body.replace("\r", "\n").split("\n")
     names = []
     for i, line in enumerate(lines):
-        if line.strip() not in ("Attorney for Debtor", "Attorney for Joint Debtor"):
+        stripped = line.strip()
+        # Skip prefix-format lines like "Attorney for Debtor: Name" — name already on same line
+        if ':' in stripped:
             continue
-        for j in range(i - 1, max(-1, i - 10), -1):
+        if not _ATTY_ROLE_RE.match(stripped):
+            continue
+        # Scan back up to 15 lines to find the attorney name above this label
+        for j in range(i - 1, max(-1, i - 15), -1):
             candidate = lines[j].strip()
             if not candidate:
                 continue
@@ -234,12 +253,35 @@ def run_district_discovery(db: Session, district: str, year: int, month: int) ->
                 except Exception:
                     pass
 
-            # Ensure party_information is checked (NCMB/NCWB need this for attorney names)
-            try:
-                if not page.is_checked('[id="party_information"]'):
-                    page.check('[id="party_information"]', timeout=1_500)
-            except Exception:
-                pass
+            # Ensure party/attorney info checkbox is checked — without it, attorney
+            # names don't appear in the CaseFiled-Rpt.pl output.
+            # Different CM/ECF courts use different ids/names for this checkbox.
+            _party_selectors = [
+                '[id="party_information"]',
+                '[name="party_information"]',
+                '[id="party_info"]',
+                '[name="party_info"]',
+                '[id="include_party"]',
+                '[name="include_party"]',
+                'input[type="checkbox"][id*="party"]',
+                'input[type="checkbox"][name*="party"]',
+                'input[type="checkbox"][id*="attorney"]',
+                'input[type="checkbox"][name*="attorney"]',
+            ]
+            _party_checked = False
+            for _sel in _party_selectors:
+                try:
+                    if page.locator(_sel).count() > 0:
+                        if not page.is_checked(_sel):
+                            page.check(_sel, timeout=1_500)
+                        _party_checked = True
+                        logger.info(f"{district}: party checkbox checked via {_sel!r}")
+                        break
+                except Exception:
+                    pass
+            if not _party_checked:
+                logger.warning(f"{district}: could not find party/attorney info checkbox — attorney names may be missing from output")
+            result["party_checkbox_found"] = _party_checked
 
             # Submit
             for sel in ['input[type="submit"]', '[name="button1"]',
@@ -254,6 +296,15 @@ def run_district_discovery(db: Session, district: str, year: int, month: int) ->
 
             body = page.inner_text("body")
             result["result_snippet"] = body[:3000]
+
+            # Count trigger lines found (diagnostic) — helps diagnose parse failures
+            _trigger_lines = [
+                l.strip() for l in body.replace("\r", "\n").split("\n")
+                if _ATTY_ROLE_RE.match(l.strip()) and ':' not in l.strip()
+            ]
+            result["trigger_lines_found"] = len(_trigger_lines)
+            result["trigger_sample"] = _trigger_lines[:3]
+            logger.info(f"{district}: {len(_trigger_lines)} 'Attorney for Debtor' trigger lines found in body")
 
             names = _parse_attorneys(body, district)
             counter = Counter(names)
