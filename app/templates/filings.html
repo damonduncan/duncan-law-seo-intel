@@ -167,7 +167,7 @@
     <tbody>
     {% for g in groups %}
     {% set fid = d ~ loop.index %}
-    {% set is_extra_firm = loop.index0 > 5 %}
+    {% set is_extra_firm = loop.index0 > 4 %}
     <tr onclick="toggleFirm('{{ fid }}')"
         class="{% if is_extra_firm %}firm-extra-{{ d }}{% endif %}"
         data-district="{{ d }}" data-firm="{{ g.firm | lower }}" data-fid="{{ fid }}"
@@ -248,11 +248,18 @@
     </tr>
     {% endif %}
     {% endfor %}
-    {% if groups|length > 6 %}
+    {% if groups|length > 5 %}
     <tr id="show-more-firms-{{ d }}">
       <td colspan="{{ ncols }}" style="text-align:center;padding:12px 14px;border-bottom:none;background:var(--surface-2);">
         <button onclick="showAllFirms('{{ d }}')" class="btn btn-ghost btn-sm">
-          ↓ Show {{ groups|length - 6 }} more firm{{ 's' if groups|length - 6 != 1 else '' }}
+          ↓ Show {{ groups|length - 5 }} more firm{{ 's' if groups|length - 5 != 1 else '' }}
+        </button>
+      </td>
+    </tr>
+    <tr id="show-less-firms-{{ d }}" style="display:none;">
+      <td colspan="{{ ncols }}" style="text-align:center;padding:12px 14px;border-bottom:none;background:var(--surface-2);">
+        <button onclick="showLessFirms('{{ d }}')" class="btn btn-ghost btn-sm">
+          ↑ Show fewer
         </button>
       </td>
     </tr>
@@ -390,8 +397,27 @@ function toggleFirm(fid) {
 
 function showAllFirms(d) {
   document.querySelectorAll('.firm-extra-' + d).forEach(function(r) { r.style.display = 'table-row'; });
-  var btn = document.getElementById('show-more-firms-' + d);
-  if (btn) btn.style.display = 'none';
+  var more = document.getElementById('show-more-firms-' + d);
+  var less = document.getElementById('show-less-firms-' + d);
+  if (more) more.style.display = 'none';
+  if (less) less.style.display = '';
+}
+
+function showLessFirms(d) {
+  document.querySelectorAll('.firm-extra-' + d).forEach(function(r) {
+    r.style.display = 'none';
+    // Collapse any open attorney rows inside hidden firms
+    var fid = r.getAttribute('data-fid');
+    if (fid) {
+      document.querySelectorAll('.atty-' + fid + ', .atty-extra-' + fid).forEach(function(a) { a.style.display = 'none'; });
+      var chev = document.getElementById('chev-' + fid);
+      if (chev) chev.style.transform = '';
+    }
+  });
+  var more = document.getElementById('show-more-firms-' + d);
+  var less = document.getElementById('show-less-firms-' + d);
+  if (more) more.style.display = '';
+  if (less) less.style.display = 'none';
 }
 
 function showAllAttorneys(fid) {
@@ -401,7 +427,8 @@ function showAllAttorneys(fid) {
 
 function filterFirms(d) {
   var query = document.getElementById('firm-search-' + d).value.toLowerCase().trim();
-  var showMoreBtn = document.getElementById('show-more-firms-' + d);
+  var moreBtn = document.getElementById('show-more-firms-' + d);
+  var lessBtn = document.getElementById('show-less-firms-' + d);
   var firmRows = document.querySelectorAll('[data-district="' + d + '"]');
   firmRows.forEach(function(row) {
     var fid = row.getAttribute('data-fid');
@@ -410,14 +437,21 @@ function filterFirms(d) {
     var chev = document.getElementById('chev-' + fid);
     if (chev) chev.style.transform = '';
     if (query === '') {
-      // Restore default: extra firms hidden, first 6 visible
+      // Restore default: extra firms hidden, first 5 visible
       row.style.display = row.classList.contains('firm-extra-' + d) ? 'none' : '';
     } else {
       var name = (row.getAttribute('data-firm') || '');
       row.style.display = name.includes(query) ? '' : 'none';
     }
   });
-  if (showMoreBtn) showMoreBtn.style.display = query === '' ? '' : 'none';
+  // When filtering, hide both expand/collapse buttons; restore show-more when cleared
+  if (query === '') {
+    if (moreBtn) moreBtn.style.display = '';
+    if (lessBtn) lessBtn.style.display = 'none';
+  } else {
+    if (moreBtn) moreBtn.style.display = 'none';
+    if (lessBtn) lessBtn.style.display = 'none';
+  }
 }
 
 function toggleDiscovery(slug) {
