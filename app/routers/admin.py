@@ -463,19 +463,81 @@ def send_digest(
 @router.post("/admin/run-pacer")
 def run_pacer(request: Request, user: dict = Depends(auth_required)):
     """Start PACER collection in a background thread — returns immediately."""
+    from datetime import datetime, timezone
     from app.database import SessionLocal
     from app.services.pacer import collect_filing_snapshots
+    from app.models.alerts import JobRun
+    from app.models.base import new_uuid
+
+    # Create job record so the status endpoint can report progress
+    db = SessionLocal()
+    try:
+        job = JobRun(
+            id=new_uuid(),
+            job_name="pacer",
+            started_at=datetime.now(timezone.utc),
+            status="running",
+        )
+        db.add(job)
+        db.commit()
+        job_id = job.id
+    finally:
+        db.close()
 
     def _run():
-        db = SessionLocal()
+        db2 = SessionLocal()
         try:
-            collect_filing_snapshots(db)
+            records = collect_filing_snapshots(db2)
+            job2 = db2.query(JobRun).filter(JobRun.id == job_id).first()
+            if job2:
+                job2.status = "success"
+                job2.records_processed = records
+                job2.completed_at = datetime.now(timezone.utc)
+                db2.commit()
+        except Exception as e:
+            job2 = db2.query(JobRun).filter(JobRun.id == job_id).first()
+            if job2:
+                job2.status = "failed"
+                job2.error_detail = str(e)
+                job2.completed_at = datetime.now(timezone.utc)
+                db2.commit()
         finally:
-            db.close()
+            db2.close()
 
     thread = threading.Thread(target=_run, daemon=True)
     thread.start()
     return RedirectResponse(url="/filings?msg=pacer_running", status_code=303)
+
+
+@router.get("/api/pacer-status")
+def pacer_status(request: Request, user: dict = Depends(auth_required)):
+    """Return the status of the most recent PACER collection job."""
+    from datetime import datetime, timezone
+    from app.database import SessionLocal
+    from app.models.alerts import JobRun
+
+    db = SessionLocal()
+    try:
+        job = (
+            db.query(JobRun)
+            .filter(JobRun.job_name == "pacer")
+            .order_by(JobRun.started_at.desc())
+            .first()
+        )
+        if not job:
+            return JSONResponse({"status": "never_run"})
+
+        now = datetime.now(timezone.utc)
+        elapsed = int((now - job.started_at.replace(tzinfo=timezone.utc)).total_seconds())
+        return JSONResponse({
+            "status":            job.status,
+            "started_at":        job.started_at.isoformat(),
+            "elapsed_seconds":   elapsed,
+            "records_processed": job.records_processed,
+            "error":             job.error_detail,
+        })
+    finally:
+        db.close()
 
 
 @router.post("/admin/run-job/daily")

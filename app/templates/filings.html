@@ -12,10 +12,63 @@
 {% endif %}
 
 {% if request.query_params.get('msg') == 'pacer_running' %}
-<div style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:6px;padding:14px 18px;margin-bottom:24px;color:var(--accent);">
-  <strong>PACER collection is running in the background.</strong>
-  This takes 3–5 minutes for both districts. Refresh this page when it's done — data will appear automatically.
+<div id="pacer-status-bar" style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:6px;padding:14px 18px;margin-bottom:24px;color:var(--accent);">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div id="pacer-spinner" style="width:14px;height:14px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>
+    <div>
+      <strong id="pacer-status-text">PACER collection is running…</strong>
+      <span id="pacer-elapsed" style="margin-left:10px;font-size:12px;opacity:.7;"></span>
+      <div id="pacer-sub" style="font-size:12px;margin-top:2px;opacity:.8;">Searching MDNC and WDNC for all tracked attorneys. Typical run: 5–8 minutes.</div>
+    </div>
+  </div>
 </div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+<script>
+(function() {
+  var start = Date.now();
+  var bar   = document.getElementById('pacer-status-bar');
+  var txt   = document.getElementById('pacer-status-text');
+  var sub   = document.getElementById('pacer-sub');
+  var elp   = document.getElementById('pacer-elapsed');
+  var spin  = document.getElementById('pacer-spinner');
+
+  function fmt(sec) {
+    if (sec < 60) return sec + 's';
+    return Math.floor(sec/60) + 'm ' + (sec%60) + 's';
+  }
+
+  function poll() {
+    fetch('/api/pacer-status')
+      .then(function(r){ return r.json(); })
+      .then(function(d) {
+        var elapsed = d.elapsed_seconds || Math.round((Date.now()-start)/1000);
+        elp.textContent = '(' + fmt(elapsed) + ')';
+
+        if (d.status === 'success') {
+          spin.style.display = 'none';
+          bar.style.background = 'rgba(16,185,129,.1)';
+          bar.style.borderColor = 'rgba(16,185,129,.3)';
+          bar.style.color = 'var(--green)';
+          txt.textContent = 'Collection complete — ' + (d.records_processed||0) + ' filing snapshots saved.';
+          sub.textContent = 'Reloading page…';
+          setTimeout(function(){ window.location.href = '/filings'; }, 1500);
+        } else if (d.status === 'failed') {
+          spin.style.display = 'none';
+          bar.style.background = 'rgba(239,68,68,.1)';
+          bar.style.borderColor = 'rgba(239,68,68,.3)';
+          bar.style.color = 'var(--red)';
+          txt.textContent = 'Collection failed.';
+          sub.textContent = d.error || 'Check Railway logs for details.';
+        } else {
+          setTimeout(poll, 20000);  // poll every 20s while running
+        }
+      })
+      .catch(function() { setTimeout(poll, 30000); });
+  }
+
+  setTimeout(poll, 10000);  // first check after 10s
+})();
+</script>
 {% endif %}
 
 {% if not has_data %}
