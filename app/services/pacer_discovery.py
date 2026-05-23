@@ -1,12 +1,17 @@
 """PACER top-filer discovery — uses CaseFiled-Rpt.pl for accurate new-filing counts.
 
-CaseFiled-Rpt.pl is a standard CM/ECF report available on all federal bankruptcy
-courts. It lists every case opened in a date range with the attorney of record,
-giving an exact count of new filings per attorney per month — which is what
-iquery.pl does NOT reliably provide (iquery counts attorney activity across all
-their cases, not just new filings).
+Two different attorney-name formats exist across CM/ECF courts:
 
-Works for all three NC bankruptcy districts: MDNC, WDNC, EDNC.
+  NCEB (EDNC) — prefix format:
+      Attorney for Debtor: Travis Sasser
+
+  NCMB/NCWB (MDNC/WDNC) — backward format:
+      Damon Duncan
+      Duncan Law
+      1000 N. Main St.
+      Greensboro, NC 27401
+      336-555-0100
+      Attorney for Debtor        ← name is several lines above this label
 """
 import logging
 import re
@@ -26,19 +31,113 @@ LOGIN_URL = "https://pacer.login.uscourts.gov/csologin/login.jsf"
 DISTRICT_CONFIG = {
     "EDNC": {
         "court_base": "https://ecf.nceb.uscourts.gov",
-        # Judge last names that bleed into attorney name cells in NCEB's rendering
-        "judges": {"Warren", "McAfee", "Callaway", "Flanagan", "Travis"},
+        "judges":     {"Warren", "McAfee", "Callaway", "Flanagan", "Travis"},
+        "parser":     "prefix",    # name follows colon on same line
     },
     "MDNC": {
         "court_base": "https://ecf.ncmb.uscourts.gov",
-        "judges": set(),  # populate after first run if judge names appear in output
+        "judges":     set(),       # add if judge names bleed into attorney cells
+        "parser":     "backward",  # name precedes role label on separate line
     },
     "WDNC": {
         "court_base": "https://ecf.ncwb.uscourts.gov",
-        "judges": set(),  # populate after first run if judge names appear in output
+        "judges":     set(),
+        "parser":     "backward",
     },
 }
 
+# ── Parsing helpers ────────────────────────────────────────────────────────────
+
+_FIRM_SUFFIX_RE = re.compile(
+    r'\b(PLLC|LLC|LLP|P\.A\.|P\.C\.|Inc\.|Corp\.|Associates|Group|Partners|Foundation)\b',
+    re.IGNORECASE,
+)
+_DIGITS_RE   = re.compile(r'\d{3,}')            # phone numbers, zip codes, street numbers
+_STATE_ZIP   = re.compile(r',\s*[A-Z]{2}\s+\d') # "Greensboro, NC 2"
+_SKIP_PREFIX = re.compile(
+    r'^(Role:|Filed:|Entered:|Office:|Chapter:|Lead BK:|PACER|U\.S\.|Case No\.)',
+    re.IGNORECASE,
+)
+_SKIP_EXACT  = {"pro se", "all", "open", "closed", ""}
+
+
+def _is_person_name(s: str) -> bool:
+    """Return True if s looks like an individual attorney's name."""
+    if not s or s.lower() in _SKIP_EXACT:
+        return False
+    words = s.split()
+    if len(words) < 2:
+        return False
+    if not words[0][0].isupper():
+        return False
+    if _DIGITS_RE.search(s):        # any 3+ digit run → address/phone/zip
+        return False
+    if _FIRM_SUFFIX_RE.search(s):   # firm indicator
+        return False
+    if _STATE_ZIP.search(s):        # "City, NC 27401"
+        return False
+    if _SKIP_PREFIX.match(s):       # "Role:", "Filed:", etc.
+        return False
+    if '&' in s:                    # partnership / firm name
+        return False
+    return True
+
+
+def _parse_prefix(body: str, judges: set) -> list:
+    """
+    NCEB format: extract name from 'Attorney for Debtor: <Name>' lines.
+    """
+    names = []
+    for line in body.replace("\r", "\n").split("\n"):
+        stripped = line.strip()
+        for prefix in ("Attorney for Debtor:", "Attorney for Joint Debtor:"):
+            if stripped.startswith(prefix):
+                raw = stripped[len(prefix):].split("\t")[0].strip().rstrip(",.")
+                if not raw or raw.lower() in ("pro se", "unknown"):
+                    break
+                parts = raw.split()
+                if parts and parts[-1] in judges:
+                    parts = parts[:-1]
+                name = " ".join(parts).strip().rstrip(",.")
+                if name:
+                    names.append(name)
+                break
+    return names
+
+
+def _parse_backward(body: str, judges: set) -> list:
+    """
+    NCMB/NCWB format: attorney name appears on the line(s) above the role label.
+    Scan backwards from each 'Attorney for Debtor' label to find the name.
+    """
+    lines = body.replace("\r", "\n").split("\n")
+    names = []
+    for i, line in enumerate(lines):
+        if line.strip() not in ("Attorney for Debtor", "Attorney for Joint Debtor"):
+            continue
+        for j in range(i - 1, max(-1, i - 10), -1):
+            candidate = lines[j].strip()
+            if not candidate:
+                continue
+            if _is_person_name(candidate):
+                parts = candidate.split()
+                if parts and parts[-1] in judges:
+                    parts = parts[:-1]
+                if parts:
+                    names.append(" ".join(parts))
+                break
+    return names
+
+
+def _parse_attorneys(body: str, district: str) -> list:
+    config = DISTRICT_CONFIG.get(district.upper(), {})
+    judges = config.get("judges", set())
+    if config.get("parser") == "backward":
+        return _parse_backward(body, judges)
+    return _parse_prefix(body, judges)
+
+
+# ── Cache key ──────────────────────────────────────────────────────────────────
 
 def _cache_key(district: str) -> str:
     # EDNC keeps its legacy key so existing cached results are not lost
@@ -46,6 +145,8 @@ def _cache_key(district: str) -> str:
         return "ednc_top_filers"
     return f"{district.lower()}_top_filers"
 
+
+# ── Main discovery function ────────────────────────────────────────────────────
 
 def run_district_discovery(db: Session, district: str, year: int, month: int) -> dict:
     """
@@ -64,7 +165,6 @@ def run_district_discovery(db: Session, district: str, year: int, month: int) ->
     from playwright.sync_api import sync_playwright
 
     court_base = config["court_base"]
-    judges     = config["judges"]
     report_url = f"{court_base}/cgi-bin/CaseFiled-Rpt.pl"
 
     period_start = date(year, month, 1)
@@ -107,19 +207,18 @@ def run_district_discovery(db: Session, district: str, year: int, month: int) ->
 
             # Navigate to CaseFiled-Rpt.pl
             page.goto(report_url, wait_until="domcontentloaded")
-            result["report_title"] = page.title()
-            result["form_fields"]  = page.eval_on_selector_all(
+            result["form_fields"] = page.eval_on_selector_all(
                 "input, select",
                 "els => els.map(e => ({name: e.name, id: e.id, type: e.type, value: e.value}))"
             )[:25]
             logger.info(f"{district} form fields: {result['form_fields']}")
 
-            # Fill date range — try every naming convention seen across CM/ECF courts
+            # Fill date range
             # NCMB/NCWB use StartDate/EndDate; NCEB uses filed_start_dt
             date_from_str = period_start.strftime("%m/%d/%Y")
             date_to_str   = period_end.strftime("%m/%d/%Y")
             for fname in ["StartDate", "filed_start_dt", "date_from", "Sdate",
-                          "start_date", "filed_from", "DateFiled_from", "start_dt"]:
+                          "start_date", "filed_from", "DateFiled_from"]:
                 try:
                     page.fill(f'[name="{fname}"]', date_from_str, timeout=1_000)
                     logger.info(f"Filled date_from via [{fname}]")
@@ -127,7 +226,7 @@ def run_district_discovery(db: Session, district: str, year: int, month: int) ->
                 except Exception:
                     pass
             for fname in ["EndDate", "filed_end_dt", "date_to", "Edate",
-                          "end_date", "filed_to", "DateFiled_to", "end_dt"]:
+                          "end_date", "filed_to", "DateFiled_to"]:
                 try:
                     page.fill(f'[name="{fname}"]', date_to_str, timeout=1_000)
                     logger.info(f"Filled date_to via [{fname}]")
@@ -135,7 +234,7 @@ def run_district_discovery(db: Session, district: str, year: int, month: int) ->
                 except Exception:
                     pass
 
-            # Ensure party_information is checked so attorney names appear in output
+            # Ensure party_information is checked (NCMB/NCWB need this for attorney names)
             try:
                 if not page.is_checked('[id="party_information"]'):
                     page.check('[id="party_information"]', timeout=1_500)
@@ -156,23 +255,7 @@ def run_district_discovery(db: Session, district: str, year: int, month: int) ->
             body = page.inner_text("body")
             result["result_snippet"] = body[:3000]
 
-            # Line-by-line extraction of attorney names from "Attorney for Debtor:" lines
-            names = []
-            for line in body.replace("\r", "\n").split("\n"):
-                stripped = line.strip()
-                for prefix in ("Attorney for Debtor:", "Attorney for Joint Debtor:"):
-                    if stripped.startswith(prefix):
-                        raw = stripped[len(prefix):].split("\t")[0].strip().rstrip(",.")
-                        if not raw or raw.lower() in ("pro se", "unknown"):
-                            break
-                        parts = raw.split()
-                        if parts and parts[-1] in judges:
-                            parts = parts[:-1]
-                        name = " ".join(parts).strip().rstrip(",.")
-                        if name:
-                            names.append(name)
-                        break
-
+            names = _parse_attorneys(body, district)
             counter = Counter(names)
             logger.info(
                 f"{district}: {len(names)} attorney lines → "
@@ -193,7 +276,7 @@ def run_district_discovery(db: Session, district: str, year: int, month: int) ->
     return _store_and_return(db, result, district)
 
 
-# Backward-compatible alias so existing call sites don't break
+# Backward-compatible alias
 def run_ednc_discovery(db: Session, year: int, month: int) -> dict:
     return run_district_discovery(db, "EDNC", year, month)
 
