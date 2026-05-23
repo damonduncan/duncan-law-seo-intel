@@ -563,7 +563,7 @@ competitors:
       - market: asheville
         google_place_id: "ChIJOxwaRqb0WYgRvdF0ENnhULU"    # Mosley Law Firm, P.C. — primary (60 reviews)
       - market: waynesville
-        google_place_id: "ChIJqfPlttJ2WYhDT7XzpCCVQQ"     # Mosley Law Firm, P.C. — 9 reviews (TODO: verify Place ID)
+        google_place_id: "ChIJqfPlttJ2WYhDT7XzpCCVQQ"     # Mosley Law Firm, P.C. — 9 reviews, Clyde/Canton area
     attorneys:
       - name: "R. Todd Mosley"
         aliases:
