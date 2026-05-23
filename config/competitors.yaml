@@ -383,6 +383,122 @@ competitors:
           - "Robert Lutz"
           - "R Lutz"
 
+  # ── EASTERN DISTRICT (EDNC) ───────────────────────────────────────────────
+  # Discovered via NCEB CaseFiled-Rpt.pl for April 2026
+
+  - id: comp_023
+    name: "Sasser Law Firm"
+    google_place_id: ""   # TODO: Cary NC — find via Place ID Finder
+    bbb_url: ""
+    markets:
+      - ednc
+    attorneys:
+      - name: "Travis Sasser"
+        aliases:
+          - "T Sasser"
+      - name: "Philip Sasser"
+        aliases:
+          - "P Sasser"
+      - name: "Cort Walker"
+        aliases:
+          - "C Walker"
+          - "Cort E. Walker"
+
+  - id: comp_024
+    name: "Law Office of Palmer Huffstetler"   # TODO: confirm firm name
+    google_place_id: ""
+    bbb_url: ""
+    markets:
+      - ednc
+    attorneys:
+      - name: "Palmer E. Huffstetler, III"
+        aliases:
+          - "Palmer Huffstetler"
+          - "P Huffstetler"
+
+  - id: comp_025
+    name: "Law Office of Edwin Hardy"   # TODO: confirm firm name
+    google_place_id: ""
+    bbb_url: ""
+    markets:
+      - ednc
+    attorneys:
+      - name: "Edwin M. Hardy"
+        aliases:
+          - "Edwin Hardy"
+          - "E Hardy"
+
+  - id: comp_026
+    name: "Law Office of Richard Preston Cook"   # TODO: confirm firm name
+    google_place_id: ""
+    bbb_url: ""
+    markets:
+      - ednc
+    attorneys:
+      - name: "Richard Preston Cook"
+        aliases:
+          - "Richard Cook"
+          - "R Cook"
+
+  - id: comp_027
+    name: "Law Office of Brent Wootton"   # TODO: confirm firm name
+    google_place_id: ""
+    bbb_url: ""
+    markets:
+      - ednc
+    attorneys:
+      - name: "Brent Wootton"
+        aliases:
+          - "B Wootton"
+
+  - id: comp_028
+    name: "Law Office of Erich Fabricius"   # TODO: confirm firm name
+    google_place_id: ""
+    bbb_url: ""
+    markets:
+      - ednc
+    attorneys:
+      - name: "Erich M. Fabricius"
+        aliases:
+          - "Erich Fabricius"
+          - "E Fabricius"
+
+  - id: comp_029
+    name: "Law Office of Lindsay Parker"   # TODO: confirm firm name
+    google_place_id: ""
+    bbb_url: ""
+    markets:
+      - ednc
+    attorneys:
+      - name: "Lindsay M. Parker"
+        aliases:
+          - "Lindsay Parker"
+          - "L Parker"
+
+  - id: comp_030
+    name: "Law Office of Christopher Vonderau"   # TODO: confirm firm name
+    google_place_id: ""
+    bbb_url: ""
+    markets:
+      - ednc
+    attorneys:
+      - name: "Christopher T. Vonderau"
+        aliases:
+          - "Christopher Vonderau"
+          - "C Vonderau"
+
+  - id: comp_031
+    name: "Law Office of William Berggren"   # TODO: confirm firm name
+    google_place_id: ""
+    bbb_url: ""
+    markets:
+      - ednc
+    attorneys:
+      - name: "William G. Berggren"
+        aliases:
+          - "William Berggren"
+          - "W Berggren"
+
 markets:
   greensboro:
     display_name: "Greensboro"
