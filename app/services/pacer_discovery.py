@@ -56,6 +56,11 @@ _FIRM_ENDING_RE = re.compile(
     r'\b(Law|Firm|Office|Center|Legal|Counsel)\s*$',
     re.IGNORECASE,
 )
+# Firm names often start with these patterns — reject before spending time on other checks
+_FIRM_PREFIX_RE = re.compile(
+    r'^(Law Office|Law Offices|Office of|The Law|Chapter \d|Case No)',
+    re.IGNORECASE,
+)
 _DIGITS_RE   = re.compile(r'\d{3,}')            # phone numbers, zip codes, street numbers
 _STATE_ZIP   = re.compile(r',\s*[A-Z]{2}\s+\d') # "Greensboro, NC 2"
 _SKIP_PREFIX = re.compile(
@@ -79,9 +84,13 @@ def _is_person_name(s: str) -> bool:
     words = s.split()
     if len(words) < 2:
         return False
+    if len(words) > 5:              # firm names have many words; person names rarely exceed 5
+        return False
     if not words[0][0].isupper():
         return False
     if _DIGITS_RE.search(s):        # any 3+ digit run → address/phone/zip
+        return False
+    if _FIRM_PREFIX_RE.match(s):    # starts like a firm name ("Law Office of…")
         return False
     if _FIRM_SUFFIX_RE.search(s):   # firm indicators (PLLC, LLC, etc.)
         return False
