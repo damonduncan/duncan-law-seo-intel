@@ -14,3 +14,8 @@ cities:
   - "Charlotte"
   - "Salisbury"
   - "Asheville"
+  # EDNC markets — competitor intelligence only; Duncan Law has no offices here
+  - "Raleigh"
+  - "Fayetteville"
+  - "Wilmington"
+  - "Wilson"

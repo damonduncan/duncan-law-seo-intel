@@ -17,6 +17,11 @@ CITY_TO_LOCATION = {
     "Charlotte":     "Charlotte,North Carolina,United States",
     "Salisbury":     "Salisbury,North Carolina,United States",
     "Asheville":     "Asheville,North Carolina,United States",
+    # EDNC markets
+    "Raleigh":       "Raleigh,North Carolina,United States",
+    "Fayetteville":  "Fayetteville,North Carolina,United States",
+    "Wilmington":    "Wilmington,North Carolina,United States",
+    "Wilson":        "Wilson,North Carolina,United States",
 }
 
 # Maps display city name → market key (matches competitors.yaml)
@@ -27,6 +32,11 @@ CITY_TO_MARKET = {
     "Charlotte":     "charlotte",
     "Salisbury":     "salisbury",
     "Asheville":     "asheville",
+    # EDNC markets
+    "Raleigh":       "raleigh",
+    "Fayetteville":  "fayetteville",
+    "Wilmington":    "wilmington",
+    "Wilson":        "wilson",
 }
 
 

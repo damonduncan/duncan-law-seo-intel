@@ -157,6 +157,11 @@ def _gather_data(db: Session) -> dict:
 
 def _generate_priority(rankings: dict, reviews: dict) -> dict:
     """Synthesise rankings and review data into a single priority recommendation."""
+    # Restrict gap analysis to own-firm markets — EDNC cities are tracked for
+    # competitor intelligence but Duncan Law has no offices there, so they
+    # should never surface as "pack gaps" in the digest.
+    own_rankings = {m: v for m, v in rankings.items() if m in MARKET_ORDER}
+
     # Critical: listings with fewer than 5 reviews — directly limits neutral search rankings
     thin = [
         (MARKET_DISPLAY.get(m, m), d["review_count"])
@@ -176,10 +181,10 @@ def _generate_priority(rankings: dict, reviews: dict) -> dict:
             ),
         }
 
-    # Pack gaps — not in 3-pack for a keyword
+    # Pack gaps — not in 3-pack for a keyword (own-firm markets only)
     gaps = [
         (MARKET_DISPLAY.get(m, m), d["gaps"][0])
-        for m, d in rankings.items()
+        for m, d in own_rankings.items()
         if d["gaps"]
     ]
     if gaps:
