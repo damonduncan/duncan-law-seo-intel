@@ -48,15 +48,11 @@ competitors:
       - market: greensboro
         google_place_id: "ChIJJTUCiP0bU4gRamiZpP1Sl_Q"
       - market: winston_salem
-        google_place_id:                                    # no confirmed WS office
+        google_place_id:                                    # no confirmed WS office — MDNC tracking only
       - market: high_point
-        google_place_id:                                    # no confirmed HP office
-      - market: charlotte
-        google_place_id:                                    # no confirmed Charlotte office
+        google_place_id:                                    # no confirmed HP office — MDNC tracking only
       - market: salisbury
-        google_place_id:                                    # no confirmed Salisbury office
-      - market: asheville
-        google_place_id:                                    # no confirmed Asheville office
+        google_place_id:                                    # no confirmed Salisbury office — MDNC tracking only
       - market: durham
         google_place_id: "ChIJMxDpFFzhrIkRnO_7agBZslc"
       - market: raleigh
@@ -555,8 +551,8 @@ competitors:
   # ── ASHEVILLE / WESTERN FOOTHILLS ─────────────────────────────────────────
 
   - id: comp_017
-    name: "Mosley Law Firm, P.C."
-    google_place_id: "ChIJOxwaRqb0WYgRvdF0ENnhULU"
+    name: "Matney Mosley, P.C."
+    google_place_id: "ChIJOxwaRqb0WYgRvdF0ENnhULU"   # TODO: verify Place ID is for Matney Mosley, P.C. listing
     bbb_url: "https://www.bbb.org/us/nc/asheville/profile/debt-relief-services/mosley-law-firm-pc-0473-92031590"
     markets:
       - asheville
