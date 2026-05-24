@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from datetime import datetime, timezone, date, timedelta
 from typing import Optional
 from sqlalchemy.orm import Session
@@ -214,6 +215,135 @@ def _send_immediate_alert_email(alert: Alert, db: Session) -> None:
 
     except Exception as e:
         logger.error(f"Failed to send immediate alert email: {e}")
+
+
+def check_convergence_alerts(db: Session, own_firm_id: str) -> None:
+    """
+    Daily: detect competitors consistently closing on Duncan Law's rank position.
+    Fires 'pack_convergence' (digest severity) when a rival improves 2+ positions
+    over 30 days AND is now within 2 spots of Duncan Law or inside the pack.
+    Deduplicates to one alert per competitor/keyword/market per 28-day window.
+    """
+    today = date.today()
+    lookback = today - timedelta(days=30)
+    one_month_ago = today - timedelta(days=28)
+
+    own_firm = db.query(Competitor).filter(Competitor.id == own_firm_id).first()
+    if not own_firm:
+        return
+
+    own_recent = (
+        db.query(LocalPackRanking)
+        .filter(
+            LocalPackRanking.competitor_id == own_firm_id,
+            LocalPackRanking.in_pack == True,
+            cast(LocalPackRanking.scraped_at, Date) >= lookback,
+        )
+        .all()
+    )
+    kw_market_set = set((r.keyword, r.market) for r in own_recent)
+
+    comp_name_cache: dict = {}
+
+    for keyword, market in kw_market_set:
+        own_latest = (
+            db.query(LocalPackRanking)
+            .filter(
+                LocalPackRanking.competitor_id == own_firm_id,
+                LocalPackRanking.keyword == keyword,
+                LocalPackRanking.market == market,
+                LocalPackRanking.in_pack == True,
+                cast(LocalPackRanking.scraped_at, Date) >= lookback,
+            )
+            .order_by(LocalPackRanking.scraped_at.desc())
+            .first()
+        )
+        if not own_latest or own_latest.rank_position is None:
+            continue
+        own_rank = own_latest.rank_position
+
+        comp_rows = (
+            db.query(LocalPackRanking)
+            .filter(
+                LocalPackRanking.keyword == keyword,
+                LocalPackRanking.market == market,
+                LocalPackRanking.is_own_firm == False,
+                cast(LocalPackRanking.scraped_at, Date) >= lookback,
+            )
+            .order_by(LocalPackRanking.competitor_id, LocalPackRanking.scraped_at)
+            .all()
+        )
+
+        comp_history: dict = defaultdict(list)
+        for r in comp_rows:
+            comp_history[r.competitor_id].append(r)
+
+        for comp_id, hist in comp_history.items():
+            if len(hist) < 3:
+                continue
+            ranks = [r.rank_position for r in hist if r.rank_position is not None]
+            if len(ranks) < 3:
+                continue
+
+            first_rank = ranks[0]
+            last_rank = ranks[-1]
+            improvement = first_rank - last_rank
+
+            if improvement < 2:
+                continue
+            if last_rank > own_rank + 2 and last_rank > 3:
+                continue
+
+            existing = (
+                db.query(Alert)
+                .filter(
+                    Alert.alert_type == "pack_convergence",
+                    Alert.competitor_id == comp_id,
+                    Alert.keyword == keyword,
+                    Alert.market == market,
+                    cast(Alert.triggered_at, Date) >= one_month_ago,
+                )
+                .first()
+            )
+            if existing:
+                continue
+
+            if comp_id not in comp_name_cache:
+                comp = db.query(Competitor).filter(Competitor.id == comp_id).first()
+                comp_name_cache[comp_id] = comp.name if comp else "Unknown"
+            comp_name = comp_name_cache[comp_id]
+            market_display = market.replace("_", " ").title()
+
+            alert = Alert(
+                id=new_uuid(),
+                alert_type="pack_convergence",
+                severity="weekly_digest",
+                competitor_id=comp_id,
+                keyword=keyword,
+                market=market,
+                detail={
+                    "keyword": keyword,
+                    "market": market,
+                    "competitor_name": comp_name,
+                    "competitor_rank_first": first_rank,
+                    "competitor_rank_latest": last_rank,
+                    "own_rank": own_rank,
+                    "improvement": improvement,
+                    "message": (
+                        f"{comp_name} improved from #{first_rank} to #{last_rank} "
+                        f"for '{keyword}' in {market_display} over 30 days "
+                        f"(Duncan Law at #{own_rank})."
+                    ),
+                },
+                triggered_at=datetime.now(timezone.utc),
+            )
+            db.add(alert)
+            logger.info(
+                f"Convergence alert: {comp_name} #{first_rank}→#{last_rank} "
+                f"for '{keyword}' in {market}, Duncan Law #{own_rank}"
+            )
+
+    db.commit()
 
 
 def check_review_gaps(db: Session) -> None:

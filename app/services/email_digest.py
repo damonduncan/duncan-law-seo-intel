@@ -243,8 +243,11 @@ def _gather_data(db: Session) -> dict:
         return out
 
     all_by_comp: dict = defaultdict(list)
+    comp_snaps_by_market: dict = defaultdict(lambda: defaultdict(list))
     for s in all_snaps_recent:
         all_by_comp[s.competitor_id].append(s)
+        if s.competitor_id != own_id and s.market and s.market in MARKET_DISPLAY:
+            comp_snaps_by_market[s.market][s.competitor_id].append(s)
 
     district_review_standings: dict = {d: [] for d in DISTRICT_ORDER}
 
@@ -305,6 +308,53 @@ def _gather_data(db: Session) -> dict:
     if own_firm:
         _comp_name_map[own_id] = own_firm.name
 
+    # Market velocity: own rate vs top rival rate per market
+    market_velocity: list = []
+    for market in MARKET_ORDER:
+        own_count = reviews_by_market.get(market, {}).get("review_count")
+        if own_count is None:
+            continue
+        own_delta = own_review_deltas.get(market) or 0
+        top_rival_name = None
+        top_rival_count = 0
+        top_rival_delta = 0
+        for comp_id, snaps in comp_snaps_by_market.get(market, {}).items():
+            if not snaps or snaps[0].review_count is None:
+                continue
+            cnt = snaps[0].review_count
+            if cnt > top_rival_count:
+                top_rival_count = cnt
+                top_rival_name = _comp_name_map.get(comp_id, "Unknown")
+                top_rival_delta = (
+                    snaps[0].review_count - snaps[1].review_count
+                    if len(snaps) >= 2 and snaps[1].review_count is not None
+                    else 0
+                )
+        if not top_rival_name:
+            continue
+        gap = top_rival_count - own_count
+        rate_diff = own_delta - top_rival_delta
+        if gap <= 0:
+            proj_text, proj_color = "Leading", "green"
+        elif rate_diff > 0:
+            weeks = max(1, round(gap / rate_diff))
+            proj_text, proj_color = f"~{weeks}w to close", "blue"
+        elif rate_diff < 0:
+            proj_text, proj_color = "Widening", "red"
+        else:
+            proj_text, proj_color = "Static", "gray"
+        market_velocity.append({
+            "display":     MARKET_DISPLAY.get(market, market),
+            "own_count":   own_count,
+            "own_delta":   own_delta,
+            "rival_name":  (top_rival_name[:28] + "…") if len(top_rival_name) > 28 else top_rival_name,
+            "rival_count": top_rival_count,
+            "rival_delta": top_rival_delta,
+            "gap":         gap,
+            "proj_text":   proj_text,
+            "proj_color":  proj_color,
+        })
+
     pacer_standings: dict = {d: [] for d in DISTRICT_ORDER}
     for cid, dist_counts in _comp_dist_counts.items():
         name = _comp_name_map.get(cid, "Unknown")
@@ -330,6 +380,7 @@ def _gather_data(db: Session) -> dict:
         "priority_action":            priority_action,
         "district_review_standings":  district_review_standings,
         "pacer_standings":            pacer_standings,
+        "market_velocity":            market_velocity,
     }
 
 
@@ -521,6 +572,48 @@ def _build_html(ctx: dict, week_str: str) -> str:
         </p>''',
     ))
 
+    # ── Review Velocity section ───────────────────────────────────────────────
+    vel = ctx.get("market_velocity", [])
+    if vel:
+        vel_rows = ""
+        color_map = {"green": "#059669", "red": "#dc2626", "blue": "#2563eb", "gray": "#6b7280"}
+        bg_map    = {"green": "#d1fae5", "red": "#fee2e2", "blue": "#dbeafe", "gray": "#f3f4f6"}
+        for v in vel:
+            od = v["own_delta"]
+            rd = v["rival_delta"]
+            own_d_str   = (f"+{od}" if od > 0 else str(od)) if od != 0 else "±0"
+            rival_d_str = (f"+{rd}" if rd > 0 else str(rd)) if rd != 0 else "±0"
+            pc = v["proj_color"]
+            vel_rows += (
+                f'<tr>'
+                f'<td style="padding:8px;font-size:13px;border-bottom:1px solid #f3f4f6;font-weight:600;">{v["display"]}</td>'
+                f'<td style="padding:8px;font-size:13px;border-bottom:1px solid #f3f4f6;">'
+                f'  {v["own_count"]:,} <span style="color:#9ca3af;font-size:11px;">({own_d_str}/wk)</span></td>'
+                f'<td style="padding:8px;font-size:13px;border-bottom:1px solid #f3f4f6;color:#374151;">'
+                f'  {v["rival_name"]}<br>'
+                f'  <span style="font-size:11px;color:#9ca3af;">{v["rival_count"]:,} ({rival_d_str}/wk)</span></td>'
+                f'<td style="padding:8px;font-size:13px;border-bottom:1px solid #f3f4f6;">'
+                f'  <span style="background:{bg_map.get(pc,"#f3f4f6")};color:{color_map.get(pc,"#374151")};'
+                f'padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">{v["proj_text"]}</span>'
+                f'</td>'
+                f'</tr>'
+            )
+        sections.append(_section(
+            "Review Velocity — Duncan Law vs. Market Leader",
+            f'''<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+              <tr>
+                <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Market</th>
+                <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Duncan Law</th>
+                <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Top Rival</th>
+                <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Projection</th>
+              </tr>
+              {vel_rows}
+            </table>
+            <p style="margin-top:12px;font-size:12px;color:#6b7280;">
+              <a href="{base_url}/reviews" style="color:#3b82f6;">View full velocity chart →</a>
+            </p>''',
+        ))
+
     # ── District Review Intelligence section ─────────────────────────────────
     dist_standings = ctx.get("district_review_standings", {})
     dist_blocks = ""
@@ -655,6 +748,7 @@ def _build_html(ctx: dict, week_str: str) -> str:
             "competitor_pack_entry": "Competitor entered pack",
             "review_gap":            "Review gap",
             "pacer_volume_spike":    "PACER volume spike",
+            "pack_convergence":      "Competitor closing on pack position",
         }
         for a in ctx["open_alerts"]:
             label = type_labels.get(a.alert_type, a.alert_type)
