@@ -22,11 +22,11 @@ def run_daily_job() -> None:
     try:
         records = 0
 
-        from app.services.config_loader import get_keywords
+        from app.services.config_loader import get_own_firm_keywords
         from app.services.dataforseo import collect_rankings_for_keywords, build_place_maps
         from app.services.alert_engine import check_pack_alerts
 
-        keywords = get_keywords()
+        keywords = get_own_firm_keywords()
         own_firm_id, own_place_ids, competitor_place_map = build_place_maps(db)
 
         if not own_firm_id:

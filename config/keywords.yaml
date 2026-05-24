@@ -6,7 +6,16 @@ templates:
   - "chapter 13 attorney {city}"
   - "bankruptcy lawyer {city}"
 
-# Cities used to expand templates (must match display_name in competitors.yaml markets)
+# Own-firm cities — daily job uses this subset (Duncan Law has offices here).
+own_firm_cities:
+  - "Greensboro"
+  - "Winston-Salem"
+  - "High Point"
+  - "Charlotte"
+  - "Salisbury"
+  - "Asheville"
+
+# All cities — weekly job uses this full list (includes EDNC competitor-intelligence markets).
 cities:
   - "Greensboro"
   - "Winston-Salem"

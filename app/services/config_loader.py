@@ -164,10 +164,23 @@ def _upsert_competitor(
 
 
 def get_keywords() -> List[str]:
-    """Return all expanded keyword strings (e.g. 'bankruptcy attorney Greensboro')."""
+    """Return all expanded keyword strings across all markets (weekly job)."""
     data = load_yaml("keywords.yaml")
     templates: List[str] = data.get("templates", [])
     cities: List[str] = data.get("cities", [])
+    return [t.format(city=city) for t in templates for city in cities]
+
+
+def get_own_firm_keywords() -> List[str]:
+    """Return keyword strings for own-firm markets only (daily job).
+
+    Uses own_firm_cities from keywords.yaml — the 6 markets where Duncan Law
+    has offices. Avoids burning DataForSEO credits on EDNC cities where we
+    will never appear in the local pack.
+    """
+    data = load_yaml("keywords.yaml")
+    templates: List[str] = data.get("templates", [])
+    cities: List[str] = data.get("own_firm_cities", data.get("cities", []))
     return [t.format(city=city) for t in templates for city in cities]
 
 
