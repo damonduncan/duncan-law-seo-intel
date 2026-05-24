@@ -162,6 +162,8 @@ def reviews(
         counts = Counter(MARKET_TO_DISTRICT[m] for m in markets if m in MARKET_TO_DISTRICT)
         row["district"] = counts.most_common(1)[0][0] if counts else "MDNC"
 
+    velocity_projections = _build_velocity_projections(own_google_snaps, own_snap_deltas, comp_rows)
+
     mdnc_comps = [r for r in comp_rows if r["district"] == "MDNC"]
     wdnc_comps = [r for r in comp_rows if r["district"] == "WDNC"]
     ednc_comps = [r for r in comp_rows if r["district"] == "EDNC"]
@@ -233,6 +235,7 @@ def reviews(
         "competitor_count": len(comp_rows),
         "recommendations": recommendations,
         "velocity_leaders": velocity_leaders,
+        "velocity_projections": velocity_projections,
         "review_chart_data": review_chart_data,
         # District-grouped data
         "mdnc_comps": mdnc_comps,
@@ -241,6 +244,96 @@ def reviews(
         "own_mdnc_snaps": own_mdnc_snaps,
         "own_wdnc_snaps": own_wdnc_snaps,
     })
+
+
+_OWN_MARKETS_META = [
+    ("greensboro",    "Greensboro",    "MDNC"),
+    ("winston_salem", "Winston-Salem", "MDNC"),
+    ("high_point",    "High Point",    "MDNC"),
+    ("salisbury",     "Salisbury",     "MDNC"),
+    ("charlotte",     "Charlotte",     "WDNC"),
+    ("asheville",     "Asheville",     "WDNC"),
+]
+
+
+def _build_velocity_projections(own_google_snaps: list, own_snap_deltas: dict, comp_rows: list) -> list:
+    own_by_market = {s.market: s for s in own_google_snaps}
+    dist_comps: dict = defaultdict(list)
+    for r in comp_rows:
+        dist_comps[r["district"]].append(r)
+
+    projections = []
+    for market, display, district in _OWN_MARKETS_META:
+        snap = own_by_market.get(market)
+        if not snap or snap.review_count is None:
+            continue
+        own_count = snap.review_count
+        own_rate = own_snap_deltas.get(market, 0)
+
+        rivals = dist_comps.get(district, [])
+        if not rivals:
+            continue
+        top_rival = max(rivals, key=lambda r: r["google_count"] or 0)
+        rival_count = top_rival["google_count"] or 0
+        rival_rate = top_rival["count_delta"] or 0
+
+        gap = rival_count - own_count  # positive = rival ahead
+
+        if gap > 0:
+            rate_diff = own_rate - rival_rate  # positive = closing the gap
+            if rate_diff > 0:
+                weeks = gap / rate_diff
+                if weeks < 52:
+                    proj_text = f"Closing — ~{round(weeks)} wk to match"
+                else:
+                    proj_text = f"Closing slowly — ~{round(weeks / 52, 1)} yr"
+                proj_type = "trailing_closing"
+                proj_weeks = weeks
+            else:
+                proj_type = "trailing_widening"
+                proj_weeks = None
+                if rate_diff < 0:
+                    proj_text = f"Gap widening — rival +{abs(rate_diff)}/wk faster"
+                else:
+                    proj_text = "Static — matching rival's pace"
+        elif gap < 0:
+            rate_diff = rival_rate - own_rate  # positive = rival closing
+            if rate_diff > 0:
+                weeks = abs(gap) / rate_diff
+                proj_type = "leading_threatened"
+                if weeks < 52:
+                    proj_text = f"At risk — rival catches up ~{round(weeks)} wk"
+                else:
+                    proj_text = f"Leading safely — ~{round(weeks / 52, 1)} yr buffer"
+                proj_weeks = weeks
+            else:
+                proj_type = "leading_safe"
+                proj_text = "Leading — rival not gaining ground"
+                proj_weeks = None
+        else:
+            proj_type = "tied"
+            proj_text = "Tied with top rival"
+            proj_weeks = None
+
+        pct = min(100, round(own_count / rival_count * 100)) if rival_count > 0 else 100
+        rival_short = top_rival["name"] if len(top_rival["name"]) <= 28 else top_rival["name"][:27] + "…"
+
+        projections.append({
+            "market":      market,
+            "display":     display,
+            "district":    district,
+            "own_count":   own_count,
+            "own_rate":    own_rate,
+            "rival_name":  rival_short,
+            "rival_count": rival_count,
+            "rival_rate":  rival_rate,
+            "proj_type":   proj_type,
+            "proj_text":   proj_text,
+            "proj_weeks":  proj_weeks,
+            "pct":         pct,
+        })
+
+    return projections
 
 
 def _build_recommendations(own_snaps: list, comp_rows: list) -> list:

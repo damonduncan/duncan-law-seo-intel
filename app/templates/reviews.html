@@ -368,6 +368,90 @@
 </script>
 {% endif %}
 
+<!-- Review Velocity Projections -->
+{% if velocity_projections %}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-vel-proj')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon green">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </span>
+    Review Velocity &amp; Projections
+    <span id="chev-sec-vel-proj" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-vel-proj" data-collapsible="1">
+  <p style="color:var(--muted);font-size:14px;margin-bottom:16px;line-height:1.6;">
+    At current weekly rates, how long until Duncan Law matches — or is overtaken by — the district review leader?
+  </p>
+  <table>
+    <thead><tr>
+      <th>Market</th>
+      <th>Duncan Law</th>
+      <th style="text-align:center;">+/wk</th>
+      <th>Top Rival</th>
+      <th>Rival Reviews</th>
+      <th style="text-align:center;">+/wk</th>
+      <th>Progress</th>
+      <th>Projection</th>
+    </tr></thead>
+    <tbody>
+    {% for p in velocity_projections %}
+    <tr>
+      <td>
+        <div style="font-weight:600;font-size:14px;">{{ p.display }}</div>
+        <span class="chip {% if p.district == 'MDNC' %}chip-blue{% elif p.district == 'WDNC' %}chip-purple{% else %}chip-orange{% endif %}" style="font-size:11px;margin-top:3px;">{{ p.district }}</span>
+      </td>
+      <td style="font-size:15px;font-weight:700;color:var(--accent);">{{ p.own_count }}</td>
+      <td style="text-align:center;">
+        {% if p.own_rate > 0 %}
+        <span style="font-size:13px;font-weight:700;color:var(--green-dark);">+{{ p.own_rate }}</span>
+        {% elif p.own_rate < 0 %}
+        <span style="font-size:13px;font-weight:700;color:var(--red-dark);">{{ p.own_rate }}</span>
+        {% else %}
+        <span style="font-size:13px;color:var(--muted);">+0</span>
+        {% endif %}
+      </td>
+      <td style="font-size:14px;font-weight:500;color:var(--text-2);">{{ p.rival_name }}</td>
+      <td style="font-size:14px;font-weight:600;">{{ p.rival_count }}</td>
+      <td style="text-align:center;">
+        {% if p.rival_rate > 0 %}
+        <span style="font-size:13px;font-weight:700;color:var(--orange);">+{{ p.rival_rate }}</span>
+        {% elif p.rival_rate < 0 %}
+        <span style="font-size:13px;color:var(--muted);">{{ p.rival_rate }}</span>
+        {% else %}
+        <span style="font-size:13px;color:var(--muted);">+0</span>
+        {% endif %}
+      </td>
+      <td style="min-width:90px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="flex:1;height:5px;background:var(--surface-3);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:{{ p.pct }}%;background:{% if p.pct >= 80 %}var(--green-dark){% elif p.pct >= 50 %}var(--yellow-dark){% else %}var(--red-dark){% endif %};border-radius:3px;"></div>
+          </div>
+          <span style="font-size:12px;color:var(--muted);white-space:nowrap;">{{ p.pct }}%</span>
+        </div>
+      </td>
+      <td>
+        {% if p.proj_type == 'trailing_closing' %}
+        <span style="font-size:12px;font-weight:600;color:var(--green-dark);">{{ p.proj_text }}</span>
+        {% elif p.proj_type == 'trailing_widening' %}
+        <span style="font-size:12px;font-weight:600;color:var(--red-dark);">{{ p.proj_text }}</span>
+        {% elif p.proj_type == 'leading_safe' %}
+        <span style="font-size:12px;font-weight:600;color:var(--green-dark);">{{ p.proj_text }}</span>
+        {% elif p.proj_type == 'leading_threatened' %}
+        <span style="font-size:12px;font-weight:600;color:var(--orange);">{{ p.proj_text }}</span>
+        {% else %}
+        <span style="font-size:12px;color:var(--muted);">{{ p.proj_text }}</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
 <!-- DISTRICT REVIEW INTELLIGENCE                                              -->
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
