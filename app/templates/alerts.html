@@ -68,7 +68,7 @@
   <!-- Type filters + dismiss -->
   <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
     <div style="display:flex;gap:4px;">
-      {% for ft_id, ft_label in [('all','All types'),('pack_drop','Pack Drop'),('competitor_pack_entry','Comp. Entry'),('review_gap','Review Gap'),('pacer_volume_spike','PACER')] %}
+      {% for ft_id, ft_label in [('all','All types'),('pack_drop','Pack Drop'),('competitor_pack_entry','Comp. Entry'),('review_gap','Review Gap'),('pacer_volume_spike','PACER'),('pack_convergence','Convergence')] %}
       <button class="ft-btn" data-ft="{{ ft_id }}" onclick="setType('{{ ft_id }}')"
         style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;transition:all .12s;
         {% if ft_id == 'all' %}background:var(--surface-3);color:var(--text);{% else %}background:transparent;color:var(--muted);{% endif %}">
@@ -135,6 +135,11 @@
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
           </span>
           <span style="font-size:14px;font-weight:500;">PACER volume spike</span>
+          {% elif alert.alert_type == 'pack_convergence' %}
+          <span style="width:22px;height:22px;border-radius:6px;background:var(--orange-light);color:var(--orange);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+          </span>
+          <span style="font-size:14px;font-weight:500;">Competitor closing on pack position</span>
           {% else %}
           <span style="font-size:14px;color:var(--muted);">{{ alert.alert_type }}</span>
           {% endif %}

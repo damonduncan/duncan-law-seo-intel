@@ -112,20 +112,18 @@ def reviews(
     )
 
     comp_rows = []
+    def _dedup(snaps):
+        seen, out = set(), []
+        for s in snaps:
+            fp = json.dumps(s.snapshot_data, sort_keys=True) if s.snapshot_data else id(s)
+            if fp not in seen:
+                seen.add(fp)
+                out.append(s)
+        return out
+
     for c in competitors:
         raw_snaps = snap_index.get(c.id, {}).get("google", [])
         raw_prev = prev_index.get(c.id, {}).get("google", [])
-
-        # Deduplicate: same Google listing may appear under multiple market rows.
-        # Use snapshot_data as a fingerprint — identical API responses == same listing.
-        def _dedup(snaps):
-            seen, out = set(), []
-            for s in snaps:
-                fp = json.dumps(s.snapshot_data, sort_keys=True) if s.snapshot_data else id(s)
-                if fp not in seen:
-                    seen.add(fp)
-                    out.append(s)
-            return out
 
         google_snaps = _dedup(raw_snaps)
         prev_google = _dedup(raw_prev)

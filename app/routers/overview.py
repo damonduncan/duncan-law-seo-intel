@@ -1,3 +1,4 @@
+import json
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from fastapi import APIRouter, Request, Depends
@@ -53,8 +54,9 @@ def dashboard(
     scorecard = _build_scorecard(db, own_firm)
     action_items = _build_action_items(db, own_firm, scorecard, competitors)
     rank_changes = _build_rank_changes(db, own_firm)
-    pacer_share = _build_pacer_share(db, own_firm)
-    opportunity_matrix = _build_opportunity_matrix(db, own_firm, scorecard, pacer_share)
+    fc_counts, fc_dist_latest = _compute_filing_counts(db)
+    pacer_share = _build_pacer_share(own_firm, fc_counts, fc_dist_latest)
+    opportunity_matrix = _build_opportunity_matrix(own_firm, scorecard, pacer_share, fc_counts, fc_dist_latest)
     activity_feed = _build_activity_feed(db, own_firm)
 
     return templates.TemplateResponse("overview.html", {
@@ -135,7 +137,6 @@ def _build_scorecard(db: Session, own_firm) -> list:
         }
 
     # Most recent review count per top competitor (deduplicated across market rows)
-    import json as _json
     top_comp_reviews: dict = {}  # competitor_id → review_count
     if _comp_ids:
         comp_snaps = (
@@ -149,7 +150,7 @@ def _build_scorecard(db: Session, own_firm) -> list:
         )
         seen_fps: dict = {}  # competitor_id → set of fingerprints
         for s in comp_snaps:
-            fp = _json.dumps(s.snapshot_data, sort_keys=True) if s.snapshot_data else str(id(s))
+            fp = json.dumps(s.snapshot_data, sort_keys=True) if s.snapshot_data else str(id(s))
             seen_fps.setdefault(s.competitor_id, set())
             if fp not in seen_fps[s.competitor_id]:
                 seen_fps[s.competitor_id].add(fp)
@@ -399,7 +400,6 @@ def _build_rank_changes(db: Session, own_firm) -> list:
 
 def _build_activity_feed(db: Session, own_firm) -> list:
     """Chronological timeline of notable competitor events (alerts + review gains)."""
-    import json as _json
     since_90 = datetime.now(timezone.utc) - timedelta(days=90)
     since_60 = datetime.now(timezone.utc) - timedelta(days=60)
     events = []
@@ -410,6 +410,7 @@ def _build_activity_feed(db: Session, own_firm) -> list:
         "competitor_pack_entry": ("▲", "var(--orange)",      "Competitor entered 3-pack"),
         "review_gap":            ("★", "var(--yellow-dark)", "Review gap alert"),
         "pacer_volume_spike":    ("↑", "var(--purple)",      "PACER volume spike"),
+        "pack_convergence":      ("⬆", "var(--orange)",      "Competitor closing on pack position"),
     }
     alerts = (
         db.query(Alert)
@@ -486,27 +487,31 @@ def _build_activity_feed(db: Session, own_firm) -> list:
     return events[:30]
 
 
-def _build_opportunity_matrix(db: Session, own_firm, scorecard: list, pacer_share: dict) -> list:
+def _compute_filing_counts(db: Session) -> tuple:
+    """Query FilingSnapshot once and return (counts, dist_latest) for reuse."""
+    snaps = db.query(FilingSnapshot).all()
+    counts: dict = {}
+    for s in snaps:
+        key = (s.competitor_id, s.attorney_id, s.district, s.chapter, s.period_start)
+        if key not in counts or s.case_count > counts[key]:
+            counts[key] = s.case_count
+    dist_latest: dict = {}
+    for (_cid, _aid, dist, _ch, per) in counts:
+        if dist not in dist_latest or per > dist_latest[dist]:
+            dist_latest[dist] = per
+    return counts, dist_latest
+
+
+def _build_opportunity_matrix(own_firm, scorecard: list, pacer_share: dict, counts: dict, dist_latest: dict) -> list:
     """Per-market opportunity quadrant: pack strength vs PACER district volume."""
     if not own_firm or not scorecard:
         return []
 
-    snaps = db.query(FilingSnapshot).all()
     dist_totals: dict = {}
-    if snaps:
-        counts: dict = {}
-        for s in snaps:
-            key = (s.competitor_id, s.attorney_id, s.district, s.chapter, s.period_start)
-            if key not in counts or s.case_count > counts[key]:
-                counts[key] = s.case_count
-        dist_latest: dict = {}
-        for (_, _, dist, _, per) in counts:
-            if dist not in dist_latest or per > dist_latest[dist]:
-                dist_latest[dist] = per
-        for district, per in dist_latest.items():
-            dist_totals[district] = sum(
-                count for (_, _, d, _, p), count in counts.items() if d == district and p == per
-            )
+    for district, per in dist_latest.items():
+        dist_totals[district] = sum(
+            count for (_, _, d, _, p), count in counts.items() if d == district and p == per
+        )
 
     _m2d = {
         "greensboro": "MDNC", "winston_salem": "MDNC", "high_point": "MDNC", "salisbury": "MDNC",
@@ -561,24 +566,10 @@ def _build_opportunity_matrix(db: Session, own_firm, scorecard: list, pacer_shar
     return matrix
 
 
-def _build_pacer_share(db: Session, own_firm) -> dict:
+def _build_pacer_share(own_firm, counts: dict, dist_latest: dict) -> dict:
     """Most recent month's Duncan Law market share per district (MDNC, WDNC)."""
-    if not own_firm:
+    if not own_firm or not counts:
         return {}
-    snaps = db.query(FilingSnapshot).all()
-    if not snaps:
-        return {}
-
-    counts: dict = {}
-    for s in snaps:
-        key = (s.competitor_id, s.attorney_id, s.district, s.chapter, s.period_start)
-        if key not in counts or s.case_count > counts[key]:
-            counts[key] = s.case_count
-
-    dist_latest: dict = {}
-    for (_cid, _aid, dist, _ch, per) in counts:
-        if dist not in dist_latest or per > dist_latest[dist]:
-            dist_latest[dist] = per
 
     result: dict = {}
     for district in ("MDNC", "WDNC"):

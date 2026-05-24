@@ -2,7 +2,7 @@ from collections import defaultdict
 from fastapi import APIRouter, Request, Depends, Query
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.dependencies import RedirectIfNotAuthenticated
 from app.database import get_db
@@ -37,7 +37,10 @@ def filings(
     attorney_map = {a.id: a for a in db.query(CompetitorAttorney).all()}
     comp_map = {
         c.id: c
-        for c in db.query(Competitor).filter(Competitor.active == True).all()
+        for c in db.query(Competitor)
+        .filter(Competitor.active == True)
+        .options(joinedload(Competitor.locations), joinedload(Competitor.attorneys))
+        .all()
     }
 
     # De-dupe: max case_count per (competitor_id, attorney_id, district, chapter, period_start)

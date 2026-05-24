@@ -16,8 +16,6 @@ class RedirectIfNotAuthenticated:
     def __call__(self, request: Request) -> dict:
         user = request.session.get("user")
         if not user:
-            # For page routes we want a redirect, not a JSON 401
-            from fastapi.responses import RedirectResponse
             raise HTTPException(
                 status_code=307,
                 headers={"Location": "/login"},

@@ -1,8 +1,10 @@
 import threading
+from datetime import date
+from typing import Optional
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.dependencies import RedirectIfNotAuthenticated
 from app.database import get_db
 from app.config import settings
@@ -50,10 +52,9 @@ def clean_pacer_dupes(request: Request, user: dict = Depends(auth_required), db:
             else:
                 to_delete.append(s.id)
 
-    deleted = 0
-    for snap_id in to_delete:
-        db.query(FilingSnapshot).filter(FilingSnapshot.id == snap_id).delete()
-        deleted += 1
+    deleted = len(to_delete)
+    if to_delete:
+        db.query(FilingSnapshot).filter(FilingSnapshot.id.in_(to_delete)).delete(synchronize_session=False)
     db.commit()
     return RedirectResponse(
         url="/filings?msg=removed_{d}_duplicate_rows".format(d=deleted),
@@ -100,13 +101,17 @@ def discover_district(
     district: str,
     request: Request,
     user: dict = Depends(auth_required),
-    year: int = 2026,
-    month: int = 4,
+    year: Optional[int] = None,
+    month: Optional[int] = None,
 ):
     """Start CaseFiled-Rpt.pl discovery for any district in background."""
     district = district.upper()
     if district not in ("MDNC", "WDNC", "EDNC"):
         return RedirectResponse(url="/filings?msg=unknown_district", status_code=303)
+
+    today = date.today()
+    _year = year or today.year
+    _month = month or today.month
 
     from app.database import SessionLocal
     from app.services.pacer_discovery import run_district_discovery
@@ -114,7 +119,7 @@ def discover_district(
     def _run():
         db = SessionLocal()
         try:
-            run_district_discovery(db, district=district, year=year, month=month)
+            run_district_discovery(db, district=district, year=_year, month=_month)
         finally:
             db.close()
 
@@ -720,7 +725,7 @@ def clean_district_mismatch(
     from app.services.pacer import MARKET_TO_DISTRICT
 
     valid_districts: dict = {}
-    for comp in db.query(Competitor).all():
+    for comp in db.query(Competitor).options(joinedload(Competitor.locations)).all():
         districts = set()
         for loc in comp.locations:
             d = MARKET_TO_DISTRICT.get(loc.market)

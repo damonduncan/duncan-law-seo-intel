@@ -48,8 +48,6 @@ def dismiss_all_alerts(
     db: Session = Depends(get_db),
 ):
     now = datetime.now(timezone.utc)
-    unacked = db.query(Alert).filter(Alert.acknowledged_at == None).all()
-    for alert in unacked:
-        alert.acknowledged_at = now
+    db.query(Alert).filter(Alert.acknowledged_at == None).update({"acknowledged_at": now})
     db.commit()
     return RedirectResponse(url="/alerts", status_code=303)
