@@ -157,6 +157,127 @@
   </div>
 </div>
 
+<!-- Market Leadership Matrix -->
+{% if scorecard %}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-leadership')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon blue">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    </span>
+    Market Leadership Matrix
+    <span id="chev-sec-leadership" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-leadership" data-collapsible="1">
+  <div style="overflow-x:auto;">
+    <table style="border-collapse:collapse;width:100%;">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border);">
+          <th style="text-align:left;padding:6px 14px 12px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Market</th>
+          <th style="text-align:center;padding:6px 14px 12px;">
+            <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Rankings</div>
+            <div style="font-size:11px;font-weight:400;color:var(--muted-2);margin-top:2px;">in 3-pack</div>
+          </th>
+          <th style="text-align:center;padding:6px 14px 12px;">
+            <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Reviews</div>
+            <div style="font-size:11px;font-weight:400;color:var(--muted-2);margin-top:2px;">vs top rival</div>
+          </th>
+          <th style="text-align:center;padding:6px 14px 12px;">
+            <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">PACER Share</div>
+            <div style="font-size:11px;font-weight:400;color:var(--muted-2);margin-top:2px;">district filings</div>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for m in scorecard %}
+      {% if m.market in ['greensboro','winston_salem','high_point','salisbury'] %}
+        {% set dist_label = 'MDNC' %}
+      {% elif m.market in ['charlotte','asheville'] %}
+        {% set dist_label = 'WDNC' %}
+      {% else %}
+        {% set dist_label = '' %}
+      {% endif %}
+      {% set mkt_pacer = pacer_share.get(dist_label) if (pacer_share and dist_label) else none %}
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:10px 14px;white-space:nowrap;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-weight:700;font-size:14px;">{{ m.display }}</span>
+            {% if dist_label == 'MDNC' %}
+              <span class="chip chip-blue" style="font-size:10px;padding:1px 7px;">MDNC</span>
+            {% elif dist_label == 'WDNC' %}
+              <span class="chip chip-purple" style="font-size:10px;padding:1px 7px;">WDNC</span>
+            {% endif %}
+          </div>
+        </td>
+
+        <!-- Rankings -->
+        <td style="text-align:center;padding:10px 14px;">
+          {% if m.status == 'no_data' or m.total == 0 %}
+            <span style="color:var(--muted-2);font-size:13px;">—</span>
+          {% elif m.in_pack == m.total %}
+            <span style="font-size:16px;font-weight:800;color:var(--green-dark);">{{ m.in_pack }}/{{ m.total }}</span>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">all keywords</div>
+          {% elif m.in_pack >= (m.total // 2 + 1) %}
+            <span style="font-size:16px;font-weight:800;color:var(--yellow-dark);">{{ m.in_pack }}/{{ m.total }}</span>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">keywords</div>
+          {% else %}
+            <span style="font-size:16px;font-weight:800;color:var(--red-dark);">{{ m.in_pack }}/{{ m.total }}</span>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">keywords</div>
+          {% endif %}
+        </td>
+
+        <!-- Reviews -->
+        <td style="text-align:center;padding:10px 14px;">
+          {% if m.reviews is none %}
+            <span style="color:var(--muted-2);font-size:13px;">—</span>
+          {% else %}
+            {% set top_r = m.top_comp.reviews if (m.top_comp and m.top_comp.reviews is not none) else none %}
+            {% if top_r is none or m.reviews >= top_r %}
+              <span style="font-size:16px;font-weight:800;color:var(--green-dark);">{{ m.reviews }}</span>
+            {% elif m.reviews >= (top_r * 0.75)|int %}
+              <span style="font-size:16px;font-weight:800;color:var(--yellow-dark);">{{ m.reviews }}</span>
+            {% else %}
+              <span style="font-size:16px;font-weight:800;color:var(--red-dark);">{{ m.reviews }}</span>
+            {% endif %}
+            {% if top_r is not none %}
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;">vs {{ top_r }} rival</div>
+            {% else %}
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;">reviews</div>
+            {% endif %}
+          {% endif %}
+        </td>
+
+        <!-- PACER -->
+        <td style="text-align:center;padding:10px 14px;">
+          {% if mkt_pacer is not none %}
+            {% if mkt_pacer > 12 %}
+              <span style="font-size:16px;font-weight:800;color:var(--green-dark);">{{ mkt_pacer }}%</span>
+            {% elif mkt_pacer > 6 %}
+              <span style="font-size:16px;font-weight:800;color:var(--yellow-dark);">{{ mkt_pacer }}%</span>
+            {% else %}
+              <span style="font-size:16px;font-weight:800;color:var(--red-dark);">{{ mkt_pacer }}%</span>
+            {% endif %}
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">{{ dist_label }} share</div>
+          {% else %}
+            <span style="color:var(--muted-2);font-size:13px;">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div style="margin-top:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);">
+    <span><span style="color:var(--green-dark);font-weight:700;">■</span> Leading</span>
+    <span><span style="color:var(--yellow-dark);font-weight:700;">■</span> Competitive</span>
+    <span><span style="color:var(--red-dark);font-weight:700;">■</span> Trailing</span>
+    <span style="margin-left:auto;font-size:12px;color:var(--muted-2);">PACER = district market share, most recent month · Rankings thresholds: &gt;12% green, 6–12% yellow</span>
+  </div>
+  </div>
+</div>
+{% endif %}
+
 <!-- Action center -->
 {% if action_items %}
 <div class="card" style="margin-bottom:24px;">

@@ -10,6 +10,7 @@ from app.dependencies import RedirectIfNotAuthenticated
 from app.database import get_db
 from app.models.competitor import Competitor
 from app.models.alerts import Alert, JobRun
+from app.models.filings import FilingSnapshot
 from app.models.rankings import LocalPackRanking
 from app.models.reviews import ReviewSnapshot
 
@@ -52,6 +53,7 @@ def dashboard(
     scorecard = _build_scorecard(db, own_firm)
     action_items = _build_action_items(db, own_firm, scorecard, competitors)
     rank_changes = _build_rank_changes(db, own_firm)
+    pacer_share = _build_pacer_share(db, own_firm)
 
     return templates.TemplateResponse("overview.html", {
         "request": request,
@@ -64,6 +66,7 @@ def dashboard(
         "scorecard": scorecard,
         "action_items": action_items,
         "rank_changes": rank_changes,
+        "pacer_share": pacer_share,
         "active_page": "dashboard",
     })
 
@@ -388,3 +391,38 @@ def _build_rank_changes(db: Session, own_firm) -> list:
     drops.sort(key=lambda x: abs(x["delta"] or 99), reverse=True)
     gains.sort(key=lambda x: abs(x["delta"] or 99), reverse=True)
     return drops + gains
+
+
+def _build_pacer_share(db: Session, own_firm) -> dict:
+    """Most recent month's Duncan Law market share per district (MDNC, WDNC)."""
+    if not own_firm:
+        return {}
+    snaps = db.query(FilingSnapshot).all()
+    if not snaps:
+        return {}
+
+    counts: dict = {}
+    for s in snaps:
+        key = (s.competitor_id, s.attorney_id, s.district, s.chapter, s.period_start)
+        if key not in counts or s.case_count > counts[key]:
+            counts[key] = s.case_count
+
+    dist_latest: dict = {}
+    for (_cid, _aid, dist, _ch, per) in counts:
+        if dist not in dist_latest or per > dist_latest[dist]:
+            dist_latest[dist] = per
+
+    result: dict = {}
+    for district in ("MDNC", "WDNC"):
+        per = dist_latest.get(district)
+        if not per:
+            continue
+        dist_total = own_total = 0
+        for (cid, _aid, dist, _ch, period), count in counts.items():
+            if dist == district and period == per:
+                dist_total += count
+                if cid == own_firm.id:
+                    own_total += count
+        if dist_total > 0:
+            result[district] = round(own_total / dist_total * 100, 1)
+    return result
