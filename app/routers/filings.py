@@ -184,6 +184,43 @@ def filings(
     wdnc_trend = build_trend("WDNC")
     ednc_trend = build_trend("EDNC")
 
+    def build_mom_table(district: str) -> dict:
+        dist_periods = sorted(
+            {per for (cid, dist2, per) in firm_period_totals if dist2 == district},
+            reverse=True,
+        )[:6]
+        if len(dist_periods) < 2:
+            return {}
+        display_periods = list(reversed(dist_periods))  # oldest → newest left-to-right
+        rows = []
+        for cid in {cid for (cid, dist2, _) in firm_period_totals if dist2 == district}:
+            comp = comp_map.get(cid)
+            if not comp:
+                continue
+            data = [firm_period_totals.get((cid, district, per), 0) for per in display_periods]
+            if not any(data):
+                continue
+            latest, prev = data[-1], data[-2]
+            mom_abs = latest - prev
+            mom_pct = round((latest - prev) / prev * 100) if prev else None
+            rows.append({
+                "firm":    comp.name,
+                "is_own":  comp.is_own_firm,
+                "data":    data,
+                "mom_abs": mom_abs,
+                "mom_pct": mom_pct,
+                "latest":  latest,
+            })
+        rows.sort(key=lambda r: (not r["is_own"], -(r["latest"] or 0)))
+        return {
+            "labels": [p.strftime("%b '%y") for p in display_periods],
+            "rows":   rows,
+        }
+
+    mdnc_mom = build_mom_table("MDNC")
+    wdnc_mom = build_mom_table("WDNC")
+    ednc_mom = build_mom_table("EDNC")
+
     mdnc_discovery = get_cached_results(db, "MDNC")
     wdnc_discovery = get_cached_results(db, "WDNC")
     ednc_discovery = get_cached_results(db, "EDNC")
@@ -219,4 +256,7 @@ def filings(
         "mdnc_trend":     mdnc_trend,
         "wdnc_trend":     wdnc_trend,
         "ednc_trend":     ednc_trend,
+        "mdnc_mom":       mdnc_mom,
+        "wdnc_mom":       wdnc_mom,
+        "ednc_mom":       ednc_mom,
     })
