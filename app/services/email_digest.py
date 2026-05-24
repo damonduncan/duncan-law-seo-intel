@@ -3,7 +3,8 @@
 Sends a Monday morning intelligence summary to damonduncan@duncanlawonline.com
 via Resend covering:
   • Duncan Law's current Google 3-pack positions across all 6 markets
-  • Review counts by market with action flags for thin listings
+  • Review counts by market with week-over-week deltas
+  • Top competitor review gainers since last collection
   • All unacknowledged alerts from the past week
   • Quick links back to the full dashboard
 """
@@ -114,8 +115,9 @@ def _gather_data(db: Session) -> dict:
             else:
                 m["gaps"].append(r.keyword)
 
-    # Latest own-firm review snapshot per market
+    # Latest own-firm review snapshot per market + week-over-week deltas
     reviews_by_market: dict = {}
+    own_review_deltas: dict = {}
     if own_id:
         snaps = (
             db.query(ReviewSnapshot)
@@ -127,12 +129,47 @@ def _gather_data(db: Session) -> dict:
             .order_by(ReviewSnapshot.snapped_at.desc())
             .all()
         )
+        # Group by market — list is newest-first from the query
+        snap_by_market: dict = {}
         for s in snaps:
-            if s.market not in reviews_by_market:
-                reviews_by_market[s.market] = {
-                    "rating":       float(s.rating) if s.rating else None,
-                    "review_count": s.review_count or 0,
-                }
+            snap_by_market.setdefault(s.market, []).append(s)
+        for market, msnaps in snap_by_market.items():
+            reviews_by_market[market] = {
+                "rating":       float(msnaps[0].rating) if msnaps[0].rating else None,
+                "review_count": msnaps[0].review_count or 0,
+            }
+            if (len(msnaps) >= 2
+                    and msnaps[0].review_count is not None
+                    and msnaps[1].review_count is not None):
+                own_review_deltas[market] = msnaps[0].review_count - msnaps[1].review_count
+
+    # Competitor review velocity leaders (top gainers since last collection)
+    velocity_leaders: list = []
+    competitors_all = (
+        db.query(Competitor)
+        .filter(Competitor.is_own_firm == False, Competitor.active == True)
+        .all()
+    )
+    for c in competitors_all:
+        pair = (
+            db.query(ReviewSnapshot)
+            .filter(ReviewSnapshot.competitor_id == c.id, ReviewSnapshot.source == "google")
+            .order_by(ReviewSnapshot.snapped_at.desc())
+            .limit(2)
+            .all()
+        )
+        if (len(pair) >= 2
+                and pair[0].review_count is not None
+                and pair[1].review_count is not None):
+            delta = pair[0].review_count - pair[1].review_count
+            if delta > 0:
+                velocity_leaders.append({
+                    "name":  c.name,
+                    "delta": delta,
+                    "total": pair[0].review_count,
+                })
+    velocity_leaders.sort(key=lambda r: r["delta"], reverse=True)
+    velocity_leaders = velocity_leaders[:3]
 
     # Unacknowledged alerts
     open_alerts = (
@@ -148,6 +185,8 @@ def _gather_data(db: Session) -> dict:
     return {
         "rankings_by_market":  rankings_by_market,
         "reviews_by_market":   reviews_by_market,
+        "own_review_deltas":   own_review_deltas,
+        "velocity_leaders":    velocity_leaders,
         "open_alerts":         open_alerts,
         "rankings_as_of":      latest_date,
         "base_url":            settings.app_base_url,
@@ -295,11 +334,13 @@ def _build_html(ctx: dict, week_str: str) -> str:
 
     # ── Reviews section ───────────────────────────────────────────────────────
     review_rows = ""
+    own_deltas = ctx.get("own_review_deltas", {})
     for market in MARKET_ORDER:
         label = MARKET_DISPLAY.get(market, market)
         data  = ctx["reviews_by_market"].get(market)
+        delta = own_deltas.get(market)
         if not data:
-            review_rows += _tr(label, "—", "", "")
+            review_rows += _tr(label, "—", "—", "—", "")
             continue
         count  = data["review_count"]
         rating = data["rating"]
@@ -313,15 +354,25 @@ def _build_html(ctx: dict, week_str: str) -> str:
         else:
             badge = _badge("green", f"{count} reviews")
             note  = ""
-        review_rows += _tr(label, f"{stars}", badge, note)
+        if delta is not None:
+            if delta > 0:
+                delta_cell = f'<span style="color:#059669;font-weight:700;">+{delta}</span>'
+            elif delta < 0:
+                delta_cell = f'<span style="color:#dc2626;font-weight:700;">{delta}</span>'
+            else:
+                delta_cell = '<span style="color:#9ca3af;">+0</span>'
+        else:
+            delta_cell = '<span style="color:#9ca3af;">—</span>'
+        review_rows += _tr(label, stars, badge, delta_cell, note)
 
     sections.append(_section(
-        "Google Review Counts by Market",
+        "Duncan Law — Google Reviews by Market",
         f'''<table width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse;">
           <tr>
             <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Market</th>
             <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Rating</th>
             <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Reviews</th>
+            <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Δ Week</th>
             <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Action</th>
           </tr>
           {review_rows}
@@ -330,6 +381,35 @@ def _build_html(ctx: dict, week_str: str) -> str:
           <a href="{base_url}/reviews" style="color:#3b82f6;">View full review data →</a>
         </p>''',
     ))
+
+    # ── Competitor activity section ───────────────────────────────────────────
+    leaders = ctx.get("velocity_leaders", [])
+    if leaders:
+        vel_rows = ""
+        for v in leaders:
+            name = v["name"][:38] + ("…" if len(v["name"]) > 38 else "")
+            vel_rows += f'''<tr>
+              <td style="padding:8px;font-size:13px;border-bottom:1px solid #f3f4f6;">{name}</td>
+              <td style="padding:8px;font-size:13px;border-bottom:1px solid #f3f4f6;color:#6b7280;">{v["total"]:,} total</td>
+              <td style="padding:8px;font-size:13px;border-bottom:1px solid #f3f4f6;">
+                <span style="background:#fff7ed;color:#c2410c;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">+{v["delta"]} this week</span>
+              </td>
+            </tr>'''
+        sections.append(_section(
+            "Competitor Review Activity",
+            f'''<p style="margin:0 0 10px;font-size:13px;color:#6b7280;">Top gainers since last collection — may indicate a review campaign running</p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+              <tr>
+                <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Firm</th>
+                <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Total Reviews</th>
+                <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Gained</th>
+              </tr>
+              {vel_rows}
+            </table>
+            <p style="margin-top:12px;font-size:12px;color:#6b7280;">
+              <a href="{base_url}/reviews" style="color:#3b82f6;">View full review data →</a>
+            </p>''',
+        ))
 
     # ── Alerts section ────────────────────────────────────────────────────────
     if ctx["open_alerts"]:
