@@ -116,6 +116,29 @@
 </div>
 {% endif %}
 
+<!-- Review velocity leaders -->
+{% if velocity_leaders %}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title">
+    <span class="section-icon orange">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+    </span>
+    This Week's Review Movers
+  </div>
+  <div style="display:flex;flex-direction:column;gap:0;">
+    {% for r in velocity_leaders %}
+    <div style="display:grid;grid-template-columns:1fr auto auto;gap:16px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);{% if loop.last %}border-bottom:none;{% endif %}">
+      <div style="font-size:14px;font-weight:500;color:var(--text-2);">{{ r.name }}</div>
+      <div style="font-size:14px;color:var(--muted);text-align:right;">{{ "{:,}".format(r.google_count) }} total</div>
+      <div style="min-width:52px;text-align:right;">
+        <span style="font-size:13px;font-weight:700;padding:2px 8px;border-radius:5px;background:rgba(249,115,22,.12);color:var(--orange-dark);">+{{ r.count_delta }} this week</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 <!-- Rating comparison bars -->
 {% if comp_rows %}
 {% set has_ratings = namespace(val=false) %}
@@ -168,6 +191,7 @@
       <th>Market</th>
       <th>Rating</th>
       <th>Reviews</th>
+      <th>Δ Week</th>
       <th>Last Collected</th>
     </tr></thead>
     <tbody>
@@ -185,6 +209,14 @@
         {% else %}<span style="color:var(--muted);">—</span>{% endif %}
       </td>
       <td style="font-weight:600;">{{ s.review_count if s.review_count else "—" }}</td>
+      <td>
+        {% if s.market in own_snap_deltas %}
+        {% set d = own_snap_deltas[s.market] %}
+        <span style="font-size:13px;font-weight:700;color:{% if d > 0 %}var(--green-dark){% elif d < 0 %}var(--red-dark){% else %}var(--muted){% endif %};">
+          {% if d > 0 %}+{{ d }}{% elif d == 0 %}+0{% else %}{{ d }}{% endif %}
+        </span>
+        {% else %}<span style="color:var(--muted-2);font-size:13px;">—</span>{% endif %}
+      </td>
       <td style="font-size:14px;color:var(--muted);">{{ s.snapped_at.strftime('%b %d, %Y') if s.snapped_at else "—" }}</td>
     </tr>
     {% endfor %}
@@ -234,11 +266,19 @@
       </td>
       <td>
         {% if r.google_count is not none %}
-        <div style="display:flex;align-items:center;gap:8px;min-width:100px;">
+        <div style="display:flex;align-items:center;gap:8px;min-width:120px;">
           <div style="flex:1;height:5px;background:var(--surface-3);border-radius:3px;overflow:hidden;">
             <div style="height:100%;width:{{ (r.google_count / ns_max.val * 100)|int }}%;background:var(--accent);border-radius:3px;"></div>
           </div>
           <span style="font-weight:600;font-size:14px;white-space:nowrap;">{{ "{:,}".format(r.google_count) }}</span>
+          {% if r.count_delta is not none %}
+          <span style="font-size:11px;font-weight:700;padding:1px 5px;border-radius:4px;white-space:nowrap;
+            {% if r.count_delta > 0 %}background:rgba(249,115,22,.12);color:var(--orange-dark);
+            {% elif r.count_delta < 0 %}background:var(--surface-3);color:var(--muted);
+            {% else %}background:var(--surface-3);color:var(--muted-2);{% endif %}">
+            {% if r.count_delta > 0 %}+{{ r.count_delta }}{% elif r.count_delta == 0 %}={% else %}{{ r.count_delta }}{% endif %}
+          </span>
+          {% endif %}
         </div>
         {% else %}<span style="color:var(--muted);">—</span>{% endif %}
       </td>

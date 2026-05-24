@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse
@@ -52,17 +53,18 @@ def reviews(
         .all()
     )
 
-    # Deduplicate: (competitor_id, source, market) → most recent snapshot
-    seen: dict = {}
+    # Group by (competitor_id, source, market) — list ordered newest first
+    snap_history: dict = defaultdict(list)
     for s in all_snaps:
-        key = (s.competitor_id, s.source, s.market)
-        if key not in seen:
-            seen[key] = s
+        snap_history[(s.competitor_id, s.source, s.market)].append(s)
 
-    # Index: competitor_id → {source: [snapshots]}
+    # Build current and previous lookups: competitor_id → {source: [snaps]}
     snap_index: dict = {}
-    for (cid, source, _market), snap in seen.items():
-        snap_index.setdefault(cid, {}).setdefault(source, []).append(snap)
+    prev_index: dict = {}
+    for (cid, source, _market), snaps in snap_history.items():
+        snap_index.setdefault(cid, {}).setdefault(source, []).append(snaps[0])
+        if len(snaps) > 1:
+            prev_index.setdefault(cid, {}).setdefault(source, []).append(snaps[1])
 
     # Own firm
     own_firm = db.query(Competitor).filter(Competitor.is_own_firm == True).first()
@@ -76,6 +78,15 @@ def reviews(
     own_avg_rating = round(sum(own_ratings) / len(own_ratings), 1) if own_ratings else None
     own_total_reviews = sum(own_counts) if own_counts else None
 
+    # Own firm per-market week-over-week deltas
+    prev_own = prev_index.get(own_firm.id, {}).get("google", []) if own_firm else []
+    prev_own_by_market = {s.market: s for s in prev_own}
+    own_snap_deltas: dict = {}
+    for s in own_google_snaps:
+        prev = prev_own_by_market.get(s.market)
+        if prev and s.review_count is not None and prev.review_count is not None:
+            own_snap_deltas[s.market] = s.review_count - prev.review_count
+
     # Competitor rows
     competitors = (
         db.query(Competitor)
@@ -87,16 +98,30 @@ def reviews(
     comp_rows = []
     for c in competitors:
         google_snaps = snap_index.get(c.id, {}).get("google", [])
+        prev_google = prev_index.get(c.id, {}).get("google", [])
         g = google_snaps[0] if google_snaps else None
+        prev_g = prev_google[0] if prev_google else None
+
+        delta = None
+        if g and g.review_count is not None and prev_g and prev_g.review_count is not None:
+            delta = g.review_count - prev_g.review_count
 
         comp_rows.append({
             "name": c.name,
             "google_rating": float(g.rating) if g and g.rating else None,
             "google_count": g.review_count if g else None,
+            "count_delta": delta,
             "last_updated": g.snapped_at if g else None,
         })
 
     comp_rows.sort(key=lambda r: r["google_count"] or 0, reverse=True)
+
+    # Top competitors gaining reviews this period
+    velocity_leaders = sorted(
+        [r for r in comp_rows if r["count_delta"] is not None and r["count_delta"] > 0],
+        key=lambda r: r["count_delta"],
+        reverse=True,
+    )[:5]
 
     recommendations = _build_recommendations(own_google_snaps, comp_rows)
 
@@ -109,9 +134,11 @@ def reviews(
         "own_google_snaps": own_google_snaps,
         "own_avg_rating": own_avg_rating,
         "own_total_reviews": own_total_reviews,
+        "own_snap_deltas": own_snap_deltas,
         "comp_rows": comp_rows,
         "competitor_count": len(comp_rows),
         "recommendations": recommendations,
+        "velocity_leaders": velocity_leaders,
     })
 
 
