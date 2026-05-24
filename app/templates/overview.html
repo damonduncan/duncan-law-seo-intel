@@ -310,8 +310,18 @@
       </td>
       <td style="color:var(--muted);">{{ c.attorneys | length }}</td>
       <td>
-        {% if c.google_place_id %}<span class="chip chip-green">✓ Set</span>
-        {% else %}<span class="chip chip-yellow">Missing</span>{% endif %}
+        {% set loc_ids = c.locations | selectattr('google_place_id') | list %}
+        {% if c.google_place_id and loc_ids | length > 1 %}
+          <span class="chip chip-green">✓ {{ loc_ids | length }} offices</span>
+        {% elif c.google_place_id %}
+          <span class="chip chip-green">✓ Set</span>
+        {% elif loc_ids | length > 1 %}
+          <span class="chip chip-green">✓ {{ loc_ids | length }} offices</span>
+        {% elif loc_ids | length == 1 %}
+          <span class="chip chip-green">✓ Set</span>
+        {% else %}
+          <span class="chip chip-yellow">Missing</span>
+        {% endif %}
       </td>
     </tr>
     {% endfor %}
