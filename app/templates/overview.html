@@ -160,12 +160,16 @@
 <!-- Action center -->
 {% if action_items %}
 <div class="card" style="margin-bottom:24px;">
-  <div class="section-title">
+  <div class="section-title" onclick="toggleSection('sec-actions')" style="cursor:pointer;user-select:none;">
     <span class="section-icon orange">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
     </span>
     Recommended Actions Today
+    <span id="chev-sec-actions" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-actions" data-collapsible="1">
   <div style="display:flex;flex-direction:column;gap:0;">
     {% for item in action_items %}
     <div style="display:flex;align-items:flex-start;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);{% if loop.last %}border-bottom:none;{% endif %}">
@@ -193,18 +197,23 @@
     </div>
     {% endfor %}
   </div>
+  </div>
 </div>
 {% endif %}
 
 <!-- Market health scorecard -->
 {% if scorecard %}
 <div class="card" style="margin-bottom:24px;">
-  <div class="section-title">
+  <div class="section-title" onclick="toggleSection('sec-market-health')" style="cursor:pointer;user-select:none;">
     <span class="section-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
     </span>
     Market Health — Duncan Law
+    <span id="chev-sec-market-health" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-market-health" data-collapsible="1">
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px;">
     {% for m in scorecard %}
     {% if m.status == 'strong' %}
@@ -246,17 +255,22 @@
     <span><span style="color:var(--red);">●</span> Needs attention</span>
     <span><span style="color:var(--muted-2);">●</span> No data</span>
   </div>
+  </div>
 </div>
 {% endif %}
 
 <!-- Own firm -->
 <div class="card" style="margin-bottom:24px;">
-  <div class="section-title">
+  <div class="section-title" onclick="toggleSection('sec-own-firm')" style="cursor:pointer;user-select:none;">
     <span class="section-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     </span>
     Your Firm — Duncan Law, LLP
+    <span id="chev-sec-own-firm" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-own-firm" data-collapsible="1">
   {% if own_firm %}
   <table>
     <thead><tr><th>Firm</th><th>Office Configuration</th><th>Status</th></tr></thead>
@@ -278,19 +292,24 @@
   {% else %}
   <p style="color:var(--muted);font-size:15px;">Own firm not yet configured. Add your details to <code>config/competitors.yaml</code> and redeploy.</p>
   {% endif %}
+  </div>
 </div>
 
 <!-- Tracked competitors -->
 <div class="card" style="margin-bottom:24px;">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-    <div class="section-title" style="margin-bottom:0;">
+    <div class="section-title" style="margin-bottom:0;cursor:pointer;user-select:none;" onclick="toggleSection('sec-competitors')">
       <span class="section-icon purple">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </span>
       Tracked Competitors
+      <span id="chev-sec-competitors" style="display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </span>
     </div>
     <a href="/competitors" style="font-size:14px;color:var(--accent);font-weight:600;text-decoration:none;">View all →</a>
   </div>
+  <div id="sec-competitors" data-collapsible="1">
   {% if competitors %}
   <table>
     <thead><tr><th>Firm</th><th>Attorneys</th><th>Google Place ID</th></tr></thead>
@@ -346,11 +365,12 @@
   {% else %}
   <p style="color:var(--muted);font-size:15px;">No competitors configured yet. Add them to <code>config/competitors.yaml</code> and redeploy.</p>
   {% endif %}
+  </div>
 </div>
 
 <!-- Data collection -->
 <div class="card">
-  <div class="section-title">
+  <div class="section-title" onclick="toggleSection('sec-jobs')" style="cursor:pointer;user-select:none;">
     <span class="section-icon teal">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     </span>
@@ -358,7 +378,11 @@
     {% if job_runs %}
     <span style="margin-left:auto;font-size:13px;color:var(--muted);font-weight:400;">last {{ job_runs | length }} runs</span>
     {% endif %}
+    <span id="chev-sec-jobs" style="{% if not job_runs %}margin-left:auto;{% endif %}display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-jobs" data-collapsible="1">
   {% if job_runs %}
   <table>
     <thead><tr>
@@ -452,6 +476,7 @@
     <form method="post" action="/admin/clear-filings">
       <button type="submit" class="btn btn-danger btn-sm">Clear Filing Data</button>
     </form>
+  </div>
   </div>
 </div>
 

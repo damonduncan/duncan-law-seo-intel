@@ -1541,6 +1541,31 @@
     else if (e.key==='Escape' && ov.classList.contains('open')) { cpClose(); }
   });
 })();
+
+// ── Collapsible sections ──────────────────────────────────────────────────
+window.toggleSection = function(id) {
+  var body = document.getElementById(id);
+  var chev = document.getElementById('chev-' + id);
+  if (!body) return;
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : '';
+  if (chev) chev.style.transform = isOpen ? 'rotate(-90deg)' : '';
+  try { localStorage.setItem('cc:' + id, isOpen ? '0' : '1'); } catch(e) {}
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('[data-collapsible]').forEach(function(body) {
+    var id = body.id;
+    var chev = document.getElementById('chev-' + id);
+    try {
+      var val = localStorage.getItem('cc:' + id);
+      if (val === '0') {
+        body.style.display = 'none';
+        if (chev) chev.style.transform = 'rotate(-90deg)';
+      }
+    } catch(e) {}
+  });
+});
 </script>
 
 </body>

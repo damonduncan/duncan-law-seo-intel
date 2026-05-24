@@ -49,12 +49,16 @@
 
 <!-- Current positions — grouped by keyword -->
 <div class="card" style="margin-bottom:24px;">
-  <div class="section-title">
+  <div class="section-title" onclick="toggleSection('sec-positions')" style="cursor:pointer;user-select:none;">
     <span class="section-icon green">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
     </span>
     Current Positions — Duncan Law
+    <span id="chev-sec-positions" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-positions" data-collapsible="1">
   <table>
     <thead><tr>
       <th>Keyword</th>
@@ -109,6 +113,7 @@
     {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>
 
 <!-- Rank legend -->
@@ -125,13 +130,17 @@
 <!-- Rank Trend — tabbed by market -->
 {% if chart_data %}
 <div class="card" style="margin-bottom:24px;">
-  <div class="section-title" style="margin-bottom:16px;">
+  <div class="section-title" style="margin-bottom:16px;cursor:pointer;user-select:none;" onclick="toggleSection('sec-rank-trend')">
     <span class="section-icon purple">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
     </span>
     Rank Trend — Last 90 Days
     <span style="margin-left:auto;font-size:13px;color:var(--muted);font-weight:400;">Lower = better · gaps = not in pack</span>
+    <span id="chev-sec-rank-trend" style="display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-rank-trend" data-collapsible="1">
 
   <!-- Market tabs -->
   <div style="display:flex;gap:3px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:3px;margin-bottom:20px;flex-wrap:wrap;">
@@ -161,6 +170,7 @@
     </div>
   </div>
   {% endfor %}
+  </div>
 </div>
 
 <script>
@@ -264,13 +274,17 @@
 <!-- Keyword Gap Analysis -->
 {% if gap_data %}
 <div class="card" style="margin-bottom:24px;">
-  <div class="section-title" style="margin-bottom:4px;">
+  <div class="section-title" style="margin-bottom:4px;cursor:pointer;user-select:none;" onclick="toggleSection('sec-gap')">
     <span class="section-icon teal">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     </span>
     Keyword Gap Analysis
     <span style="margin-left:auto;font-size:13px;color:var(--muted);font-weight:400;">today's 3-pack · all 6 markets</span>
+    <span id="chev-sec-gap" style="display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-gap" data-collapsible="1">
   <p style="font-size:14px;color:var(--muted);margin:6px 0 20px;">Red rows = Duncan Law not in the pack. Who has those spots?</p>
 
   {% for kw, markets in gap_data.items() %}
@@ -334,6 +348,7 @@
   </div>
   {% if not loop.last %}<div style="border-top:1px solid var(--border);margin-bottom:28px;"></div>{% endif %}
   {% endfor %}
+  </div>
 </div>
 {% endif %}
 
@@ -351,13 +366,17 @@
   </div>
 </div>
 <div class="card" style="margin-bottom:24px;">
-  <div class="section-title">
+  <div class="section-title" onclick="toggleSection('sec-mdnc')" style="cursor:pointer;user-select:none;">
     <span class="section-icon" style="background:rgba(16,185,129,.12);color:#059669;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
     </span>
     MDNC Competitor Intelligence
     <span class="chip chip-green" style="margin-left:8px;font-size:12px;">Duncan Law active</span>
+    <span id="chev-sec-mdnc" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-mdnc" data-collapsible="1">
   <p style="color:var(--muted);font-size:14px;margin-bottom:20px;line-height:1.6;">Who holds the 3-pack in Middle District NC — Greensboro, Winston-Salem, and High Point. Duncan Law's positions are highlighted in blue.</p>
 
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;">
@@ -394,6 +413,7 @@
   {% endif %}
   {% endfor %}
   </div>
+  </div>
 </div>
 {% endif %}
 
@@ -411,13 +431,17 @@
   </div>
 </div>
 <div class="card" style="margin-bottom:24px;">
-  <div class="section-title">
+  <div class="section-title" onclick="toggleSection('sec-wdnc')" style="cursor:pointer;user-select:none;">
     <span class="section-icon" style="background:rgba(139,92,246,.12);color:#7c3aed;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
     </span>
     WDNC Competitor Intelligence
     <span class="chip chip-purple" style="margin-left:8px;font-size:12px;">Duncan Law active</span>
+    <span id="chev-sec-wdnc" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-wdnc" data-collapsible="1">
   <p style="color:var(--muted);font-size:14px;margin-bottom:20px;line-height:1.6;">Who holds the 3-pack in Western District NC — Charlotte, Salisbury, and Asheville. Duncan Law's positions are highlighted in blue.</p>
 
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;">
@@ -454,6 +478,7 @@
   {% endif %}
   {% endfor %}
   </div>
+  </div>
 </div>
 {% endif %}
 
@@ -471,13 +496,17 @@
   </div>
 </div>
 <div class="card" style="margin-bottom:24px;">
-  <div class="section-title">
+  <div class="section-title" onclick="toggleSection('sec-ednc')" style="cursor:pointer;user-select:none;">
     <span class="section-icon orange">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
     </span>
     EDNC Competitor Intelligence
     <span class="chip chip-orange" style="margin-left:8px;font-size:12px;">Duncan Law not present</span>
+    <span id="chev-sec-ednc" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-ednc" data-collapsible="1">
   <p style="color:var(--muted);font-size:14px;margin-bottom:20px;line-height:1.6;">Who owns the 3-pack in Eastern NC — Raleigh, Fayetteville, Wilmington, and Wilson. These are competitor-only markets tracked for strategic awareness.</p>
 
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;">
@@ -506,6 +535,7 @@
     {% endfor %}
   </div>
   {% endfor %}
+  </div>
   </div>
 </div>
 {% endif %}

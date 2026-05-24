@@ -94,12 +94,16 @@
 <!-- Recommendations -->
 {% if recommendations %}
 <div class="card" style="margin-bottom:24px;">
-  <div class="section-title">
+  <div class="section-title" onclick="toggleSection('sec-recommendations')" style="cursor:pointer;user-select:none;">
     <span class="section-icon orange">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     </span>
     Recommended Actions
+    <span id="chev-sec-recommendations" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-recommendations" data-collapsible="1">
   <div style="display:flex;flex-direction:column;gap:0;">
     {% for r in recommendations %}
     <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);{% if loop.last %}border-bottom:none;{% endif %}">
@@ -113,18 +117,23 @@
     </div>
     {% endfor %}
   </div>
+  </div>
 </div>
 {% endif %}
 
 <!-- Review velocity leaders -->
 {% if velocity_leaders %}
 <div class="card" style="margin-bottom:24px;">
-  <div class="section-title">
+  <div class="section-title" onclick="toggleSection('sec-velocity')" style="cursor:pointer;user-select:none;">
     <span class="section-icon orange">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
     </span>
     This Week's Review Movers
+    <span id="chev-sec-velocity" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-velocity" data-collapsible="1">
   <div style="display:flex;flex-direction:column;gap:0;">
     {% for r in velocity_leaders %}
     <div style="display:grid;grid-template-columns:1fr auto auto;gap:16px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);{% if loop.last %}border-bottom:none;{% endif %}">
@@ -136,6 +145,7 @@
     </div>
     {% endfor %}
   </div>
+  </div>
 </div>
 {% endif %}
 
@@ -145,12 +155,16 @@
 {% for r in comp_rows %}{% if r.google_rating %}{% set has_ratings.val = true %}{% endif %}{% endfor %}
 {% if has_ratings.val %}
 <div class="card" style="margin-bottom:24px;">
-  <div class="section-title">
+  <div class="section-title" onclick="toggleSection('sec-ratings')" style="cursor:pointer;user-select:none;">
     <span class="section-icon teal">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
     </span>
     Google Ratings &amp; Review Counts
+    <span id="chev-sec-ratings" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-ratings" data-collapsible="1">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;">
 
     <!-- Left: compact rating + count list -->
@@ -215,6 +229,7 @@
     </div>
 
   </div>
+  </div>
 </div>
 {% endif %}
 {% endif %}
@@ -222,12 +237,16 @@
 <!-- Own firm by market -->
 {% if own_google_snaps %}
 <div class="card" style="margin-bottom:24px;">
-  <div class="section-title">
+  <div class="section-title" onclick="toggleSection('sec-own-markets')" style="cursor:pointer;user-select:none;">
     <span class="section-icon yellow">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     </span>
     Duncan Law — Google Ratings by Market
+    <span id="chev-sec-own-markets" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-own-markets" data-collapsible="1">
   <table>
     <thead><tr>
       <th>Market</th>
@@ -264,17 +283,22 @@
     {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>
 {% endif %}
 
 <!-- Competitor review profiles -->
 <div class="card">
-  <div class="section-title">
+  <div class="section-title" onclick="toggleSection('sec-comp-profiles')" style="cursor:pointer;user-select:none;">
     <span class="section-icon purple">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     </span>
     Competitor Review Profiles
+    <span id="chev-sec-comp-profiles" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-comp-profiles" data-collapsible="1">
   {% if comp_rows %}
   {% set ns_max = namespace(val=1) %}
   {% for r in comp_rows %}{% if r.google_count and r.google_count > ns_max.val %}{% set ns_max.val = r.google_count %}{% endif %}{% endfor %}
@@ -332,6 +356,7 @@
   {% else %}
   <p style="color:var(--muted);font-size:15px;">No competitor review data collected yet.</p>
   {% endif %}
+  </div>
 </div>
 
 {% endif %}

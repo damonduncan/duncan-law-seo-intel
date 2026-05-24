@@ -136,17 +136,21 @@
 {% set ncols = 6 if prior_label else 5 %}
 <div class="card" style="margin-bottom:24px;">
   <div style="margin-bottom:16px;">
-    <div class="section-title" style="margin-bottom:3px;">
+    <div class="section-title" style="margin-bottom:3px;cursor:pointer;user-select:none;" onclick="toggleSection('sec-table-{{ d }}')">
       <span class="section-icon">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </span>
       {{ district_name }}
       {% if cur_label %}<span class="chip chip-teal" style="margin-left:auto;font-size:12px;">{{ cur_label }}</span>{% endif %}
+      <span id="chev-sec-table-{{ d }}" style="{% if not cur_label %}margin-left:auto;{% endif %}display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </span>
     </div>
     {% if prior_label %}
     <div style="font-size:14px;color:var(--muted-2);margin-left:36px;">vs {{ prior_label }}</div>
     {% endif %}
   </div>
+  <div id="sec-table-{{ d }}" data-collapsible="1">
   {% if groups %}
   <div style="margin-bottom:14px;">
     <div style="position:relative;display:inline-block;">
@@ -269,6 +273,7 @@
   {% else %}
   <p style="color:var(--muted);font-size:15px;">No filings recorded for this district.</p>
   {% endif %}
+  </div>
 </div>
 {% endmacro %}
 
@@ -351,12 +356,16 @@
 
 {% if mdnc_trend.labels or wdnc_trend.labels or ednc_trend.labels %}
 <div class="card" style="margin-bottom:24px;">
-  <div class="section-title" style="margin-bottom:16px;">
+  <div class="section-title" style="margin-bottom:16px;cursor:pointer;user-select:none;" onclick="toggleSection('sec-trend-chart')">
     <span class="section-icon teal">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
     </span>
     Filing Volume Trends
+    <span id="chev-sec-trend-chart" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-trend-chart" data-collapsible="1">
 
   <!-- District tabs -->
   <div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:12px;">
@@ -449,6 +458,8 @@
   if (first) showTrendTab(first);
 })();
 </script>
+  </div>
+</div>
 {% endif %}
 
 <!-- Period toggle -->
