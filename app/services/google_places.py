@@ -73,14 +73,20 @@ def collect_competitor_reviews(db: Session) -> int:
         .all()
     )
     _place_cache: dict = {}
+    _saved_pairs: set = set()  # (competitor_id, place_id) — skip duplicate listings
     for loc in comp_locs:
         pid = loc.google_place_id
         if pid not in _place_cache:
             _place_cache[pid] = _fetch_place(pid)
             time.sleep(REQUEST_DELAY)
+        pair = (loc.competitor_id, pid)
+        if pair in _saved_pairs:
+            # Same Google listing referenced from multiple market rows — skip duplicate
+            continue
         data = _place_cache[pid]
         if data:
             db.add(_make_snapshot(loc.competitor_id, "google", data, market=loc.market))
+            _saved_pairs.add(pair)
             records += 1
 
     db.commit()
