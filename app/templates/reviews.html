@@ -161,8 +161,7 @@
       </span>
     </div>
     {% endif %}
-    {% for r in comp_rows | sort(attribute='google_rating', reverse=true) %}
-    {% if r.google_rating %}
+    {% for r in comp_rows | selectattr('google_rating') | list | sort(attribute='google_rating', reverse=true) %}
     <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 10px;border-radius:var(--r-sm);">
       <span style="font-size:13px;font-weight:500;color:var(--text-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:16px;">{{ r.name }}</span>
       <span style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;flex-shrink:0;">
@@ -170,7 +169,6 @@
         {{ "%.1f"|format(r.google_rating|float) }}{% if r.google_count %} <span style="font-weight:400;color:var(--muted);">({{ "{:,}".format(r.google_count) }})</span>{% endif %}
       </span>
     </div>
-    {% endif %}
     {% endfor %}
   </div>
 </div>
