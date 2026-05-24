@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import date
+from datetime import date, timedelta
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -51,6 +51,7 @@ def dashboard(
 
     scorecard = _build_scorecard(db, own_firm)
     action_items = _build_action_items(db, own_firm, scorecard, competitors)
+    rank_changes = _build_rank_changes(db, own_firm)
 
     return templates.TemplateResponse("overview.html", {
         "request": request,
@@ -62,6 +63,7 @@ def dashboard(
         "job_runs": job_runs,
         "scorecard": scorecard,
         "action_items": action_items,
+        "rank_changes": rank_changes,
         "active_page": "dashboard",
     })
 
@@ -294,3 +296,95 @@ def _build_action_items(db: Session, own_firm, scorecard: list, competitors: lis
     # High-priority first, cap at 5
     items.sort(key=lambda x: 0 if x["priority"] == "high" else 1)
     return items[:5]
+
+
+def _build_rank_changes(db: Session, own_firm) -> list:
+    """Compare most recent ranking date vs ~7 days prior — return list of position changes."""
+    if not own_firm:
+        return []
+
+    _latest = (
+        db.query(cast(LocalPackRanking.scraped_at, Date))
+        .filter(
+            LocalPackRanking.competitor_id == own_firm.id,
+            LocalPackRanking.is_own_firm == True,
+            LocalPackRanking.in_pack == True,
+        )
+        .order_by(LocalPackRanking.scraped_at.desc())
+        .first()
+    )
+    if not _latest:
+        return []
+    rank_date = _latest[0]
+
+    cur_rows = (
+        db.query(LocalPackRanking)
+        .filter(
+            LocalPackRanking.competitor_id == own_firm.id,
+            LocalPackRanking.is_own_firm == True,
+            LocalPackRanking.market.in_(MARKET_ORDER),
+            cast(LocalPackRanking.scraped_at, Date) == rank_date,
+        )
+        .all()
+    )
+
+    # Prior window: 5–11 days before rank_date to bridge weekend/holiday gaps
+    prior_rows = (
+        db.query(LocalPackRanking)
+        .filter(
+            LocalPackRanking.competitor_id == own_firm.id,
+            LocalPackRanking.is_own_firm == True,
+            LocalPackRanking.market.in_(MARKET_ORDER),
+            cast(LocalPackRanking.scraped_at, Date) >= rank_date - timedelta(days=11),
+            cast(LocalPackRanking.scraped_at, Date) <= rank_date - timedelta(days=5),
+        )
+        .order_by(LocalPackRanking.scraped_at.desc())
+        .all()
+    )
+
+    prior_by_key: dict = {}
+    for r in prior_rows:
+        key = (r.keyword, r.market)
+        if key not in prior_by_key:
+            prior_by_key[key] = r
+
+    if not prior_by_key:
+        return []
+
+    def _strip(kw: str, market: str) -> str:
+        for city in ["Greensboro", "Winston-Salem", "High Point", "Charlotte",
+                     "Salisbury", "Asheville", "Raleigh", "Fayetteville",
+                     "Wilmington", "Wilson"]:
+            if kw.endswith(" " + city):
+                return kw[: -(len(city) + 1)]
+        return kw
+
+    drops, gains = [], []
+    for r in cur_rows:
+        key = (r.keyword, r.market)
+        prior = prior_by_key.get(key)
+        if not prior:
+            continue
+        cur_rank  = r.rank_position if r.in_pack else None
+        prev_rank = prior.rank_position if prior.in_pack else None
+        if cur_rank == prev_rank:
+            continue
+
+        kw = _strip(r.keyword or "", r.market)
+        city = (r.city or r.market or "").replace("_", " ").title()
+
+        if cur_rank is not None and prev_rank is not None:
+            delta = cur_rank - prev_rank  # negative = improved
+            entry = {"keyword": kw, "city": city, "cur": cur_rank, "prev": prev_rank,
+                     "delta": delta, "type": "improved" if delta < 0 else "dropped"}
+            (gains if delta < 0 else drops).append(entry)
+        elif cur_rank is None and prev_rank is not None:
+            drops.append({"keyword": kw, "city": city, "cur": None, "prev": prev_rank,
+                          "delta": None, "type": "dropped_out"})
+        elif cur_rank is not None and prev_rank is None:
+            gains.append({"keyword": kw, "city": city, "cur": cur_rank, "prev": None,
+                          "delta": None, "type": "entered"})
+
+    drops.sort(key=lambda x: abs(x["delta"] or 99), reverse=True)
+    gains.sort(key=lambda x: abs(x["delta"] or 99), reverse=True)
+    return drops + gains

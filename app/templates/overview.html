@@ -201,6 +201,62 @@
 </div>
 {% endif %}
 
+<!-- What Changed This Week -->
+{% if rank_changes %}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-rank-changes')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+    </span>
+    Rank Changes This Week
+    {% set n_drops = rank_changes | selectattr('type', 'in', ['dropped','dropped_out']) | list | length %}
+    {% set n_gains = rank_changes | selectattr('type', 'in', ['improved','entered']) | list | length %}
+    {% if n_drops > 0 %}
+      <span class="chip chip-red" style="font-size:11px;margin-left:6px;">{{ n_drops }} drop{{ 's' if n_drops != 1 else '' }}</span>
+    {% endif %}
+    {% if n_gains > 0 %}
+      <span class="chip chip-green" style="font-size:11px;">{{ n_gains }} gain{{ 's' if n_gains != 1 else '' }}</span>
+    {% endif %}
+    <span id="chev-sec-rank-changes" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-rank-changes" data-collapsible="1">
+  <div style="display:flex;flex-wrap:wrap;gap:8px;">
+    {% for ch in rank_changes %}
+    {% if ch.type in ('dropped', 'dropped_out') %}
+      {% set bg = 'var(--red-light)' %}{% set fg = 'var(--red-dark)' %}
+      {% set icon %}↓{% endset %}
+      {% if ch.type == 'dropped_out' %}
+        {% set detail %}Out of pack (was #{{ ch.prev }}){% endset %}
+      {% else %}
+        {% set detail %}#{{ ch.prev }} → #{{ ch.cur }}{% endset %}
+      {% endif %}
+    {% else %}
+      {% set bg = 'var(--green-light)' %}{% set fg = 'var(--green-dark)' %}
+      {% set icon %}↑{% endset %}
+      {% if ch.type == 'entered' %}
+        {% set detail %}Entered pack at #{{ ch.cur }}{% endset %}
+      {% else %}
+        {% set detail %}#{{ ch.prev }} → #{{ ch.cur }}{% endset %}
+      {% endif %}
+    {% endif %}
+    <div style="background:{{ bg }};border-radius:var(--r-sm);padding:8px 12px;display:flex;flex-direction:column;gap:2px;min-width:160px;">
+      <div style="font-size:11px;font-weight:700;color:{{ fg }};text-transform:uppercase;letter-spacing:.05em;">
+        {{ icon }} {{ ch.city }}
+      </div>
+      <div style="font-size:14px;font-weight:600;color:var(--text);">{{ ch.keyword }}</div>
+      <div style="font-size:13px;color:{{ fg }};font-weight:600;">{{ detail }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <p style="margin:12px 0 0;font-size:13px;color:var(--muted);">
+    <a href="/rankings" style="color:var(--accent);">View full rankings →</a>
+  </p>
+  </div>
+</div>
+{% endif %}
+
 <!-- Market health scorecard -->
 {% if scorecard %}
 <div class="card" style="margin-bottom:24px;">
