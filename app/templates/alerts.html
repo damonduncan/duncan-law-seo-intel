@@ -5,23 +5,86 @@
 <p class="page-sub">Immediate and digest-flagged intelligence events</p>
 
 {% if alerts %}
-{% set unacked_count = alerts | selectattr('acknowledged_at', 'none') | list | length %}
+{% set unacked       = alerts | selectattr('acknowledged_at', 'none') | list %}
+{% set unacked_count = unacked | length %}
+{% set pack_drops    = unacked | selectattr('alert_type', 'equalto', 'pack_drop') | list | length %}
+{% set comp_entries  = unacked | selectattr('alert_type', 'equalto', 'competitor_pack_entry') | list | length %}
+{% set review_gaps   = unacked | selectattr('alert_type', 'equalto', 'review_gap') | list | length %}
+{% set pacer_spikes  = unacked | selectattr('alert_type', 'equalto', 'pacer_volume_spike') | list | length %}
 
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap;">
-  <div style="display:flex;gap:10px;flex-wrap:wrap;">
-    {% if unacked_count > 0 %}
-    <span class="chip chip-red">{{ unacked_count }} unacknowledged</span>
-    {% endif %}
-    <span class="chip chip-blue">{{ alerts | length }} total</span>
+<!-- Summary stat cards -->
+<div class="card-grid" style="margin-bottom:24px;">
+  <div class="stat-card {% if unacked_count > 0 %}stat-red{% else %}stat-green{% endif %}">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    </div>
+    <div class="label">Active Alerts</div>
+    <div class="value" style="color:{% if unacked_count > 0 %}var(--red-dark){% else %}var(--green-dark){% endif %};">{{ unacked_count }}</div>
+    <div class="sub">{% if unacked_count == 0 %}all clear{% else %}need review{% endif %}</div>
   </div>
-  {% if unacked_count > 0 %}
-  <form method="post" action="/alerts/dismiss-all">
-    <button type="submit" class="btn btn-ghost btn-sm">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-      Dismiss All ({{ unacked_count }})
+  <div class="stat-card stat-orange">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="label">Pack Drops</div>
+    <div class="value" style="color:{% if pack_drops > 0 %}var(--red-dark){% else %}var(--muted){% endif %};">{{ pack_drops }}</div>
+    <div class="sub">own firm out of 3-pack</div>
+  </div>
+  <div class="stat-card stat-purple">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+    </div>
+    <div class="label">Competitor Entries</div>
+    <div class="value" style="color:{% if comp_entries > 0 %}var(--orange-dark){% else %}var(--muted){% endif %};">{{ comp_entries }}</div>
+    <div class="sub">new competitor in pack</div>
+  </div>
+  <div class="stat-card stat-teal">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+    </div>
+    <div class="label">PACER Spikes</div>
+    <div class="value" style="color:{% if pacer_spikes > 0 %}var(--purple-dark){% else %}var(--muted){% endif %};">{{ pacer_spikes }}</div>
+    <div class="sub">competitor volume +20%</div>
+  </div>
+</div>
+
+<!-- Filter bar -->
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+  <!-- Active / All toggle -->
+  <div style="display:flex;gap:3px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:3px;">
+    <button id="fv-active" onclick="setView('active')"
+      style="padding:4px 14px;border-radius:6px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all .12s;background:var(--accent);color:#fff;">
+      Active ({{ unacked_count }})
     </button>
-  </form>
-  {% endif %}
+    <button id="fv-all" onclick="setView('all')"
+      style="padding:4px 14px;border-radius:6px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all .12s;background:transparent;color:var(--muted);">
+      All ({{ alerts | length }})
+    </button>
+  </div>
+  <!-- Type filters + dismiss -->
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <div style="display:flex;gap:4px;">
+      {% for ft_id, ft_label in [('all','All types'),('pack_drop','Pack Drop'),('competitor_pack_entry','Comp. Entry'),('review_gap','Review Gap'),('pacer_volume_spike','PACER')] %}
+      <button class="ft-btn" data-ft="{{ ft_id }}" onclick="setType('{{ ft_id }}')"
+        style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;transition:all .12s;
+        {% if ft_id == 'all' %}background:var(--surface-3);color:var(--text);{% else %}background:transparent;color:var(--muted);{% endif %}">
+        {{ ft_label }}
+      </button>
+      {% endfor %}
+    </div>
+    {% if unacked_count > 0 %}
+    <form method="post" action="/alerts/dismiss-all">
+      <button type="submit" class="btn btn-ghost btn-sm">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Dismiss All Active
+      </button>
+    </form>
+    {% endif %}
+  </div>
 </div>
 
 <div class="card">
@@ -37,7 +100,9 @@
     </tr></thead>
     <tbody>
     {% for alert in alerts %}
-    <tr style="{% if alert.acknowledged_at %}opacity:.45;{% endif %}">
+    <tr data-acked="{{ '1' if alert.acknowledged_at else '0' }}"
+        data-type="{{ alert.alert_type }}"
+        style="{% if alert.acknowledged_at %}opacity:.4;{% endif %}">
       <td>
         {% if alert.severity == 'immediate' %}
         <span class="chip chip-red">
@@ -113,7 +178,51 @@
     {% endfor %}
     </tbody>
   </table>
+  <div id="no-results" style="display:none;padding:24px;text-align:center;color:var(--muted);font-size:15px;">
+    No alerts match the current filter.
+  </div>
 </div>
+
+<script>
+(function() {
+  var view = 'active', type = 'all';
+
+  function apply() {
+    var rows = document.querySelectorAll('tbody tr');
+    var shown = 0;
+    rows.forEach(function(r) {
+      var acked   = r.dataset.acked === '1';
+      var rtype   = r.dataset.type;
+      var viewOk  = view === 'all' || !acked;
+      var typeOk  = type === 'all' || rtype === type;
+      r.style.display = (viewOk && typeOk) ? '' : 'none';
+      if (viewOk && typeOk) shown++;
+    });
+    document.getElementById('no-results').style.display = shown === 0 ? '' : 'none';
+
+    // View toggle styles
+    var activeBtn = document.getElementById('fv-active');
+    var allBtn    = document.getElementById('fv-all');
+    activeBtn.style.background = view === 'active' ? 'var(--accent)' : 'transparent';
+    activeBtn.style.color      = view === 'active' ? '#fff' : 'var(--muted)';
+    allBtn.style.background    = view === 'all'    ? 'var(--accent)' : 'transparent';
+    allBtn.style.color         = view === 'all'    ? '#fff' : 'var(--muted)';
+
+    // Type filter styles
+    document.querySelectorAll('.ft-btn').forEach(function(b) {
+      var active = b.dataset.ft === type;
+      b.style.background   = active ? 'var(--surface-3)' : 'transparent';
+      b.style.color        = active ? 'var(--text)' : 'var(--muted)';
+      b.style.borderColor  = active ? 'var(--border-2)' : 'var(--border)';
+    });
+  }
+
+  window.setView = function(v) { view = v; apply(); };
+  window.setType = function(t) { type = t; apply(); };
+
+  apply(); // default: active only
+})();
+</script>
 
 {% else %}
 <div class="card">
