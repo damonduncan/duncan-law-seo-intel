@@ -2,7 +2,7 @@
 {% block title %}Reviews{% endblock %}
 {% block content %}
 <h1>Review Monitoring</h1>
-<p class="page-sub">Google ratings, review counts, and BBB grades across all tracked firms</p>
+<p class="page-sub">Google ratings and review counts across all tracked firms</p>
 
 {% if not has_data %}
 <!-- No data yet -->
@@ -15,15 +15,6 @@
     <div class="label">Primary Source</div>
     <div class="value" style="font-size:20px;margin-top:4px;">Google</div>
     <div class="sub">Places API — rating + count</div>
-  </div>
-  <div class="stat-card stat-orange">
-    <div class="stat-top-bar"></div>
-    <div class="stat-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-    </div>
-    <div class="label">Secondary Source</div>
-    <div class="value" style="font-size:20px;margin-top:4px;">BBB</div>
-    <div class="sub">Letter grade + complaints</div>
   </div>
   <div class="stat-card stat-teal">
     <div class="stat-top-bar"></div>
@@ -218,7 +209,6 @@
       <th>Firm</th>
       <th>Google Rating</th>
       <th>Reviews</th>
-      <th>BBB Grade</th>
       <th>Last Updated</th>
     </tr></thead>
     <tbody>
@@ -251,20 +241,6 @@
           <span style="font-weight:600;font-size:14px;white-space:nowrap;">{{ "{:,}".format(r.google_count) }}</span>
         </div>
         {% else %}<span style="color:var(--muted);">—</span>{% endif %}
-      </td>
-      <td>
-        {% if r.bbb_grade %}
-        <span class="chip {% if r.bbb_grade.startswith('A') %}chip-green{% elif r.bbb_grade.startswith('B') %}chip-yellow{% else %}chip-red{% endif %}">
-          {{ r.bbb_grade }}
-        </span>
-        {% if r.bbb_complaint_count %}
-        <span style="font-size:15px;color:var(--muted);margin-left:6px;">{{ r.bbb_complaint_count }} complaint{{ 's' if r.bbb_complaint_count != 1 }}</span>
-        {% endif %}
-        {% elif r.has_bbb_url %}
-        <span style="color:var(--muted-2);font-size:14px;">pending</span>
-        {% else %}
-        <span style="color:var(--muted);">—</span>
-        {% endif %}
       </td>
       <td style="font-size:14px;color:var(--muted);">{{ r.last_updated.strftime('%b %d, %Y') if r.last_updated else "—" }}</td>
     </tr>

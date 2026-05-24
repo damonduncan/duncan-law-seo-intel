@@ -21,7 +21,6 @@
       <th>Firm Name</th>
       <th>Attorneys</th>
       <th>Google Place ID</th>
-      <th>BBB</th>
       <th>Status</th>
     </tr></thead>
     <tbody>
@@ -36,7 +35,7 @@
             data-initials="{{ c.name[:2] | upper }}"
             data-attorneys="{{ c.attorneys | length }}"
             data-place="{{ '✓ Set' if c.google_place_id else 'Missing' }}"
-            data-bbb="{{ 'Set' if c.bbb_url else 'None' }}">{{ c.name }}</strong>
+            >{{ c.name }}</strong>
         </div>
       </td>
       <td>
@@ -54,13 +53,6 @@
         <span class="chip chip-green">✓ Set</span>
         {% else %}
         <span class="chip chip-yellow">Missing</span>
-        {% endif %}
-      </td>
-      <td>
-        {% if c.bbb_url %}
-        <a href="{{ c.bbb_url }}" target="_blank" style="color:var(--accent);font-size:14px;font-weight:500;text-decoration:none;">View BBB →</a>
-        {% else %}
-        <span style="color:var(--muted-2);font-size:14px;">—</span>
         {% endif %}
       </td>
       <td><span class="chip chip-green">Active</span></td>

@@ -43,8 +43,6 @@ def run_weekly_job() -> None:
         # Phase 3: Competitor reviews
         from app.services.google_places import collect_competitor_reviews
         records += collect_competitor_reviews(db)
-        from app.services.bbb import collect_bbb_reviews
-        records += collect_bbb_reviews(db)
         from app.services.alert_engine import check_review_gaps
         check_review_gaps(db)
 

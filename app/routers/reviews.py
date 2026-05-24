@@ -87,20 +87,13 @@ def reviews(
     comp_rows = []
     for c in competitors:
         google_snaps = snap_index.get(c.id, {}).get("google", [])
-        bbb_snaps = snap_index.get(c.id, {}).get("bbb", [])
         g = google_snaps[0] if google_snaps else None
-        b = bbb_snaps[0] if bbb_snaps else None
 
         comp_rows.append({
             "name": c.name,
             "google_rating": float(g.rating) if g and g.rating else None,
             "google_count": g.review_count if g else None,
-            "bbb_grade": b.snapshot_data.get("letter_grade") if b and b.snapshot_data else None,
-            "bbb_complaint_count": (
-                b.snapshot_data.get("complaint_count") if b and b.snapshot_data else None
-            ),
-            "has_bbb_url": bool(c.bbb_url),
-            "last_updated": (g or b).snapped_at if (g or b) else None,
+            "last_updated": g.snapped_at if g else None,
         })
 
     comp_rows.sort(key=lambda r: r["google_count"] or 0, reverse=True)

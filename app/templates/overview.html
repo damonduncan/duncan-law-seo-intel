@@ -289,7 +289,7 @@
   </div>
   {% if competitors %}
   <table>
-    <thead><tr><th>Firm</th><th>Attorneys</th><th>Google Place ID</th><th>BBB</th></tr></thead>
+    <thead><tr><th>Firm</th><th>Attorneys</th><th>Google Place ID</th></tr></thead>
     <tbody>
     {% for c in competitors %}
     <tr>
@@ -301,17 +301,13 @@
             data-initials="{{ c.name[:2] | upper }}"
             data-attorneys="{{ c.attorneys | length }}"
             data-place="{{ '✓ Set' if c.google_place_id else 'Missing' }}"
-            data-bbb="{{ 'Set' if c.bbb_url else 'None' }}">{{ c.name }}</strong>
+            >{{ c.name }}</strong>
         </div>
       </td>
       <td style="color:var(--muted);">{{ c.attorneys | length }}</td>
       <td>
         {% if c.google_place_id %}<span class="chip chip-green">✓ Set</span>
         {% else %}<span class="chip chip-yellow">Missing</span>{% endif %}
-      </td>
-      <td>
-        {% if c.bbb_url %}<span class="chip chip-green">✓ Set</span>
-        {% else %}<span class="chip chip-blue">Optional</span>{% endif %}
       </td>
     </tr>
     {% endfor %}

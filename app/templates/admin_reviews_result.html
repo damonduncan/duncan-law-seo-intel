@@ -22,16 +22,6 @@
       {% else %}check API key and Place IDs{% endif %}
     </div>
   </div>
-  <div class="stat-card">
-    <div class="label">BBB Snapshots Collected</div>
-    <div class="value" style="color:{% if bbb_count > 0 %}var(--green){% else %}var(--muted){% endif %};">
-      {{ bbb_count }}
-    </div>
-    <div class="sub">
-      {% if bbb_count > 0 %}grades + complaint counts saved
-      {% else %}check BBB URLs in competitors.yaml{% endif %}
-    </div>
-  </div>
 </div>
 
 {% if google_count == 0 and not error %}

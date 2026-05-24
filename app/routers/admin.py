@@ -80,12 +80,10 @@ def run_reviews(
     db: Session = Depends(get_db),
 ):
     """Run review collection synchronously and show a result page."""
-    google_count, bbb_count, error = 0, 0, None
+    google_count, error = 0, None
     try:
         from app.services.google_places import collect_competitor_reviews
         google_count = collect_competitor_reviews(db)
-        from app.services.bbb import collect_bbb_reviews
-        bbb_count = collect_bbb_reviews(db)
     except Exception as e:
         error = str(e)
     return templates.TemplateResponse("admin_reviews_result.html", {
@@ -93,7 +91,6 @@ def run_reviews(
         "user": user,
         "active_page": "reviews",
         "google_count": google_count,
-        "bbb_count": bbb_count,
         "error": error,
     })
 
@@ -1039,77 +1036,6 @@ def debug_pacer(
             result["frmRefineSearch_select_options"] = refine_selects
         else:
             result["frmRefineSearch_fields"] = None
-
-    except Exception as e:
-        result["error"] = str(e)
-
-    return JSONResponse(result)
-
-
-@router.get("/admin/debug/bbb")
-def debug_bbb(
-    request: Request,
-    user: dict = Depends(auth_required),
-    url: str = "https://www.bbb.org/us/nc/greensboro/profile/bankruptcy-attorney/law-offices-of-john-t-orcutt-pc-0503-33061541",
-):
-    """Fetch a BBB page and return the HTTP status, key HTML snippets, and parsed grade."""
-    import requests as req
-    import re
-    from bs4 import BeautifulSoup
-
-    HEADERS = {
-        "User-Agent": (
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-        ),
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-    }
-    _GRADE_RE = re.compile(r'^(?:[A-F][+-]?|NR)$')
-
-    result = {"url": url, "http_status": None, "error": None,
-              "page_length": 0, "bbb_rating_found": False,
-              "snippet_around_rating": None, "parsed_grade": None,
-              "body_start": None}
-    try:
-        resp = req.get(url, headers=HEADERS, timeout=20)
-        result["http_status"] = resp.status_code
-        result["page_length"] = len(resp.text)
-        result["body_start"] = resp.text[:500]
-
-        soup = BeautifulSoup(resp.text, "lxml")
-
-        # Find the rating heading
-        rating_el = soup.find(
-            lambda tag: tag.name in ("h3", "h4", "p", "span")
-            and "BBB Rating" in tag.get_text()
-        )
-        result["bbb_rating_found"] = rating_el is not None
-        if rating_el:
-            # Show surrounding HTML
-            result["snippet_around_rating"] = str(rating_el.parent)[:800]
-
-            # Walk siblings to find grade
-            node = rating_el.next_sibling
-            siblings = []
-            for _ in range(8):
-                if node is None:
-                    break
-                siblings.append(repr(str(node)[:60]))
-                candidate = str(node).strip() if hasattr(node, "strip") else ""
-                if candidate and _GRADE_RE.match(candidate):
-                    result["parsed_grade"] = candidate
-                    break
-                if hasattr(node, "name") and node.name in ("h2", "h3", "h4", "div", "section"):
-                    break
-                node = getattr(node, "next_sibling", None)
-            result["siblings"] = siblings
-        else:
-            # Show all h3/h4 text so we can see what headings exist
-            result["all_headings"] = [
-                t.get_text(strip=True)[:80]
-                for t in soup.find_all(["h2", "h3", "h4"])
-            ][:20]
 
     except Exception as e:
         result["error"] = str(e)
