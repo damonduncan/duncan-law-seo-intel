@@ -40,6 +40,7 @@ def rankings(
         .filter(
             LocalPackRanking.competitor_id == own_firm_id,
             LocalPackRanking.is_own_firm == True,
+            LocalPackRanking.market.in_(OWN_FIRM_MARKETS),
             cast(LocalPackRanking.scraped_at, Date) >= since,
         )
         .order_by(LocalPackRanking.scraped_at.desc())
