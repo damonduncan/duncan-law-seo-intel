@@ -24,11 +24,19 @@
         {% endif %}
       </div>
     </div>
-    <div style="flex-shrink:0;text-align:right;">
+    <div style="flex-shrink:0;display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
       {% if comp.google_place_id %}
-      <span class="chip chip-green">✓ Place ID</span>
+      <a href="https://www.google.com/maps/place/?q=place_id:{{ comp.google_place_id }}" target="_blank" rel="noopener"
+         class="chip chip-green" style="text-decoration:none;cursor:pointer;">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Google Maps ↗
+      </a>
       {% else %}
       <span class="chip chip-yellow">No Place ID</span>
+      {% endif %}
+      {% if comp.bbb_url %}
+      <a href="{{ comp.bbb_url }}" target="_blank" rel="noopener"
+         class="chip chip-blue" style="text-decoration:none;cursor:pointer;">BBB ↗</a>
       {% endif %}
     </div>
   </div>
@@ -67,10 +75,8 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     </div>
     <div class="label">Google Reviews</div>
-    <div class="value">{{ review_current.review_count if review_current and review_current.review_count else "—" }}</div>
-    <div class="sub">
-      {% if review_current and review_current.rating %}{{ "%.1f"|format(review_current.rating|float) }} ★ avg rating{% else %}no review data{% endif %}
-    </div>
+    <div class="value">{{ total_count if total_count else "—" }}</div>
+    <div class="sub">{% if avg_rating %}{{ avg_rating }} ★ avg rating{% else %}no review data{% endif %}</div>
   </div>
   <div class="stat-card stat-purple">
     <div class="stat-top-bar"></div>
@@ -94,15 +100,19 @@
 
 <!-- Rankings presence -->
 <div class="card" style="margin-bottom:24px;">
-  <div class="section-title">
+  <div class="section-title" onclick="toggleSection('sec-cd-rankings')" style="cursor:pointer;user-select:none;">
     <span class="section-icon teal">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     </span>
     Google 3-Pack Presence
     {% if ranking_as_of %}
-    <span style="margin-left:auto;font-size:13px;color:var(--muted);font-weight:400;">as of {{ ranking_as_of.strftime('%b %d, %Y') }}</span>
+    <span style="font-size:13px;color:var(--muted);font-weight:400;margin-left:8px;">as of {{ ranking_as_of.strftime('%b %d, %Y') }}</span>
     {% endif %}
+    <span id="chev-sec-cd-rankings" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-cd-rankings" data-collapsible="1">
   {% if pack_presence %}
   <table>
     <thead><tr>
@@ -135,17 +145,22 @@
     {% else %}No ranking data collected for this firm yet. Rankings are collected weekly.{% endif %}
   </p>
   {% endif %}
+  </div><!-- /sec-cd-rankings -->
 </div>
 
 <!-- PACER filing history -->
 {% if pacer_data %}
 <div class="card" style="margin-bottom:24px;">
-  <div class="section-title">
+  <div class="section-title" onclick="toggleSection('sec-cd-pacer')" style="cursor:pointer;user-select:none;">
     <span class="section-icon purple">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
     </span>
     PACER Filing History
+    <span id="chev-sec-cd-pacer" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-cd-pacer" data-collapsible="1">
   {% for district, periods in pacer_data | dictsort %}
   <div style="margin-bottom:20px;">
     <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px;">{{ district }}</div>
@@ -165,58 +180,159 @@
   </div>
   {% if not loop.last %}<div style="border-top:1px solid var(--border);margin-bottom:20px;"></div>{% endif %}
   {% endfor %}
+  </div><!-- /sec-cd-pacer -->
 </div>
 {% endif %}
 
 <!-- Google Reviews -->
-{% if review_current %}
+{% if total_count is not none or comp_review_chart %}
 <div class="card" style="margin-bottom:24px;">
-  <div class="section-title">
+  <div class="section-title" onclick="toggleSection('sec-cd-reviews')" style="cursor:pointer;user-select:none;">
     <span class="section-icon yellow">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     </span>
     Google Reviews
-    <span style="margin-left:auto;font-size:13px;color:var(--muted);font-weight:400;">
-      collected {{ review_current.snapped_at.strftime('%b %d, %Y') if review_current.snapped_at else '—' }}
+    {% if last_collected %}
+    <span style="font-size:13px;color:var(--muted);font-weight:400;margin-left:8px;">collected {{ last_collected.strftime('%b %d, %Y') }}</span>
+    {% endif %}
+    <span id="chev-sec-cd-reviews" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </span>
   </div>
-  <div style="display:flex;align-items:center;gap:32px;flex-wrap:wrap;">
+  <div id="sec-cd-reviews" data-collapsible="1">
+
+  <!-- Headline stats -->
+  <div style="display:flex;align-items:center;gap:36px;flex-wrap:wrap;margin-bottom:20px;">
     <div>
-      <div style="font-size:36px;font-weight:800;color:var(--text);">{{ review_current.review_count if review_current.review_count else '—' }}</div>
-      <div style="font-size:13px;color:var(--muted);margin-top:2px;">total reviews</div>
+      <div style="font-size:38px;font-weight:800;color:var(--text);line-height:1;">{{ total_count if total_count is not none else '—' }}</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:3px;">total reviews</div>
     </div>
-    {% if review_current.rating %}
+    {% if avg_rating %}
     <div>
       <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:24px;color:var(--yellow);">
-          {% for i in range(5) %}{% if loop.index <= review_current.rating|int %}★{% else %}☆{% endif %}{% endfor %}
-        </span>
-        <span style="font-size:28px;font-weight:800;color:var(--yellow-dark);">{{ "%.1f"|format(review_current.rating|float) }}</span>
+        <span style="font-size:22px;color:var(--yellow);letter-spacing:1px;">{% for i in range(5) %}{% if loop.index <= avg_rating|int %}★{% else %}☆{% endif %}{% endfor %}</span>
+        <span style="font-size:30px;font-weight:800;color:var(--yellow-dark);">{{ avg_rating }}</span>
       </div>
-      <div style="font-size:13px;color:var(--muted);margin-top:2px;">avg rating</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:3px;">avg rating</div>
     </div>
     {% endif %}
     {% if review_delta is not none %}
     <div>
-      <div style="font-size:28px;font-weight:800;color:{% if review_delta > 0 %}var(--orange-dark){% elif review_delta < 0 %}var(--green-dark){% else %}var(--muted){% endif %};">
-        {% if review_delta > 0 %}+{{ review_delta }}{% elif review_delta == 0 %}+0{% else %}{{ review_delta }}{% endif %}
+      <div style="font-size:30px;font-weight:800;color:{% if review_delta > 0 %}var(--orange-dark){% elif review_delta < 0 %}var(--red-dark){% else %}var(--muted){% endif %};">
+        {% if review_delta > 0 %}+{{ review_delta }}{% elif review_delta == 0 %}±0{% else %}{{ review_delta }}{% endif %}
       </div>
-      <div style="font-size:13px;color:var(--muted);margin-top:2px;">since last collection</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:3px;">vs. prior week</div>
     </div>
     {% endif %}
   </div>
+
+  <!-- Per-location breakdown (multi-office firms) -->
+  {% if review_by_location %}
+  <div style="margin-bottom:20px;">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px;">By Office Location</div>
+    <table>
+      <thead><tr><th>Market</th><th>Rating</th><th>Reviews</th><th>Δ Week</th></tr></thead>
+      <tbody>
+      {% for loc in review_by_location %}
+      <tr>
+        <td style="font-weight:500;">{{ (loc.market or 'Unknown') | replace('_', ' ') | title }}</td>
+        <td>
+          {% if loc.rating %}
+          <span style="color:var(--yellow);font-size:13px;">{% for i in range(5) %}{% if loop.index <= loc.rating|int %}★{% else %}☆{% endif %}{% endfor %}</span>
+          <strong style="font-size:13px;color:var(--yellow-dark);margin-left:4px;">{{ "%.1f"|format(loc.rating) }}</strong>
+          {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+        </td>
+        <td style="font-weight:600;">{{ loc.count if loc.count is not none else '—' }}</td>
+        <td>
+          {% if loc.delta is not none %}
+          <span style="font-size:13px;font-weight:700;color:{% if loc.delta > 0 %}var(--green-dark){% elif loc.delta < 0 %}var(--red-dark){% else %}var(--muted){% endif %};">
+            {% if loc.delta > 0 %}+{{ loc.delta }}{% elif loc.delta == 0 %}±0{% else %}{{ loc.delta }}{% endif %}
+          </span>
+          {% else %}<span style="color:var(--muted-2);">—</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- Review trend chart -->
+  {% if comp_review_chart %}
+  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:12px;">60-Day Trend</div>
+  <div style="position:relative;height:220px;">
+    <canvas id="comp-review-chart"></canvas>
+  </div>
+  <script>
+  (function () {
+    var d = {{ comp_review_chart | tojson }};
+    new Chart(document.getElementById('comp-review-chart'), {
+      type: 'line',
+      data: {
+        labels: d.labels,
+        datasets: d.series.map(function (s) {
+          return {
+            label: s.label,
+            data: s.data,
+            borderColor: s.color,
+            backgroundColor: s.color + '18',
+            borderWidth: 2.5,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            pointBackgroundColor: s.color,
+            tension: 0.35,
+            spanGaps: true,
+            fill: false,
+          };
+        }),
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 14, padding: 14, font: { size: 12 } } },
+          tooltip: { callbacks: {
+            label: function (ctx) {
+              var v = ctx.parsed.y;
+              return ' ' + ctx.dataset.label + ': ' + (v !== null ? v + ' reviews' : '—');
+            },
+          }},
+        },
+        scales: {
+          x: { grid: { color: 'rgba(148,163,184,.12)' }, ticks: { font: { size: 11 }, color: '#64748B', maxRotation: 0 } },
+          y: {
+            beginAtZero: false,
+            grid: { color: 'rgba(148,163,184,.12)' },
+            ticks: { font: { size: 11 }, color: '#64748B', precision: 0 },
+            title: { display: true, text: 'Reviews', font: { size: 11 }, color: '#64748B' },
+          },
+        },
+      },
+    });
+  })();
+  </script>
+  {% else %}
+  <p style="color:var(--muted);font-size:14px;margin:4px 0;">Review history chart will appear after at least 2 weekly collections.</p>
+  {% endif %}
+
+  </div><!-- /sec-cd-reviews -->
 </div>
 {% endif %}
 
 <!-- Recent alerts -->
 {% if recent_alerts %}
 <div class="card">
-  <div class="section-title">
+  <div class="section-title" onclick="toggleSection('sec-cd-alerts')" style="cursor:pointer;user-select:none;">
     <span class="section-icon orange">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
     </span>
     Recent Alerts
+    <span id="chev-sec-cd-alerts" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </div>
+  <div id="sec-cd-alerts" data-collapsible="1">
   <div style="display:flex;flex-direction:column;gap:0;">
     {% for a in recent_alerts %}
     <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);{% if loop.last %}border-bottom:none;{% endif %}{% if a.acknowledged_at %}opacity:.45;{% endif %}">
@@ -255,6 +371,7 @@
   <div style="margin-top:12px;">
     <a href="/alerts" style="font-size:13px;color:var(--accent);">View all alerts →</a>
   </div>
+  </div><!-- /sec-cd-alerts -->
 </div>
 {% else %}
 <div class="card">
