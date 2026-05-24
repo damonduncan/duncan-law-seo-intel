@@ -30,12 +30,12 @@
       <td>
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="firm-badge">{{ c.name[:2] | upper }}</div>
-          <strong class="firm-hover"
+          <a href="/competitors/{{ c.id }}" class="firm-hover"
             data-name="{{ c.name }}"
             data-initials="{{ c.name[:2] | upper }}"
             data-attorneys="{{ c.attorneys | length }}"
             data-place="{{ '✓ Set' if c.google_place_id else 'Missing' }}"
-            >{{ c.name }}</strong>
+            style="color:var(--text);text-decoration:none;font-weight:700;">{{ c.name }}</a>
         </div>
       </td>
       <td>

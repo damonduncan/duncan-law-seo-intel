@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% block title %}{{ comp.name }}{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:20px;">
+  <a href="/competitors" style="font-size:13px;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:5px;">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    All Competitors
+  </a>
+</div>
+
+<!-- Firm header card -->
+<div class="card" style="margin-bottom:24px;">
+  <div style="display:flex;align-items:flex-start;gap:18px;margin-bottom:18px;">
+    <div class="firm-badge" style="width:52px;height:52px;border-radius:14px;font-size:20px;flex-shrink:0;">{{ comp.name[:2] | upper }}</div>
+    <div style="flex:1;min-width:0;">
+      <h2 style="margin:0 0 8px;font-size:22px;font-weight:800;color:var(--text);">{{ comp.name }}</h2>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        {% for loc in comp.locations %}
+        <span class="chip chip-blue">{{ loc.market | replace('_', ' ') | title }}</span>
+        {% endfor %}
+        {% if not comp.locations %}
+        <span class="chip chip-yellow">No markets configured</span>
+        {% endif %}
+      </div>
+    </div>
+    <div style="flex-shrink:0;text-align:right;">
+      {% if comp.google_place_id %}
+      <span class="chip chip-green">✓ Place ID</span>
+      {% else %}
+      <span class="chip chip-yellow">No Place ID</span>
+      {% endif %}
+    </div>
+  </div>
+  {% if comp.attorneys %}
+  <div style="border-top:1px solid var(--border);padding-top:14px;">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px;">Attorneys</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      {% for atty in comp.attorneys %}
+      <div style="font-size:14px;font-weight:500;color:var(--text-2);">
+        {{ atty.attorney_name }}
+        {% if atty.aliases %}
+        <span style="color:var(--muted);font-size:13px;"> +{{ atty.aliases|length }} alias{{ 'es' if atty.aliases|length != 1 else '' }}</span>
+        {% endif %}
+      </div>
+      {% if not loop.last %}<span style="color:var(--border-2);margin-top:2px;">·</span>{% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Summary stat row -->
+<div class="card-grid" style="margin-bottom:24px;">
+  <div class="stat-card stat-teal">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </div>
+    <div class="label">Pack Presence</div>
+    <div class="value">{{ pack_presence | length }}</div>
+    <div class="sub">{% if ranking_as_of %}markets as of {{ ranking_as_of.strftime('%b %d') }}{% else %}markets (no data yet){% endif %}</div>
+  </div>
+  <div class="stat-card stat-yellow">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </div>
+    <div class="label">Google Reviews</div>
+    <div class="value">{{ review_current.review_count if review_current and review_current.review_count else "—" }}</div>
+    <div class="sub">
+      {% if review_current and review_current.rating %}{{ "%.1f"|format(review_current.rating|float) }} ★ avg rating{% else %}no review data{% endif %}
+    </div>
+  </div>
+  <div class="stat-card stat-purple">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    </div>
+    <div class="label">PACER Districts</div>
+    <div class="value">{{ pacer_data | length }}</div>
+    <div class="sub">{% if pacer_data %}{{ pacer_data.keys() | join(' · ') }}{% else %}no filing data{% endif %}</div>
+  </div>
+  <div class="stat-card {% if recent_alerts | selectattr('acknowledged_at', 'none') | list | length > 0 %}stat-red{% else %}stat-green{% endif %}">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    </div>
+    <div class="label">Recent Alerts</div>
+    <div class="value">{{ recent_alerts | length }}</div>
+    <div class="sub">last {{ recent_alerts | length }} alert{{ 's' if recent_alerts | length != 1 }}</div>
+  </div>
+</div>
+
+<!-- Rankings presence -->
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title">
+    <span class="section-icon teal">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </span>
+    Google 3-Pack Presence
+    {% if ranking_as_of %}
+    <span style="margin-left:auto;font-size:13px;color:var(--muted);font-weight:400;">as of {{ ranking_as_of.strftime('%b %d, %Y') }}</span>
+    {% endif %}
+  </div>
+  {% if pack_presence %}
+  <table>
+    <thead><tr>
+      <th>Market</th>
+      <th>Keyword</th>
+      <th>Rank</th>
+    </tr></thead>
+    <tbody>
+    {% for market, keywords in pack_presence | dictsort %}
+    {% for kw, rank in keywords | dictsort %}
+    <tr>
+      {% if loop.index == 1 %}
+      <td style="font-weight:600;{% if keywords | length > 1 %}vertical-align:top;{% endif %}" rowspan="{{ keywords | length }}">
+        {{ market | replace('_', ' ') | title }}
+      </td>
+      {% endif %}
+      <td style="font-size:14px;color:var(--text-2);">{{ kw }}</td>
+      <td>
+        <span class="chip {% if rank == 1 %}chip-green{% elif rank == 2 %}chip-yellow{% else %}chip-blue{% endif %}"
+          style="font-weight:800;min-width:32px;text-align:center;">#{{ rank }}</span>
+      </td>
+    </tr>
+    {% endfor %}
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--muted);font-size:15px;margin:4px 0;">
+    {% if ranking_as_of %}Not in the 3-pack for any tracked keyword on this date.
+    {% else %}No ranking data collected for this firm yet. Rankings are collected weekly.{% endif %}
+  </p>
+  {% endif %}
+</div>
+
+<!-- PACER filing history -->
+{% if pacer_data %}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title">
+    <span class="section-icon purple">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    </span>
+    PACER Filing History
+  </div>
+  {% for district, periods in pacer_data | dictsort %}
+  <div style="margin-bottom:20px;">
+    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px;">{{ district }}</div>
+    {% set max_cases = namespace(val=1) %}
+    {% for per, cnt in periods %}{% if cnt > max_cases.val %}{% set max_cases.val = cnt %}{% endif %}{% endfor %}
+    <div style="display:flex;flex-direction:column;gap:5px;">
+      {% for per, cnt in periods | reverse %}
+      <div style="display:grid;grid-template-columns:80px 1fr 44px;gap:10px;align-items:center;">
+        <div style="font-size:13px;color:var(--muted);">{{ per.strftime('%b %Y') }}</div>
+        <div style="height:7px;background:var(--surface-3);border-radius:4px;overflow:hidden;">
+          <div style="height:100%;width:{{ (cnt / max_cases.val * 100)|int }}%;background:var(--purple);border-radius:4px;"></div>
+        </div>
+        <div style="font-size:14px;font-weight:700;color:var(--text);text-align:right;">{{ cnt }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% if not loop.last %}<div style="border-top:1px solid var(--border);margin-bottom:20px;"></div>{% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Google Reviews -->
+{% if review_current %}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title">
+    <span class="section-icon yellow">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </span>
+    Google Reviews
+    <span style="margin-left:auto;font-size:13px;color:var(--muted);font-weight:400;">
+      collected {{ review_current.snapped_at.strftime('%b %d, %Y') if review_current.snapped_at else '—' }}
+    </span>
+  </div>
+  <div style="display:flex;align-items:center;gap:32px;flex-wrap:wrap;">
+    <div>
+      <div style="font-size:36px;font-weight:800;color:var(--text);">{{ review_current.review_count if review_current.review_count else '—' }}</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:2px;">total reviews</div>
+    </div>
+    {% if review_current.rating %}
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:24px;color:var(--yellow);">
+          {% for i in range(5) %}{% if loop.index <= review_current.rating|int %}★{% else %}☆{% endif %}{% endfor %}
+        </span>
+        <span style="font-size:28px;font-weight:800;color:var(--yellow-dark);">{{ "%.1f"|format(review_current.rating|float) }}</span>
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-top:2px;">avg rating</div>
+    </div>
+    {% endif %}
+    {% if review_delta is not none %}
+    <div>
+      <div style="font-size:28px;font-weight:800;color:{% if review_delta > 0 %}var(--orange-dark){% elif review_delta < 0 %}var(--green-dark){% else %}var(--muted){% endif %};">
+        {% if review_delta > 0 %}+{{ review_delta }}{% elif review_delta == 0 %}+0{% else %}{{ review_delta }}{% endif %}
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-top:2px;">since last collection</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Recent alerts -->
+{% if recent_alerts %}
+<div class="card">
+  <div class="section-title">
+    <span class="section-icon orange">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    </span>
+    Recent Alerts
+  </div>
+  <div style="display:flex;flex-direction:column;gap:0;">
+    {% for a in recent_alerts %}
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);{% if loop.last %}border-bottom:none;{% endif %}{% if a.acknowledged_at %}opacity:.45;{% endif %}">
+      {% if a.severity == 'immediate' %}
+      <span class="chip chip-red" style="flex-shrink:0;align-self:flex-start;margin-top:1px;">High</span>
+      {% else %}
+      <span class="chip chip-yellow" style="flex-shrink:0;align-self:flex-start;margin-top:1px;">Digest</span>
+      {% endif %}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:500;color:var(--text-2);">
+          {% if a.alert_type == 'pack_drop' %}Own firm dropped from 3-pack
+          {% elif a.alert_type == 'competitor_pack_entry' %}Competitor entered 3-pack
+          {% elif a.alert_type == 'review_gap' %}Competitor review gap
+          {% elif a.alert_type == 'pacer_volume_spike' %}PACER volume spike
+          {% else %}{{ a.alert_type }}{% endif %}
+        </div>
+        {% if a.market or a.keyword %}
+        <div style="font-size:13px;color:var(--muted);margin-top:2px;">
+          {% if a.market %}{{ a.market | replace('_', ' ') | title }}{% endif %}{% if a.market and a.keyword %} · {% endif %}{% if a.keyword %}{{ a.keyword }}{% endif %}
+        </div>
+        {% endif %}
+        {% if a.detail %}
+        {% set msg = a.detail.get('message', '') %}
+        {% if msg %}
+        <div style="font-size:13px;color:var(--muted);margin-top:2px;">{{ msg[:120] }}</div>
+        {% endif %}
+        {% endif %}
+      </div>
+      <div style="font-size:13px;color:var(--muted-2);white-space:nowrap;flex-shrink:0;">
+        {{ a.triggered_at.strftime('%b %d') if a.triggered_at else '—' }}
+        {% if a.acknowledged_at %}<br><span style="color:var(--green-dark);font-size:12px;">dismissed</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div style="margin-top:12px;">
+    <a href="/alerts" style="font-size:13px;color:var(--accent);">View all alerts →</a>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="section-title">
+    <span class="section-icon orange">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    </span>
+    Recent Alerts
+  </div>
+  <p style="color:var(--muted);font-size:15px;margin:4px 0;">No alerts on record for this firm.</p>
+</div>
+{% endif %}
+
+{% endblock %}
