@@ -133,7 +133,7 @@
 
 {% macro district_table(groups, district_name) %}
 {% set d = district_name[:4] %}
-{% set ncols = 6 if prior_period else 5 %}
+{% set ncols = 6 if prior_label else 5 %}
 <div class="card" style="margin-bottom:24px;">
   <div style="margin-bottom:16px;">
     <div class="section-title" style="margin-bottom:3px;">
@@ -141,10 +141,10 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </span>
       {{ district_name }}
-      {% if current_period %}<span class="chip chip-teal" style="margin-left:auto;font-size:12px;">{{ current_period.strftime('%b %Y') }}</span>{% endif %}
+      {% if cur_label %}<span class="chip chip-teal" style="margin-left:auto;font-size:12px;">{{ cur_label }}</span>{% endif %}
     </div>
-    {% if prior_period %}
-    <div style="font-size:14px;color:var(--muted-2);margin-left:36px;">vs {{ prior_period.strftime('%B %Y') }}</div>
+    {% if prior_label %}
+    <div style="font-size:14px;color:var(--muted-2);margin-left:36px;">vs {{ prior_label }}</div>
     {% endif %}
   </div>
   {% if groups %}
@@ -162,7 +162,7 @@
       <th style="text-align:right;">Ch. 13</th>
       <th style="text-align:right;">Total</th>
       <th>Market Share</th>
-      {% if prior_period %}<th style="text-align:right;">vs Prior</th>{% endif %}
+      {% if prior_label %}<th style="text-align:right;">vs Prior</th>{% endif %}
     </tr></thead>
     <tbody>
     {% for g in groups %}
@@ -202,7 +202,7 @@
           <span style="font-size:14px;font-weight:700;color:{% if g.is_own_firm %}var(--accent){% else %}var(--muted){% endif %};min-width:34px;text-align:right;">{{ g.market_share }}%</span>
         </div>
       </td>
-      {% if prior_period %}
+      {% if prior_label %}
       <td style="text-align:right;">
         {% if g.pct_change is not none and g.total_prior is not none %}
         {% set max_v = [g.total, g.total_prior, 1]|max %}
@@ -235,7 +235,7 @@
       <td style="text-align:right;font-size:15px;">{{ r.ch13 }}</td>
       <td style="text-align:right;font-size:15px;font-weight:600;">{{ r.total }}</td>
       <td></td>
-      {% if prior_period %}<td style="text-align:right;">{{ pct_chip(r.pct_change) }}</td>{% endif %}
+      {% if prior_label %}<td style="text-align:right;">{{ pct_chip(r.pct_change) }}</td>{% endif %}
     </tr>
     {% endfor %}
     {% if g.attorneys|length > 5 %}
@@ -450,6 +450,25 @@
 })();
 </script>
 {% endif %}
+
+<!-- Period toggle -->
+<div class="card" style="margin-bottom:24px;padding:14px 20px;">
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <span style="font-size:13px;font-weight:600;color:var(--muted);margin-right:4px;">Period:</span>
+    {% for wkey, wlabel in [('1m','Current month'),('3m','3 months'),('6m','6 months'),('12m','1 year'),('all','All time')] %}
+    <a href="?win={{ wkey }}"
+       style="padding:5px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;border:1px solid {% if win == wkey %}var(--accent){% else %}var(--border){% endif %};background:{% if win == wkey %}var(--accent){% else %}var(--surface-2){% endif %};color:{% if win == wkey %}#fff{% else %}var(--muted){% endif %};">
+      {{ wlabel }}
+    </a>
+    {% endfor %}
+    {% if cur_label %}
+    <span class="chip chip-teal" style="margin-left:auto;font-size:12px;">{{ cur_label }}</span>
+    {% endif %}
+    {% if prior_label %}
+    <span style="font-size:13px;color:var(--muted-2);">vs {{ prior_label }}</span>
+    {% endif %}
+  </div>
+</div>
 
 {{ district_table(mdnc_rows, "MDNC — Middle District of NC") }}
 {{ discovery_section(mdnc_discovery, "MDNC", "MDNC", mdnc_tracked) }}
