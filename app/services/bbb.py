@@ -89,27 +89,32 @@ def _scrape_bbb(url: str) -> Optional[dict]:
     result: dict = {"url": url}
 
     # ── Letter grade ──────────────────────────────────────────────────────────
-    # Try CSS selectors first (BBB renders the grade in a <p> or <span> near "BBB Rating")
+    # BBB renders the grade as a bare text node immediately after
+    # <h3>BBB Rating</h3> — not inside any wrapper element.
     grade = None
-    for sel in [
-        "[class*='grade'] p", "[class*='Grade'] p",
-        "[class*='grade'] span", "[class*='Grade'] span",
-        "[data-testid*='grade']", "[data-testid*='Grade']",
-    ]:
-        el = soup.select_one(sel)
-        if el:
-            candidate = el.get_text(strip=True)
+    rating_h3 = soup.find(lambda tag: tag.name in ("h3", "h4", "p", "span")
+                          and "BBB Rating" in tag.get_text())
+    if rating_h3:
+        node = rating_h3.next_sibling
+        while node:
+            candidate = str(node).strip() if hasattr(node, "strip") else ""
+            if not candidate:
+                node = getattr(node, "next_sibling", None)
+                continue
             if _GRADE_RE.match(candidate):
                 grade = candidate
                 break
+            # Stop if we hit another block element (grade was not right after)
+            if hasattr(node, "name") and node.name in ("h2", "h3", "h4", "div", "section"):
+                break
+            node = getattr(node, "next_sibling", None)
 
-    # Fallback: scan every short text node for a valid grade
+    # Fallback: any text node adjacent to a "BBB" or "rating" context
     if not grade:
         for node in soup.find_all(string=True):
             candidate = node.strip()
             if _GRADE_RE.match(candidate):
-                # Confirm there's a nearby "rating" or "BBB" label
-                parent_text = (node.parent.get_text(" ") if node.parent else "")
+                parent_text = node.parent.get_text(" ") if node.parent else ""
                 if "bbb" in parent_text.lower() or "rating" in parent_text.lower():
                     grade = candidate
                     break
