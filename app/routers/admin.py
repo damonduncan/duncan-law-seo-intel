@@ -745,6 +745,42 @@ def clean_district_mismatch(
     )
 
 
+@router.post("/admin/run-rankings/ednc")
+def trigger_ednc_rankings(request: Request, user: dict = Depends(auth_required)):
+    """Run competitor rankings for EDNC markets only — no reviews, no digest."""
+    from app.database import SessionLocal
+    from app.services.config_loader import load_yaml
+    from app.services.dataforseo import collect_rankings_for_keywords, build_place_maps
+
+    def _run():
+        db = SessionLocal()
+        try:
+            data = load_yaml("keywords.yaml")
+            templates = data.get("templates", [])
+            ednc_cities = ["Raleigh", "Fayetteville", "Wilmington", "Wilson"]
+            keywords = [t.format(city=city) for t in templates for city in ednc_cities]
+            own_firm_id, own_place_ids, competitor_place_map = build_place_maps(db)
+            n = collect_rankings_for_keywords(
+                keywords=keywords,
+                own_place_ids=own_place_ids,
+                competitor_place_map=competitor_place_map,
+                db=db,
+                own_firm_id=own_firm_id,
+                only_own_firm=False,
+            )
+            import logging
+            logging.getLogger(__name__).info(f"EDNC rankings run: {n} rows stored")
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"EDNC rankings run failed: {e}", exc_info=True)
+        finally:
+            db.close()
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+    return RedirectResponse(url="/rankings?msg=ednc_rankings_running", status_code=303)
+
+
 @router.post("/admin/run-job/daily")
 def trigger_daily(request: Request, user: dict = Depends(auth_required)):
     from app.jobs.daily import run_daily_job
