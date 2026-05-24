@@ -151,25 +151,69 @@
     </span>
     Google Ratings &amp; Review Counts
   </div>
-  <div style="display:flex;flex-direction:column;gap:3px;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;">
+
+    <!-- Left: compact rating + count list -->
+    <div style="display:flex;flex-direction:column;gap:3px;">
+      {% if own_avg_rating %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--accent-light);border-radius:var(--r-sm);">
+        <span style="font-size:13px;font-weight:700;color:var(--accent);">Duncan Law</span>
+        <span style="font-size:13px;font-weight:700;color:var(--accent);">
+          <span style="color:var(--yellow);letter-spacing:1px;">{% for i in range(5) %}{% if loop.index <= own_avg_rating|int %}★{% else %}☆{% endif %}{% endfor %}</span>
+          {{ own_avg_rating }}{% if own_total_reviews is not none %} <span style="font-weight:500;color:var(--muted);">({{ "{:,}".format(own_total_reviews) }})</span>{% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% for r in comp_rows | selectattr('google_rating') | list | sort(attribute='google_rating', reverse=true) %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 10px;border-radius:var(--r-sm);">
+        <span style="font-size:13px;font-weight:500;color:var(--text-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:16px;">{{ r.name }}</span>
+        <span style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;flex-shrink:0;">
+          <span style="color:var(--yellow);letter-spacing:1px;">{% for i in range(5) %}{% if loop.index <= r.google_rating|int %}★{% else %}☆{% endif %}{% endfor %}</span>
+          {{ "%.1f"|format(r.google_rating|float) }}{% if r.google_count %} <span style="font-weight:400;color:var(--muted);">({{ "{:,}".format(r.google_count) }})</span>{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Right: field insights -->
+    {% set rated = comp_rows | selectattr('google_rating') | list | sort(attribute='google_rating', reverse=true) %}
+    {% set counted = comp_rows | selectattr('google_count') | list | sort(attribute='google_count', reverse=true) %}
+    {% set all_ratings = rated | map(attribute='google_rating') | list %}
+    {% set field_avg = (all_ratings | sum / all_ratings | length) | round(1) if all_ratings else none %}
+    {% set dl_rank = namespace(val=none) %}
     {% if own_avg_rating %}
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--accent-light);border-radius:var(--r-sm);">
-      <span style="font-size:13px;font-weight:700;color:var(--accent);">Duncan Law</span>
-      <span style="font-size:13px;font-weight:700;color:var(--accent);">
-        <span style="color:var(--yellow);letter-spacing:1px;">{% for i in range(5) %}{% if loop.index <= own_avg_rating|int %}★{% else %}☆{% endif %}{% endfor %}</span>
-        {{ own_avg_rating }}{% if own_total_reviews is not none %} <span style="font-weight:500;color:var(--muted);">({{ "{:,}".format(own_total_reviews) }})</span>{% endif %}
-      </span>
-    </div>
+      {% set rank_n = namespace(n=1) %}
+      {% for r in rated %}{% if r.google_rating > own_avg_rating|float %}{% set rank_n.n = rank_n.n + 1 %}{% endif %}{% endfor %}
+      {% set dl_rank.val = rank_n.n %}
     {% endif %}
-    {% for r in comp_rows | selectattr('google_rating') | list | sort(attribute='google_rating', reverse=true) %}
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 10px;border-radius:var(--r-sm);">
-      <span style="font-size:13px;font-weight:500;color:var(--text-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:16px;">{{ r.name }}</span>
-      <span style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;flex-shrink:0;">
-        <span style="color:var(--yellow);letter-spacing:1px;">{% for i in range(5) %}{% if loop.index <= r.google_rating|int %}★{% else %}☆{% endif %}{% endfor %}</span>
-        {{ "%.1f"|format(r.google_rating|float) }}{% if r.google_count %} <span style="font-weight:400;color:var(--muted);">({{ "{:,}".format(r.google_count) }})</span>{% endif %}
-      </span>
+    <div style="display:flex;flex-direction:column;gap:12px;padding-top:4px;">
+      {% if dl_rank.val is not none %}
+      <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px;">Duncan Law Rating Rank</div>
+        <div style="font-size:26px;font-weight:800;color:var(--text);line-height:1;">#{{ dl_rank.val }} <span style="font-size:14px;font-weight:500;color:var(--muted);">of {{ rated | length + 1 }} firms</span></div>
+      </div>
+      {% endif %}
+      {% if field_avg %}
+      <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px;">Competitor Field Avg</div>
+        <div style="font-size:26px;font-weight:800;color:var(--text);line-height:1;">{{ field_avg }} ★
+          {% if own_avg_rating %}
+          <span style="font-size:13px;font-weight:600;color:{% if own_avg_rating|float >= field_avg|float %}var(--green-dark){% else %}var(--red-dark){% endif %};">
+            ({% if own_avg_rating|float >= field_avg|float %}+{% endif %}{{ ((own_avg_rating|float) - (field_avg|float)) | round(1) }} vs you)
+          </span>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% if counted %}
+      <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px;">Most Reviews (Competitor)</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;">{{ counted[0].name | truncate(28, true, '…') }}</div>
+        <div style="font-size:22px;font-weight:800;color:var(--text);">{{ "{:,}".format(counted[0].google_count) }}</div>
+      </div>
+      {% endif %}
     </div>
-    {% endfor %}
+
   </div>
 </div>
 {% endif %}
