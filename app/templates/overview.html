@@ -192,6 +192,45 @@
   </div>
 </div>
 
+<!-- Action center -->
+{% if action_items %}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title">
+    <span class="section-icon orange">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    </span>
+    Recommended Actions Today
+  </div>
+  <div style="display:flex;flex-direction:column;gap:0;">
+    {% for item in action_items %}
+    <div style="display:flex;align-items:flex-start;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);{% if loop.last %}border-bottom:none;{% endif %}">
+      <div style="width:32px;height:32px;border-radius:9px;background:var(--{{ item.color }}-light);color:var(--{{ item.color }}-dark);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
+        {% if item.priority == 'high' %}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        {% else %}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        {% endif %}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap;">
+          {% if item.priority == 'high' %}
+          <span class="chip chip-red">Urgent</span>
+          {% else %}
+          <span class="chip chip-yellow">Monitor</span>
+          {% endif %}
+          <div style="font-size:14px;font-weight:600;color:var(--text);">{{ item.title }}</div>
+        </div>
+        {% if item.detail %}
+        <div style="font-size:13px;color:var(--muted);margin-top:1px;">{{ item.detail }}</div>
+        {% endif %}
+      </div>
+      <a href="{{ item.link }}" style="font-size:13px;color:var(--accent);font-weight:600;white-space:nowrap;text-decoration:none;flex-shrink:0;align-self:center;padding-left:8px;">{{ item.link_text }} →</a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 <!-- Market health scorecard -->
 {% if scorecard %}
 <div class="card" style="margin-bottom:24px;">

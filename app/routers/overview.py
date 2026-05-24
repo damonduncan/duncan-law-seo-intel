@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import date
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse
@@ -36,6 +37,7 @@ def dashboard(
     last_job = db.query(JobRun).order_by(JobRun.started_at.desc()).first()
 
     scorecard = _build_scorecard(db, own_firm)
+    action_items = _build_action_items(db, own_firm, scorecard, competitors)
 
     return templates.TemplateResponse("overview.html", {
         "request": request,
@@ -45,6 +47,7 @@ def dashboard(
         "unacked_alerts": unacked_alerts,
         "last_job": last_job,
         "scorecard": scorecard,
+        "action_items": action_items,
         "active_page": "dashboard",
     })
 
@@ -113,3 +116,98 @@ def _build_scorecard(db: Session, own_firm) -> list:
         })
 
     return scorecard
+
+
+def _build_action_items(db: Session, own_firm, scorecard: list, competitors: list) -> list:
+    items = []
+
+    # 1. Markets with zero 3-pack presence despite having ranking data
+    for m in scorecard:
+        if m["status"] == "needs_attention" and m["total"] > 0 and m["in_pack"] == 0:
+            items.append({
+                "priority": "high",
+                "color": "red",
+                "title": f"Not ranking in {m['display']} — 0 of {m['total']} keywords in 3-pack",
+                "detail": "Review your Google Business Profile listing and local signals for this market.",
+                "link": "/rankings",
+                "link_text": "View rankings",
+            })
+
+    # 2. Urgent unacknowledged alerts (pack drops / competitor entries)
+    urgent_alerts = (
+        db.query(Alert)
+        .filter(Alert.acknowledged_at == None, Alert.severity == "immediate")
+        .order_by(Alert.triggered_at.desc())
+        .limit(2)
+        .all()
+    )
+    type_labels = {
+        "pack_drop": "Your firm dropped from the 3-pack",
+        "competitor_pack_entry": "A competitor entered the 3-pack",
+    }
+    for a in urgent_alerts:
+        label = type_labels.get(a.alert_type, a.alert_type)
+        market_str = f" in {a.market.replace('_', ' ').title()}" if a.market else ""
+        msg = (a.detail or {}).get("message", "")
+        items.append({
+            "priority": "high",
+            "color": "red",
+            "title": f"{label}{market_str}",
+            "detail": msg[:120] if msg else "",
+            "link": "/alerts",
+            "link_text": "View alerts",
+        })
+
+    # 3. Markets where own-firm reviews are below 10 (weak social proof)
+    for m in scorecard:
+        if m["reviews"] is not None and m["reviews"] < 10:
+            cnt = m["reviews"]
+            items.append({
+                "priority": "medium",
+                "color": "yellow",
+                "title": f"Low review count in {m['display']} ({cnt} review{'s' if cnt != 1 else ''})",
+                "detail": "Aim for 30+ reviews to compete reliably in the local pack.",
+                "link": "/reviews",
+                "link_text": "View reviews",
+            })
+
+    # 4. Top competitor gaining review momentum (≥5 new reviews since last snapshot)
+    if own_firm:
+        comp_snaps = (
+            db.query(ReviewSnapshot)
+            .filter(
+                ReviewSnapshot.source == "google",
+                ReviewSnapshot.competitor_id != own_firm.id,
+            )
+            .order_by(ReviewSnapshot.competitor_id, ReviewSnapshot.snapped_at.desc())
+            .all()
+        )
+        snaps_by_comp: dict = defaultdict(list)
+        for s in comp_snaps:
+            snaps_by_comp[s.competitor_id].append(s)
+
+        comp_name_map = {c.id: c.name for c in competitors}
+        gainers = []
+        for cid, snaps in snaps_by_comp.items():
+            if (len(snaps) >= 2
+                    and snaps[0].review_count is not None
+                    and snaps[1].review_count is not None):
+                delta = snaps[0].review_count - snaps[1].review_count
+                if delta >= 5:
+                    gainers.append((delta, cid, comp_name_map.get(cid, cid)))
+
+        gainers.sort(reverse=True)
+        for delta, cid, name in gainers[:1]:
+            short = name if len(name) <= 30 else name[:29] + "…"
+            items.append({
+                "priority": "medium",
+                "color": "orange",
+                "title": f"{short} gaining review momentum (+{delta} recently)",
+                "detail": "This competitor is building social proof faster than average — monitor closely.",
+                "link": f"/competitors/{cid}",
+                "link_text": "View profile",
+            })
+
+    # High-priority first, cap at 5
+    items.sort(key=lambda x: 0 if x["priority"] == "high" else 1)
+    return items[:5]
