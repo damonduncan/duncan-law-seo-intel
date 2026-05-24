@@ -354,6 +354,67 @@
 </div>
 {% endmacro %}
 
+<!-- Market Volume Overview -->
+{% set any_vol = mdnc_vol or wdnc_vol or ednc_vol %}
+{% if any_vol %}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-mkt-vol')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon purple">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+    </span>
+    Total Addressable Market Volume
+    <span id="chev-sec-mkt-vol" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-mkt-vol" data-collapsible="1">
+  <p style="color:var(--muted);font-size:14px;margin-bottom:20px;line-height:1.6;">
+    Total Chapter 7 + 13 filings across all tracked firms per district. A rising market lifts all boats;
+    a shrinking market means share gains are zero-sum. Use this to separate your growth from market drift.
+  </p>
+  <div class="card-grid" style="margin-bottom:0;">
+  {% for label, vol, chip_cls, dist_color in [
+    ('MDNC', mdnc_vol, 'chip-blue',   'var(--accent)'),
+    ('WDNC', wdnc_vol, 'chip-purple', '#7c3aed'),
+    ('EDNC', ednc_vol, 'chip-orange', 'var(--orange)'),
+  ] %}
+  {% if vol %}
+  <div class="stat-card" style="border-top:3px solid {{ dist_color }};">
+    <div class="stat-top-bar" style="background:{{ dist_color }};"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <span class="chip {{ chip_cls }}" style="font-size:12px;font-weight:800;">{{ label }}</span>
+      <span style="font-size:12px;color:var(--muted);">{{ vol.current_period }}</span>
+    </div>
+    <div class="value" style="color:{{ dist_color }};margin-bottom:4px;">{{ "{:,}".format(vol.current_total) }}</div>
+    <div class="sub" style="margin-bottom:12px;">total cases filed</div>
+    {% if vol.mom_abs is not none %}
+    <div style="font-size:13px;font-weight:700;
+      color:{% if vol.mom_abs > 0 %}var(--red-dark){% elif vol.mom_abs < 0 %}var(--green-dark){% else %}var(--muted){% endif %};">
+      {% if vol.mom_abs > 0 %}▲ +{{ vol.mom_abs }}{% elif vol.mom_abs < 0 %}▼ {{ vol.mom_abs }}{% else %}— flat{% endif %}
+      {% if vol.mom_pct is not none %}<span style="font-weight:500;color:var(--muted);">({{ vol.mom_pct }}% MoM)</span>{% endif %}
+    </div>
+    {% endif %}
+    {% if vol.sparkline and vol.sparkline | length >= 2 %}
+    {% set sp_max = vol.sparkline | max %}
+    {% set sp_min = vol.sparkline | min %}
+    {% set sp_range = sp_max - sp_min if sp_max != sp_min else 1 %}
+    <div style="display:flex;align-items:flex-end;gap:3px;height:32px;margin-top:10px;">
+      {% for v in vol.sparkline %}
+      <div style="flex:1;border-radius:2px 2px 0 0;min-height:3px;
+        background:{{ dist_color }};opacity:0.7;
+        height:{{ (((v - sp_min) / sp_range) * 28 + 4) | int }}px;"
+        title="{{ vol.sparkline_labels[loop.index0] }}: {{ v }} cases"></div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% endfor %}
+  </div>
+  </div>
+</div>
+{% endif %}
+
 {% if mdnc_trend.labels or wdnc_trend.labels or ednc_trend.labels %}
 <div class="card" style="margin-bottom:24px;">
   <div class="section-title" style="margin-bottom:16px;cursor:pointer;user-select:none;" onclick="toggleSection('sec-trend-chart')">
@@ -408,16 +469,18 @@
     if (!trend || !trend.labels || !trend.labels.length) return;
     var ci = 0;
     var datasets = trend.series.map(function(s) {
-      var clr = s.is_own ? OWN : COLS[ci++ % COLS.length];
+      var clr = s.is_total ? '#64748B' : (s.is_own ? OWN : COLS[ci++ % COLS.length]);
       return {
         label: s.firm,
         data: s.data,
         borderColor: clr,
         backgroundColor: 'transparent',
-        borderWidth: s.is_own ? 3 : 2,
-        pointRadius: 4,
-        pointHoverRadius: 6,
+        borderWidth: s.is_total ? 2 : (s.is_own ? 3 : 2),
+        borderDash: s.is_total ? [6, 3] : undefined,
+        pointRadius: s.is_total ? 2 : 4,
+        pointHoverRadius: s.is_total ? 4 : 6,
         tension: 0.3,
+        order: s.is_total ? 99 : 0,
       };
     });
     new Chart(document.getElementById('tchart-' + district), {

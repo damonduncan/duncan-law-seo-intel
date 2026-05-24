@@ -160,6 +160,11 @@ def filings(
     for (cid, _aid, dist, _ch, per), count in counts.items():
         firm_period_totals[(cid, dist, per)] += count
 
+    # District-level totals — total market volume per district per period
+    district_period_totals: dict = defaultdict(int)
+    for (cid, dist, per), val in firm_period_totals.items():
+        district_period_totals[(dist, per)] += val
+
     def build_trend(district: str) -> dict:
         pairs = [(cid, per) for (cid, dist, per) in firm_period_totals if dist == district]
         if not pairs:
@@ -176,8 +181,11 @@ def filings(
             data = [firm_period_totals.get((cid, district, per), 0) for per in district_periods]
             if any(d > 0 for d in data):
                 name = comp.name if len(comp.name) <= 24 else comp.name[:23] + "…"
-                series.append({"firm": name, "is_own": comp.is_own_firm, "data": data})
+                series.append({"firm": name, "is_own": comp.is_own_firm, "is_total": False, "data": data})
         series.sort(key=lambda s: (not s["is_own"], -(s["data"][-1] if s["data"] else 0)))
+        total_data = [district_period_totals.get((district, per), 0) for per in district_periods]
+        if any(v > 0 for v in total_data):
+            series.insert(0, {"firm": "Total Market", "is_own": False, "is_total": True, "data": total_data})
         return {"labels": labels, "series": series}
 
     mdnc_trend = build_trend("MDNC")
@@ -221,6 +229,32 @@ def filings(
     wdnc_mom = build_mom_table("WDNC")
     ednc_mom = build_mom_table("EDNC")
 
+    def build_district_volume(district: str) -> dict:
+        periods = sorted(
+            {per for (dist, per) in district_period_totals if dist == district},
+            reverse=True,
+        )
+        if not periods:
+            return {}
+        current_total = district_period_totals.get((district, periods[0]), 0)
+        prior_total = district_period_totals.get((district, periods[1]), 0) if len(periods) > 1 else None
+        mom_abs = (current_total - prior_total) if prior_total is not None else None
+        mom_pct = round((current_total - prior_total) / prior_total * 100) if prior_total else None
+        spark_periods = list(reversed(periods[:6]))
+        return {
+            "current_period":   periods[0].strftime("%b %Y"),
+            "current_total":    current_total,
+            "prior_total":      prior_total,
+            "mom_abs":          mom_abs,
+            "mom_pct":          mom_pct,
+            "sparkline":        [district_period_totals.get((district, p), 0) for p in spark_periods],
+            "sparkline_labels": [p.strftime("%b '%y") for p in spark_periods],
+        }
+
+    mdnc_vol = build_district_volume("MDNC")
+    wdnc_vol = build_district_volume("WDNC")
+    ednc_vol = build_district_volume("EDNC")
+
     mdnc_discovery = get_cached_results(db, "MDNC")
     wdnc_discovery = get_cached_results(db, "WDNC")
     ednc_discovery = get_cached_results(db, "EDNC")
@@ -259,4 +293,7 @@ def filings(
         "mdnc_mom":       mdnc_mom,
         "wdnc_mom":       wdnc_mom,
         "ednc_mom":       ednc_mom,
+        "mdnc_vol":       mdnc_vol,
+        "wdnc_vol":       wdnc_vol,
+        "ednc_vol":       ednc_vol,
     })
