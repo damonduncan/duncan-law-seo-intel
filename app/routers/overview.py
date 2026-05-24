@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -55,6 +55,7 @@ def dashboard(
     rank_changes = _build_rank_changes(db, own_firm)
     pacer_share = _build_pacer_share(db, own_firm)
     opportunity_matrix = _build_opportunity_matrix(db, own_firm, scorecard, pacer_share)
+    activity_feed = _build_activity_feed(db, own_firm)
 
     return templates.TemplateResponse("overview.html", {
         "request": request,
@@ -69,6 +70,7 @@ def dashboard(
         "rank_changes": rank_changes,
         "pacer_share": pacer_share,
         "opportunity_matrix": opportunity_matrix,
+        "activity_feed": activity_feed,
         "active_page": "dashboard",
     })
 
@@ -393,6 +395,95 @@ def _build_rank_changes(db: Session, own_firm) -> list:
     drops.sort(key=lambda x: abs(x["delta"] or 99), reverse=True)
     gains.sort(key=lambda x: abs(x["delta"] or 99), reverse=True)
     return drops + gains
+
+
+def _build_activity_feed(db: Session, own_firm) -> list:
+    """Chronological timeline of notable competitor events (alerts + review gains)."""
+    import json as _json
+    since_90 = datetime.now(timezone.utc) - timedelta(days=90)
+    since_60 = datetime.now(timezone.utc) - timedelta(days=60)
+    events = []
+
+    # — Alerts ————————————————————————————————————————————————————————
+    _type_meta = {
+        "pack_drop":             ("▼", "var(--red-dark)",    "Own firm dropped from 3-pack"),
+        "competitor_pack_entry": ("▲", "var(--orange)",      "Competitor entered 3-pack"),
+        "review_gap":            ("★", "var(--yellow-dark)", "Review gap alert"),
+        "pacer_volume_spike":    ("↑", "var(--purple)",      "PACER volume spike"),
+    }
+    alerts = (
+        db.query(Alert)
+        .filter(Alert.triggered_at >= since_90)
+        .order_by(Alert.triggered_at.desc())
+        .limit(20)
+        .all()
+    )
+    for a in alerts:
+        icon, color, default_label = _type_meta.get(a.alert_type, ("•", "var(--muted)", a.alert_type))
+        market_str = a.market.replace("_", " ").title() if a.market else ""
+        detail = a.detail or {}
+        msg    = detail.get("message", "")
+        rival  = detail.get("competitor", "")
+        summary = (msg or default_label)[:120]
+        events.append({
+            "ts":         a.triggered_at,
+            "event_type": a.alert_type,
+            "firm":       rival or "",
+            "market":     market_str,
+            "summary":    summary,
+            "color":      color,
+            "icon":       icon,
+            "acked":      bool(a.acknowledged_at),
+            "source":     "alert",
+        })
+
+    # — Competitor review gains ————————————————————————————————————————
+    review_snaps = (
+        db.query(ReviewSnapshot)
+        .filter(
+            ReviewSnapshot.snapped_at >= since_60,
+            ReviewSnapshot.source == "google",
+        )
+        .order_by(ReviewSnapshot.competitor_id, ReviewSnapshot.market, ReviewSnapshot.snapped_at.desc())
+        .all()
+    )
+    _by_cm: dict = defaultdict(list)
+    for s in review_snaps:
+        _by_cm[(s.competitor_id, s.market)].append(s)
+
+    comp_ids = {cid for (cid, _) in _by_cm}
+    comp_name_map: dict = {}
+    if comp_ids:
+        comp_name_map = {
+            c.id: c.name
+            for c in db.query(Competitor).filter(Competitor.id.in_(comp_ids)).all()
+        }
+
+    for (cid, market), snaps in _by_cm.items():
+        if len(snaps) < 2:
+            continue
+        cur, prev = snaps[0], snaps[1]
+        if cur.review_count is None or prev.review_count is None:
+            continue
+        delta = cur.review_count - prev.review_count
+        if delta < 3:
+            continue
+        name = comp_name_map.get(cid, "Unknown")
+        market_str = (market or "").replace("_", " ").title()
+        events.append({
+            "ts":         cur.snapped_at,
+            "event_type": "review_gain",
+            "firm":       name,
+            "market":     market_str,
+            "summary":    f"Gained {delta} Google review{'s' if delta != 1 else ''} (now {cur.review_count:,})",
+            "color":      "var(--orange)",
+            "icon":       "★",
+            "acked":      True,
+            "source":     "reviews",
+        })
+
+    events.sort(key=lambda e: e["ts"], reverse=True)
+    return events[:30]
 
 
 def _build_opportunity_matrix(db: Session, own_firm, scorecard: list, pacer_share: dict) -> list:
