@@ -175,6 +175,92 @@
     {% else %}No ranking data collected for this firm yet. Rankings are collected weekly.{% endif %}
   </p>
   {% endif %}
+
+  {% if comp_rank_chart %}
+  <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:14px;">90-Day Rank Trend</div>
+    {% if comp_rank_chart | length > 1 %}
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;">
+      {% for market in comp_rank_chart | sort %}
+      <button id="ctab-{{ market }}" onclick="showCompTab('{{ market }}')"
+        style="padding:4px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surface-2);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;">
+        {{ market | replace('_', ' ') | title }}
+      </button>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% for market in comp_rank_chart | sort %}
+    <div id="cpanel-{{ market }}" style="display:none;position:relative;height:200px;">
+      <canvas id="cchart-{{ market }}"></canvas>
+    </div>
+    {% endfor %}
+  </div>
+  <script>
+  (function() {
+    var chartData = {{ comp_rank_chart | tojson }};
+    var built = {};
+    window.showCompTab = function(market) {
+      Object.keys(chartData).sort().forEach(function(m) {
+        var tab = document.getElementById('ctab-' + m);
+        var panel = document.getElementById('cpanel-' + m);
+        if (tab) { tab.style.background = 'var(--surface-2)'; tab.style.color = 'var(--muted)'; tab.style.borderColor = 'var(--border)'; }
+        if (panel) panel.style.display = 'none';
+      });
+      var tab = document.getElementById('ctab-' + market);
+      var panel = document.getElementById('cpanel-' + market);
+      if (tab) { tab.style.background = 'var(--accent)'; tab.style.color = '#fff'; tab.style.borderColor = 'var(--accent)'; }
+      if (panel) { panel.style.display = ''; buildChart(market); }
+    };
+    function buildChart(market) {
+      if (built[market]) return;
+      built[market] = true;
+      var d = chartData[market];
+      if (!d) return;
+      var datasets = d.series.map(function(s) {
+        return {
+          label: s.label,
+          data: s.data,
+          borderColor: s.color,
+          backgroundColor: 'transparent',
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          tension: 0.3,
+          spanGaps: true,
+        };
+      });
+      new Chart(document.getElementById('cchart-' + market), {
+        type: 'line',
+        data: { labels: d.labels, datasets: datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } },
+            tooltip: { callbacks: { label: function(ctx) {
+              var v = ctx.parsed.y;
+              return ' ' + ctx.dataset.label + ': ' + (v != null ? '#' + v : 'Not ranked');
+            }}},
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 }, maxRotation: 0 } },
+            y: {
+              reverse: true,
+              min: 1,
+              ticks: { precision: 0, stepSize: 1 },
+              title: { display: true, text: 'Rank  (#1 = best)', font: { size: 11 }, color: '#64748B' },
+            },
+          },
+        },
+      });
+    }
+    var first = Object.keys(chartData).sort()[0];
+    if (first) showCompTab(first);
+  })();
+  </script>
+  {% endif %}
+
   </div><!-- /sec-cd-rankings -->
 </div>
 

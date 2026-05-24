@@ -191,6 +191,51 @@ def competitor_detail(
                     r.rank_position if r.in_pack else None
                 )
 
+    # ── 90-day rank trend for competitor ─────────────────────────────────────
+    _since_90 = datetime.now(timezone.utc) - timedelta(days=90)
+    trend_rows = (
+        db.query(LocalPackRanking)
+        .filter(
+            LocalPackRanking.competitor_id == comp_id,
+            LocalPackRanking.in_pack == True,
+            LocalPackRanking.scraped_at >= _since_90,
+        )
+        .order_by(LocalPackRanking.scraped_at)
+        .all()
+    )
+
+    _suffixes = [" Greensboro", " Winston-Salem", " High Point", " Charlotte",
+                 " Salisbury", " Asheville", " Raleigh", " Fayetteville",
+                 " Wilmington", " Wilson"]
+
+    def _strip(kw: str) -> str:
+        for s in _suffixes:
+            if kw.endswith(s):
+                return kw[:-len(s)]
+        return kw
+
+    _trend_raw: dict = defaultdict(lambda: defaultdict(dict))  # market → kw_short → date_str → rank
+    for r in trend_rows:
+        _trend_raw[r.market][_strip(r.keyword or "")][r.scraped_at.strftime("%Y-%m-%d")] = r.rank_position
+
+    _kw_colors = ["#F97316", "#2563EB", "#10B981", "#8B5CF6", "#EF4444", "#14B8A6"]
+    comp_rank_chart: dict = {}
+    for market, kw_dict in _trend_raw.items():
+        all_dates = sorted({d for days in kw_dict.values() for d in days})
+        if len(all_dates) < 2:
+            continue
+        series = []
+        for i, (kw, days) in enumerate(sorted(kw_dict.items())):
+            series.append({
+                "label": kw,
+                "color": _kw_colors[i % len(_kw_colors)],
+                "data": [days.get(d) for d in all_dates],
+            })
+        comp_rank_chart[market] = {
+            "labels": [d[5:].replace("-", "/") for d in all_dates],
+            "series": series,
+        }
+
     # ── PACER filing history ─────────────────────────────────────────────────
     filing_snaps = db.query(FilingSnapshot).filter(
         FilingSnapshot.competitor_id == comp_id
@@ -317,6 +362,7 @@ def competitor_detail(
         "pack_presence":      pack_presence,
         "own_firm":           own_firm,
         "own_positions":      own_positions,
+        "comp_rank_chart":    comp_rank_chart,
         "pacer_data":         pacer_data,
         "total_count":        total_count,
         "total_prev":         total_prev,
