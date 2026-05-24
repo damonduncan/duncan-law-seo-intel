@@ -349,6 +349,108 @@
 </div>
 {% endmacro %}
 
+{% if mdnc_trend.labels or wdnc_trend.labels or ednc_trend.labels %}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" style="margin-bottom:16px;">
+    <span class="section-icon teal">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+    </span>
+    Filing Volume Trends
+  </div>
+
+  <!-- District tabs -->
+  <div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:12px;">
+    {% for tab_id, tab_label, tab_trend in [('mdnc','MDNC',mdnc_trend),('wdnc','WDNC',wdnc_trend),('ednc','EDNC',ednc_trend)] %}
+    {% if tab_trend.labels %}
+    <button id="ttab-{{ tab_id }}" onclick="showTrendTab('{{ tab_id }}')"
+      style="padding:4px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surface-2);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;">
+      {{ tab_label }}
+    </button>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  {% for tab_id, tab_trend in [('mdnc',mdnc_trend),('wdnc',wdnc_trend),('ednc',ednc_trend)] %}
+  {% if tab_trend.labels %}
+  <div id="tpanel-{{ tab_id }}" style="display:none;">
+    <div style="position:relative;height:220px;">
+      <canvas id="tchart-{{ tab_id }}"></canvas>
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>
+
+<script>
+(function() {
+  var OWN  = '#2563EB';
+  var COLS = ['#F97316','#10B981','#8B5CF6','#14B8A6','#EF4444','#EAB308','#EC4899','#6366F1'];
+  var built = {};
+  var trendData = {
+    mdnc: {{ mdnc_trend | tojson }},
+    wdnc: {{ wdnc_trend | tojson }},
+    ednc: {{ ednc_trend | tojson }},
+  };
+
+  function buildChart(district) {
+    if (built[district]) return;
+    built[district] = true;
+    var trend = trendData[district];
+    if (!trend || !trend.labels || !trend.labels.length) return;
+    var ci = 0;
+    var datasets = trend.series.map(function(s) {
+      var clr = s.is_own ? OWN : COLS[ci++ % COLS.length];
+      return {
+        label: s.firm,
+        data: s.data,
+        borderColor: clr,
+        backgroundColor: 'transparent',
+        borderWidth: s.is_own ? 3 : 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        tension: 0.3,
+      };
+    });
+    new Chart(document.getElementById('tchart-' + district), {
+      type: 'line',
+      data: { labels: trend.labels, datasets: datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } },
+          tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y + ' cases'; } } },
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true, ticks: { precision: 0 } },
+        },
+      },
+    });
+  }
+
+  window.showTrendTab = function(district) {
+    document.querySelectorAll('[id^="ttab-"]').forEach(function(b) {
+      b.style.background = 'var(--surface-2)';
+      b.style.color = 'var(--muted)';
+      b.style.borderColor = 'var(--border)';
+    });
+    document.querySelectorAll('[id^="tpanel-"]').forEach(function(p) { p.style.display = 'none'; });
+    var tab = document.getElementById('ttab-' + district);
+    if (tab) { tab.style.background = 'var(--accent)'; tab.style.color = '#fff'; tab.style.borderColor = 'var(--accent)'; }
+    var panel = document.getElementById('tpanel-' + district);
+    if (panel) { panel.style.display = ''; }
+    buildChart(district);
+  };
+
+  // Activate first available tab on load
+  var first = ['mdnc','wdnc','ednc'].find(function(d) { return trendData[d] && trendData[d].labels && trendData[d].labels.length; });
+  if (first) showTrendTab(first);
+})();
+</script>
+{% endif %}
+
 {{ district_table(mdnc_rows, "MDNC — Middle District of NC") }}
 {{ discovery_section(mdnc_discovery, "MDNC", "MDNC", mdnc_tracked) }}
 

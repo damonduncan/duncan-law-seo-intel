@@ -31,25 +31,8 @@ def filings(
             "has_data": False,
         })
 
-    # Two most recent period_start values so we can show current + prior month
-    periods = (
-        db.query(FilingSnapshot.period_start)
-        .distinct()
-        .order_by(FilingSnapshot.period_start.desc())
-        .limit(2)
-        .all()
-    )
-    current_period = periods[0][0] if periods else None
-    prior_period = periods[1][0] if len(periods) > 1 else None
-
-    # Load all snapshots for both periods
-    snapshots = (
-        db.query(FilingSnapshot)
-        .filter(FilingSnapshot.period_start.in_(
-            [p[0] for p in periods]
-        ))
-        .all()
-    )
+    # Load all snapshots — used for both trend charts and current-period tables
+    all_snapshots = db.query(FilingSnapshot).all()
 
     # attorney_id → CompetitorAttorney
     attorney_map = {
@@ -62,13 +45,17 @@ def filings(
         for c in db.query(Competitor).filter(Competitor.active == True).all()
     }
 
-    # Build: (competitor_id, attorney_id, district, chapter, period) → count
-    # Use MAX when duplicates exist (stale 0-rows from partial previous runs)
+    # De-dupe: max case_count per (competitor_id, attorney_id, district, chapter, period_start)
     counts: dict = {}
-    for s in snapshots:
+    for s in all_snapshots:
         key = (s.competitor_id, s.attorney_id, s.district, s.chapter, s.period_start)
         if key not in counts or s.case_count > counts[key]:
             counts[key] = s.case_count
+
+    # Derive current and prior period from all loaded data
+    distinct_periods = sorted(set(per for (_, _, _, _, per) in counts), reverse=True)
+    current_period = distinct_periods[0] if distinct_periods else None
+    prior_period = distinct_periods[1] if len(distinct_periods) > 1 else None
 
     def make_firm_groups(district: str) -> list:
         """
@@ -156,6 +143,35 @@ def filings(
     wdnc_rows = make_firm_groups("WDNC")
     ednc_rows = make_firm_groups("EDNC")
 
+    # Aggregate case totals per (competitor, district, period) for trend charts
+    firm_period_totals: dict = defaultdict(int)
+    for (cid, _aid, dist, _ch, per), count in counts.items():
+        firm_period_totals[(cid, dist, per)] += count
+
+    def build_trend(district: str) -> dict:
+        pairs = [(cid, per) for (cid, dist, per) in firm_period_totals if dist == district]
+        if not pairs:
+            return {"labels": [], "series": []}
+        district_periods = sorted(set(per for (_, per) in pairs))
+        if len(district_periods) < 2:
+            return {"labels": [], "series": []}
+        labels = [p.strftime("%b '%y") for p in district_periods]
+        series = []
+        for cid in set(cid for (cid, _) in pairs):
+            comp = comp_map.get(cid)
+            if not comp:
+                continue
+            data = [firm_period_totals.get((cid, district, per), 0) for per in district_periods]
+            if any(d > 0 for d in data):
+                name = comp.name if len(comp.name) <= 24 else comp.name[:23] + "…"
+                series.append({"firm": name, "is_own": comp.is_own_firm, "data": data})
+        series.sort(key=lambda s: (not s["is_own"], -(s["data"][-1] if s["data"] else 0)))
+        return {"labels": labels, "series": series}
+
+    mdnc_trend = build_trend("MDNC")
+    wdnc_trend = build_trend("WDNC")
+    ednc_trend = build_trend("EDNC")
+
     mdnc_discovery = get_cached_results(db, "MDNC")
     wdnc_discovery = get_cached_results(db, "WDNC")
     ednc_discovery = get_cached_results(db, "EDNC")
@@ -194,4 +210,7 @@ def filings(
         "mdnc_tracked":   tracked_last_names["MDNC"],
         "wdnc_tracked":   tracked_last_names["WDNC"],
         "ednc_tracked":   tracked_last_names["EDNC"],
+        "mdnc_trend":     mdnc_trend,
+        "wdnc_trend":     wdnc_trend,
+        "ednc_trend":     ednc_trend,
     })
