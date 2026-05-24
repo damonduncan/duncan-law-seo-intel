@@ -65,13 +65,14 @@
       <th>Market</th>
       <th>Position</th>
       <th>Δ Week</th>
+      <th>Trend</th>
       <th>Last Checked</th>
     </tr></thead>
     <tbody>
     {% set ns = namespace(prev_kw='__none__') %}
     {% for p in positions %}
     {% if p.keyword_short != ns.prev_kw and ns.prev_kw != '__none__' %}
-    <tr><td colspan="5" style="padding:0;height:1px;background:var(--border);"></td></tr>
+    <tr><td colspan="6" style="padding:0;height:1px;background:var(--border);"></td></tr>
     {% endif %}
     {% set ns.prev_kw = p.keyword_short %}
     <tr>
@@ -104,6 +105,18 @@
           {% endif %}
         {% else %}
           <span style="font-size:13px;color:var(--muted);">—</span>
+        {% endif %}
+      </td>
+      <td style="width:72px;padding:8px 10px 8px 4px;">
+        {% if p.market in chart_data %}
+          {% set matching = chart_data[p.market].series | selectattr('label', 'equalto', p.keyword_short) | list %}
+          {% if matching %}
+            <span class="sparkline" data-spark="{{ matching[0].data | tojson }}" title="90-day rank trend — lower is better"></span>
+          {% else %}
+            <span style="color:var(--muted-2);font-size:13px;">—</span>
+          {% endif %}
+        {% else %}
+          <span style="color:var(--muted-2);font-size:13px;">—</span>
         {% endif %}
       </td>
       <td style="font-size:14px;color:var(--muted);">
@@ -541,4 +554,32 @@
 {% endif %}
 
 {% endif %}
+
+<script>
+(function() {
+  document.querySelectorAll('.sparkline[data-spark]').forEach(function(el) {
+    var data = JSON.parse(el.dataset.spark);
+    var vals = data.filter(function(v) { return v !== null && v !== undefined; });
+    if (vals.length < 2) { el.textContent = '—'; return; }
+    var W = 66, H = 22, pad = 2;
+    var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+    var range = mx - mn || 1;
+    var n = data.length;
+    var points = [];
+    data.forEach(function(v, i) {
+      if (v === null || v === undefined) return;
+      var x = pad + (i / Math.max(n - 1, 1)) * (W - 2 * pad);
+      // Lower rank = better; lower rank number → higher on chart (smaller y in SVG)
+      var y = pad + ((v - mn) / range) * (H - 2 * pad);
+      points.push(x.toFixed(1) + ',' + y.toFixed(1));
+    });
+    var first = vals[0], last = vals[vals.length - 1];
+    var clr = last < first ? '#16a34a' : (last > first ? '#dc2626' : '#94a3b8');
+    el.innerHTML =
+      '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H +
+      '" style="display:block;"><polyline points="' + points.join(' ') +
+      '" fill="none" stroke="' + clr + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  });
+})();
+</script>
 {% endblock %}
