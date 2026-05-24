@@ -147,6 +147,11 @@ def rankings(
         })
     positions.sort(key=lambda x: (x["keyword"] or "", x["city"] or ""))
 
+    kw_order = sorted(set(p["keyword_short"] for p in positions))
+    position_grid: dict = {}
+    for p in positions:
+        position_grid.setdefault(p["market"], {})[p["keyword_short"]] = p
+
     # Most recent date with pack data — own-firm markets
     today = date.today()
     _own_latest = (
@@ -279,4 +284,6 @@ def rankings(
         "WDNC_DISPLAY": WDNC_DISPLAY,
         "WDNC_ORDER": WDNC_ORDER,
         "MARKET_ORDER": MARKET_ORDER,
+        "position_grid": position_grid,
+        "kw_order": kw_order,
     })
