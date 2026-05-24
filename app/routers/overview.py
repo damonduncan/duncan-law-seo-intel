@@ -70,14 +70,25 @@ def _build_scorecard(db: Session, own_firm) -> list:
     if not own_firm:
         return []
 
-    # Today's own-firm rankings — count in_pack vs total per market
-    today = date.today()
+    # Use most recent date with actual own-firm pack data (not hardcoded today)
+    _latest = (
+        db.query(cast(LocalPackRanking.scraped_at, Date))
+        .filter(
+            LocalPackRanking.competitor_id == own_firm.id,
+            LocalPackRanking.is_own_firm == True,
+            LocalPackRanking.in_pack == True,
+        )
+        .order_by(LocalPackRanking.scraped_at.desc())
+        .first()
+    )
+    rank_date = _latest[0] if _latest else date.today()
+
     rank_rows = (
         db.query(LocalPackRanking)
         .filter(
             LocalPackRanking.competitor_id == own_firm.id,
             LocalPackRanking.is_own_firm == True,
-            cast(LocalPackRanking.scraped_at, Date) == today,
+            cast(LocalPackRanking.scraped_at, Date) == rank_date,
         )
         .all()
     )
@@ -87,6 +98,63 @@ def _build_scorecard(db: Session, own_firm) -> list:
         m["total"] += 1
         if r.in_pack:
             m["in_pack"] += 1
+
+    # Top competitor per market (#1 in pack on the same date)
+    comp_pack_rows = (
+        db.query(LocalPackRanking)
+        .filter(
+            LocalPackRanking.in_pack == True,
+            LocalPackRanking.is_own_firm == False,
+            LocalPackRanking.market.in_(MARKET_ORDER),
+            cast(LocalPackRanking.scraped_at, Date) == rank_date,
+        )
+        .order_by(LocalPackRanking.market, LocalPackRanking.rank_position)
+        .all()
+    )
+    top_comp_id_by_market: dict = {}
+    for r in comp_pack_rows:
+        if r.market not in top_comp_id_by_market:
+            top_comp_id_by_market[r.market] = r.competitor_id
+
+    # Competitor names
+    _comp_ids = set(top_comp_id_by_market.values())
+    comp_name_map: dict = {}
+    if _comp_ids:
+        comp_name_map = {
+            c.id: c.name
+            for c in db.query(Competitor).filter(Competitor.id.in_(_comp_ids)).all()
+        }
+
+    # Most recent review count per top competitor (deduplicated across market rows)
+    import json as _json
+    top_comp_reviews: dict = {}  # competitor_id → review_count
+    if _comp_ids:
+        comp_snaps = (
+            db.query(ReviewSnapshot)
+            .filter(
+                ReviewSnapshot.competitor_id.in_(_comp_ids),
+                ReviewSnapshot.source == "google",
+            )
+            .order_by(ReviewSnapshot.snapped_at.desc())
+            .all()
+        )
+        seen_fps: dict = {}  # competitor_id → set of fingerprints
+        for s in comp_snaps:
+            fp = _json.dumps(s.snapshot_data, sort_keys=True) if s.snapshot_data else str(id(s))
+            seen_fps.setdefault(s.competitor_id, set())
+            if fp not in seen_fps[s.competitor_id]:
+                seen_fps[s.competitor_id].add(fp)
+                top_comp_reviews[s.competitor_id] = (
+                    top_comp_reviews.get(s.competitor_id, 0) + (s.review_count or 0)
+                )
+
+    top_comp_by_market: dict = {}
+    for market, cid in top_comp_id_by_market.items():
+        if cid in comp_name_map:
+            top_comp_by_market[market] = {
+                "name": comp_name_map[cid],
+                "reviews": top_comp_reviews.get(cid),
+            }
 
     # Latest Google review count per own-firm market
     review_snaps = (
@@ -121,12 +189,13 @@ def _build_scorecard(db: Session, own_firm) -> list:
             status = "needs_attention"
 
         scorecard.append({
-            "market": market,
-            "display": market.replace("_", " ").title(),
-            "in_pack": in_pack,
-            "total": total,
-            "reviews": reviews,
-            "status": status,
+            "market":   market,
+            "display":  market.replace("_", " ").title(),
+            "in_pack":  in_pack,
+            "total":    total,
+            "reviews":  reviews,
+            "status":   status,
+            "top_comp": top_comp_by_market.get(market),
         })
 
     return scorecard

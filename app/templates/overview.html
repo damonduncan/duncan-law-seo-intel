@@ -243,7 +243,20 @@
       </div>
       {% endif %}
       {% if m.reviews is not none %}
-      <div style="font-size:15px;color:var(--muted);">{{ m.reviews }} reviews</div>
+      <div style="font-size:15px;color:var(--muted);">{{ m.reviews }} review{{ 's' if m.reviews != 1 else '' }}</div>
+      {% endif %}
+      {% if m.top_comp %}
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid {{ border_c }};font-size:13px;color:var(--muted-2);line-height:1.4;">
+        <span style="font-weight:600;color:var(--muted);">{{ m.top_comp.name | truncate(22, True, '…') }}</span>
+        {% if m.top_comp.reviews is not none %}
+        <span style="float:right;font-weight:700;
+          {% if m.reviews is not none and m.top_comp.reviews > (m.reviews or 0) + 10 %}color:var(--red-dark);
+          {% elif m.reviews is not none and m.top_comp.reviews <= (m.reviews or 0) %}color:var(--green-dark);
+          {% else %}color:var(--muted);{% endif %}">
+          {{ m.top_comp.reviews }}
+        </span>
+        {% endif %}
+      </div>
       {% endif %}
       {% endif %}
     </div>
