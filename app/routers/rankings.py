@@ -147,14 +147,32 @@ def rankings(
         })
     positions.sort(key=lambda x: (x["keyword"] or "", x["city"] or ""))
 
-    # Current 3-pack — own-firm markets only (for full pack table)
+    # Most recent date with pack data — own-firm markets
     today = date.today()
+    _own_latest = (
+        db.query(cast(LocalPackRanking.scraped_at, Date))
+        .filter(LocalPackRanking.market.in_(OWN_FIRM_MARKETS), LocalPackRanking.in_pack == True)
+        .order_by(LocalPackRanking.scraped_at.desc())
+        .first()
+    )
+    own_pack_date = _own_latest[0] if _own_latest else today
+
+    # Most recent date with pack data — EDNC markets
+    _ednc_latest = (
+        db.query(cast(LocalPackRanking.scraped_at, Date))
+        .filter(LocalPackRanking.market.in_(EDNC_MARKETS), LocalPackRanking.in_pack == True)
+        .order_by(LocalPackRanking.scraped_at.desc())
+        .first()
+    )
+    ednc_pack_date = _ednc_latest[0] if _ednc_latest else today
+
+    # Current 3-pack — own-firm markets only (for full pack table)
     current_pack = (
         db.query(LocalPackRanking)
         .filter(
             LocalPackRanking.in_pack == True,
             LocalPackRanking.market.in_(OWN_FIRM_MARKETS),
-            cast(LocalPackRanking.scraped_at, Date) == today,
+            cast(LocalPackRanking.scraped_at, Date) == own_pack_date,
         )
         .order_by(LocalPackRanking.market, LocalPackRanking.keyword, LocalPackRanking.rank_position)
         .all()
@@ -167,7 +185,7 @@ def rankings(
         .filter(
             LocalPackRanking.in_pack == True,
             LocalPackRanking.market.in_(EDNC_MARKETS),
-            cast(LocalPackRanking.scraped_at, Date) == today,
+            cast(LocalPackRanking.scraped_at, Date) == ednc_pack_date,
         )
         .order_by(LocalPackRanking.market, LocalPackRanking.keyword, LocalPackRanking.rank_position)
         .all()
