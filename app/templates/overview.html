@@ -57,15 +57,13 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
       </a>
       <div class="hero-stats" style="margin-top:20px;">
-        {% if scorecard %}
+        {% if scorecard and ns.total_kw > 0 %}
         <div class="hero-stat">
           <span class="hero-stat-val">{{ ns.total_in }}/{{ ns.total_kw }}</span>
           <span class="hero-stat-lbl">Keywords in 3-pack</span>
-          {% if ns.total_kw > 0 %}
           <div style="margin-top:5px;width:72px;height:3px;background:rgba(255,255,255,.2);border-radius:2px;">
             <div style="height:100%;width:{{ (ns.total_in / ns.total_kw * 100)|int }}%;background:rgba(255,255,255,.75);border-radius:2px;"></div>
           </div>
-          {% endif %}
         </div>
         {% endif %}
         <div class="hero-stat">
