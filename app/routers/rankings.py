@@ -173,6 +173,31 @@ def rankings(
         for market, kws in sorted(ednc_by_market.items())
     }
 
+    # Keyword gap analysis: keyword_short → market → {firms: [{rank, name, is_own}], own_present: bool}
+    gap_by_kw: dict = defaultdict(lambda: defaultdict(list))
+    for r in current_pack:
+        kw_short = _strip_city(r.keyword or "", r.market)
+        firm_name = (r.result_data.get("title") if r.result_data else None)
+        if r.is_own_firm:
+            firm_name = own_firm.name if own_firm else "Duncan Law"
+        gap_by_kw[kw_short][r.market].append({
+            "rank": r.rank_position,
+            "name": firm_name or "—",
+            "is_own": bool(r.is_own_firm),
+        })
+
+    tracked_kws = sorted(set(_strip_city(p["keyword"] or "", p["market"]) for p in positions))
+    gap_data: dict = {}
+    for kw in tracked_kws:
+        markets_data = {}
+        for market in MARKET_ORDER:
+            firms = sorted(gap_by_kw[kw].get(market, []), key=lambda x: x["rank"])
+            markets_data[market] = {
+                "firms": firms,
+                "own_present": any(f["is_own"] for f in firms),
+            }
+        gap_data[kw] = markets_data
+
     in_pack_count = sum(1 for r in latest_by_keyword.values() if r.in_pack)
     total_keywords = len(latest_by_keyword)
     has_data = total_keywords > 0
@@ -188,6 +213,7 @@ def rankings(
         "positions": positions,
         "current_pack": current_pack,
         "chart_data": chart_data,
+        "gap_data": gap_data,
         "own_firm": own_firm,
         "ednc_by_market": ednc_by_market,
         "EDNC_DISPLAY": EDNC_DISPLAY,
