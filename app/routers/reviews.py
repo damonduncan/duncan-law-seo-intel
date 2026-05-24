@@ -99,19 +99,23 @@ def reviews(
     for c in competitors:
         google_snaps = snap_index.get(c.id, {}).get("google", [])
         prev_google = prev_index.get(c.id, {}).get("google", [])
-        g = google_snaps[0] if google_snaps else None
-        prev_g = prev_google[0] if prev_google else None
 
-        delta = None
-        if g and g.review_count is not None and prev_g and prev_g.review_count is not None:
-            delta = g.review_count - prev_g.review_count
+        # Sum counts and average ratings across all locations for this competitor
+        counts = [s.review_count for s in google_snaps if s.review_count is not None]
+        ratings = [float(s.rating) for s in google_snaps if s.rating]
+        prev_counts = [s.review_count for s in prev_google if s.review_count is not None]
+
+        total_count = sum(counts) if counts else None
+        avg_rating = round(sum(ratings) / len(ratings), 1) if ratings else None
+        prev_total = sum(prev_counts) if prev_counts else None
+        delta = (total_count - prev_total) if (total_count is not None and prev_total is not None) else None
 
         comp_rows.append({
             "name": c.name,
-            "google_rating": float(g.rating) if g and g.rating else None,
-            "google_count": g.review_count if g else None,
+            "google_rating": avg_rating,
+            "google_count": total_count,
             "count_delta": delta,
-            "last_updated": g.snapped_at if g else None,
+            "last_updated": google_snaps[0].snapped_at if google_snaps else None,
         })
 
     comp_rows.sort(key=lambda r: r["google_count"] or 0, reverse=True)
