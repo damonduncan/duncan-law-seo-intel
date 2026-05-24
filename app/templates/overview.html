@@ -331,7 +331,7 @@
     <thead><tr><th>Firm</th><th>Attorneys</th><th>Google Place ID</th></tr></thead>
     <tbody>
     {% for c in competitors %}
-    <tr>
+    <tr{% if loop.index > 10 %} class="comp-overflow" style="display:none;"{% endif %}>
       <td>
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="firm-badge">{{ c.name[:2] | upper }}</div>
@@ -352,6 +352,22 @@
     {% endfor %}
     </tbody>
   </table>
+  {% if competitors | length > 10 %}
+  <div style="margin-top:12px;">
+    <button id="comp-toggle" onclick="toggleCompetitors()" class="btn btn-ghost btn-sm">
+      Show {{ competitors | length - 10 }} more →
+    </button>
+  </div>
+  <script>
+  function toggleCompetitors() {
+    var rows = document.querySelectorAll('.comp-overflow');
+    var btn = document.getElementById('comp-toggle');
+    var hidden = rows[0].style.display === 'none';
+    rows.forEach(function(r) { r.style.display = hidden ? '' : 'none'; });
+    btn.textContent = hidden ? '← Show less' : 'Show {{ competitors | length - 10 }} more →';
+  }
+  </script>
+  {% endif %}
   {% else %}
   <p style="color:var(--muted);font-size:15px;">No competitors configured yet. Add them to <code>config/competitors.yaml</code> and redeploy.</p>
   {% endif %}
