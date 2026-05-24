@@ -287,6 +287,323 @@
 </div>
 {% endif %}
 
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- DISTRICT REVIEW INTELLIGENCE                                              -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+
+<!-- MDNC Review Intelligence -->
+{% if mdnc_comps or own_mdnc_snaps %}
+<div style="border-radius:var(--r);background:rgba(37,99,235,.07);border-top:4px solid var(--accent);padding:18px 24px;margin:32px 0 20px;">
+  <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+    <div style="font-size:32px;font-weight:900;color:var(--accent);letter-spacing:-.03em;line-height:1;">MDNC</div>
+    <div style="width:1px;height:40px;background:rgba(37,99,235,.2);flex-shrink:0;"></div>
+    <div>
+      <div style="font-size:16px;font-weight:700;color:var(--text);">Middle District of North Carolina</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:2px;">Greensboro · Winston-Salem · High Point · Salisbury · Durham</div>
+    </div>
+    <span class="chip chip-blue" style="margin-left:auto;font-size:12px;">Duncan Law active</span>
+  </div>
+</div>
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-reviews-mdnc')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon" style="background:rgba(37,99,235,.1);color:var(--accent);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </span>
+    MDNC Review Intelligence
+    <span class="chip chip-blue" style="margin-left:8px;font-size:12px;">Duncan Law active</span>
+    <span id="chev-sec-reviews-mdnc" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-reviews-mdnc" data-collapsible="1">
+  <p style="color:var(--muted);font-size:14px;margin-bottom:16px;line-height:1.6;">Google review counts and ratings for Middle District NC firms. Duncan Law offices shown in blue at top.</p>
+  {% set mdnc_ns = namespace(max_count=1) %}
+  {% for s in own_mdnc_snaps %}{% if s.review_count and s.review_count > mdnc_ns.max_count %}{% set mdnc_ns.max_count = s.review_count %}{% endif %}{% endfor %}
+  {% for r in mdnc_comps %}{% if r.google_count and r.google_count > mdnc_ns.max_count %}{% set mdnc_ns.max_count = r.google_count %}{% endif %}{% endfor %}
+  <table>
+    <thead><tr>
+      <th>Firm</th>
+      <th>Rating</th>
+      <th>Reviews</th>
+      <th>Δ Week</th>
+    </tr></thead>
+    <tbody>
+    {% for s in own_mdnc_snaps %}
+    <tr style="background:rgba(37,99,235,.04);">
+      <td>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="firm-badge" style="background:rgba(37,99,235,.15);color:var(--accent);">DL</div>
+          <span style="font-weight:700;color:var(--accent);">Duncan Law — {{ s.market | replace('_',' ') | title }}</span>
+        </div>
+      </td>
+      <td>
+        {% if s.rating %}
+        <span style="color:var(--yellow);font-size:14px;letter-spacing:.5px;">{% for i in range(5) %}{% if loop.index <= s.rating|int %}★{% else %}☆{% endif %}{% endfor %}</span>
+        <strong style="font-size:14px;color:var(--yellow-dark);margin-left:4px;">{{ "%.1f"|format(s.rating|float) }}</strong>
+        {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+      </td>
+      <td>
+        {% if s.review_count is not none %}
+        <div style="display:flex;align-items:center;gap:8px;min-width:100px;">
+          <div style="flex:1;height:5px;background:rgba(37,99,235,.15);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:{{ (s.review_count / mdnc_ns.max_count * 100)|int }}%;background:var(--accent);border-radius:3px;"></div>
+          </div>
+          <span style="font-weight:700;font-size:14px;color:var(--accent);">{{ s.review_count }}</span>
+        </div>
+        {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+      </td>
+      <td>
+        {% if s.market in own_snap_deltas %}
+        {% set d = own_snap_deltas[s.market] %}
+        <span style="font-size:13px;font-weight:700;color:{% if d > 0 %}var(--green-dark){% elif d < 0 %}var(--red-dark){% else %}var(--muted){% endif %};">
+          {% if d > 0 %}+{{ d }}{% elif d == 0 %}+0{% else %}{{ d }}{% endif %}
+        </span>
+        {% else %}<span style="color:var(--muted-2);font-size:13px;">—</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    {% for r in mdnc_comps %}
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="firm-badge" style="background:var(--surface-3);color:var(--muted);">{{ r.name[:2] | upper }}</div>
+          <span style="font-weight:500;">{{ r.name }}</span>
+        </div>
+      </td>
+      <td>
+        {% if r.google_rating is not none %}
+        <span style="color:var(--yellow);font-size:14px;letter-spacing:.5px;">{% for i in range(5) %}{% if loop.index <= r.google_rating|int %}★{% else %}☆{% endif %}{% endfor %}</span>
+        <strong style="font-size:14px;{% if r.google_rating >= 4.5 %}color:var(--green-dark){% elif r.google_rating >= 4.0 %}color:var(--yellow-dark){% else %}color:var(--red-dark){% endif %};margin-left:4px;">{{ "%.1f"|format(r.google_rating) }}</strong>
+        {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+      </td>
+      <td>
+        {% if r.google_count is not none %}
+        <div style="display:flex;align-items:center;gap:8px;min-width:100px;">
+          <div style="flex:1;height:5px;background:var(--surface-3);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:{{ (r.google_count / mdnc_ns.max_count * 100)|int }}%;background:var(--accent);border-radius:3px;"></div>
+          </div>
+          <span style="font-weight:600;font-size:14px;">{{ "{:,}".format(r.google_count) }}</span>
+          {% if r.count_delta is not none and r.count_delta > 0 %}
+          <span style="font-size:11px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(249,115,22,.12);color:var(--orange-dark);">+{{ r.count_delta }}</span>
+          {% endif %}
+        </div>
+        {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+      </td>
+      <td>
+        {% if r.count_delta is not none %}
+        <span style="font-size:13px;font-weight:700;color:{% if r.count_delta > 0 %}var(--green-dark){% elif r.count_delta < 0 %}var(--red-dark){% else %}var(--muted){% endif %};">
+          {% if r.count_delta > 0 %}+{{ r.count_delta }}{% elif r.count_delta == 0 %}={% else %}{{ r.count_delta }}{% endif %}
+        </span>
+        {% else %}<span style="color:var(--muted-2);font-size:13px;">—</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- WDNC Review Intelligence -->
+{% if wdnc_comps or own_wdnc_snaps %}
+<div style="border-radius:var(--r);background:rgba(124,58,237,.07);border-top:4px solid #7c3aed;padding:18px 24px;margin:32px 0 20px;">
+  <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+    <div style="font-size:32px;font-weight:900;color:#7c3aed;letter-spacing:-.03em;line-height:1;">WDNC</div>
+    <div style="width:1px;height:40px;background:rgba(124,58,237,.2);flex-shrink:0;"></div>
+    <div>
+      <div style="font-size:16px;font-weight:700;color:var(--text);">Western District of North Carolina</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:2px;">Charlotte · Asheville · Morganton · Statesville</div>
+    </div>
+    <span class="chip chip-purple" style="margin-left:auto;font-size:12px;">Duncan Law active</span>
+  </div>
+</div>
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-reviews-wdnc')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon" style="background:rgba(124,58,237,.1);color:#7c3aed;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </span>
+    WDNC Review Intelligence
+    <span class="chip chip-purple" style="margin-left:8px;font-size:12px;">Duncan Law active</span>
+    <span id="chev-sec-reviews-wdnc" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-reviews-wdnc" data-collapsible="1">
+  <p style="color:var(--muted);font-size:14px;margin-bottom:16px;line-height:1.6;">Google review counts and ratings for Western District NC firms. Duncan Law offices shown in blue at top.</p>
+  {% set wdnc_ns = namespace(max_count=1) %}
+  {% for s in own_wdnc_snaps %}{% if s.review_count and s.review_count > wdnc_ns.max_count %}{% set wdnc_ns.max_count = s.review_count %}{% endif %}{% endfor %}
+  {% for r in wdnc_comps %}{% if r.google_count and r.google_count > wdnc_ns.max_count %}{% set wdnc_ns.max_count = r.google_count %}{% endif %}{% endfor %}
+  <table>
+    <thead><tr>
+      <th>Firm</th>
+      <th>Rating</th>
+      <th>Reviews</th>
+      <th>Δ Week</th>
+    </tr></thead>
+    <tbody>
+    {% for s in own_wdnc_snaps %}
+    <tr style="background:rgba(37,99,235,.04);">
+      <td>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="firm-badge" style="background:rgba(37,99,235,.15);color:var(--accent);">DL</div>
+          <span style="font-weight:700;color:var(--accent);">Duncan Law — {{ s.market | replace('_',' ') | title }}</span>
+        </div>
+      </td>
+      <td>
+        {% if s.rating %}
+        <span style="color:var(--yellow);font-size:14px;letter-spacing:.5px;">{% for i in range(5) %}{% if loop.index <= s.rating|int %}★{% else %}☆{% endif %}{% endfor %}</span>
+        <strong style="font-size:14px;color:var(--yellow-dark);margin-left:4px;">{{ "%.1f"|format(s.rating|float) }}</strong>
+        {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+      </td>
+      <td>
+        {% if s.review_count is not none %}
+        <div style="display:flex;align-items:center;gap:8px;min-width:100px;">
+          <div style="flex:1;height:5px;background:rgba(37,99,235,.15);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:{{ (s.review_count / wdnc_ns.max_count * 100)|int }}%;background:var(--accent);border-radius:3px;"></div>
+          </div>
+          <span style="font-weight:700;font-size:14px;color:var(--accent);">{{ s.review_count }}</span>
+        </div>
+        {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+      </td>
+      <td>
+        {% if s.market in own_snap_deltas %}
+        {% set d = own_snap_deltas[s.market] %}
+        <span style="font-size:13px;font-weight:700;color:{% if d > 0 %}var(--green-dark){% elif d < 0 %}var(--red-dark){% else %}var(--muted){% endif %};">
+          {% if d > 0 %}+{{ d }}{% elif d == 0 %}+0{% else %}{{ d }}{% endif %}
+        </span>
+        {% else %}<span style="color:var(--muted-2);font-size:13px;">—</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    {% for r in wdnc_comps %}
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="firm-badge" style="background:var(--surface-3);color:var(--muted);">{{ r.name[:2] | upper }}</div>
+          <span style="font-weight:500;">{{ r.name }}</span>
+        </div>
+      </td>
+      <td>
+        {% if r.google_rating is not none %}
+        <span style="color:var(--yellow);font-size:14px;letter-spacing:.5px;">{% for i in range(5) %}{% if loop.index <= r.google_rating|int %}★{% else %}☆{% endif %}{% endfor %}</span>
+        <strong style="font-size:14px;{% if r.google_rating >= 4.5 %}color:var(--green-dark){% elif r.google_rating >= 4.0 %}color:var(--yellow-dark){% else %}color:var(--red-dark){% endif %};margin-left:4px;">{{ "%.1f"|format(r.google_rating) }}</strong>
+        {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+      </td>
+      <td>
+        {% if r.google_count is not none %}
+        <div style="display:flex;align-items:center;gap:8px;min-width:100px;">
+          <div style="flex:1;height:5px;background:var(--surface-3);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:{{ (r.google_count / wdnc_ns.max_count * 100)|int }}%;background:#7c3aed;border-radius:3px;"></div>
+          </div>
+          <span style="font-weight:600;font-size:14px;">{{ "{:,}".format(r.google_count) }}</span>
+          {% if r.count_delta is not none and r.count_delta > 0 %}
+          <span style="font-size:11px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(249,115,22,.12);color:var(--orange-dark);">+{{ r.count_delta }}</span>
+          {% endif %}
+        </div>
+        {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+      </td>
+      <td>
+        {% if r.count_delta is not none %}
+        <span style="font-size:13px;font-weight:700;color:{% if r.count_delta > 0 %}var(--green-dark){% elif r.count_delta < 0 %}var(--red-dark){% else %}var(--muted){% endif %};">
+          {% if r.count_delta > 0 %}+{{ r.count_delta }}{% elif r.count_delta == 0 %}={% else %}{{ r.count_delta }}{% endif %}
+        </span>
+        {% else %}<span style="color:var(--muted-2);font-size:13px;">—</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- EDNC Review Intelligence -->
+{% if ednc_comps %}
+<div style="border-radius:var(--r);background:rgba(234,88,12,.07);border-top:4px solid var(--orange);padding:18px 24px;margin:32px 0 20px;">
+  <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+    <div style="font-size:32px;font-weight:900;color:var(--orange);letter-spacing:-.03em;line-height:1;">EDNC</div>
+    <div style="width:1px;height:40px;background:rgba(234,88,12,.2);flex-shrink:0;"></div>
+    <div>
+      <div style="font-size:16px;font-weight:700;color:var(--text);">Eastern District of North Carolina</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:2px;">Raleigh · Fayetteville · Wilmington · Wilson</div>
+    </div>
+    <span class="chip chip-orange" style="margin-left:auto;font-size:12px;">Competitor tracking</span>
+  </div>
+</div>
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-reviews-ednc')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon" style="background:rgba(234,88,12,.1);color:var(--orange);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </span>
+    EDNC Review Intelligence
+    <span class="chip chip-orange" style="margin-left:8px;font-size:12px;">Competitor tracking</span>
+    <span id="chev-sec-reviews-ednc" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-reviews-ednc" data-collapsible="1">
+  <p style="color:var(--muted);font-size:14px;margin-bottom:16px;line-height:1.6;">Google review counts for Eastern District NC firms — the high-volume PACER market dominated by Orcutt. Duncan Law has no offices here; this is competitive intelligence only.</p>
+  {% set ednc_has_data = namespace(val=false) %}
+  {% for r in ednc_comps %}{% if r.google_count is not none %}{% set ednc_has_data.val = true %}{% endif %}{% endfor %}
+  {% if ednc_has_data.val %}
+  {% set ednc_ns = namespace(max_count=1) %}
+  {% for r in ednc_comps %}{% if r.google_count and r.google_count > ednc_ns.max_count %}{% set ednc_ns.max_count = r.google_count %}{% endif %}{% endfor %}
+  <table>
+    <thead><tr>
+      <th>Firm</th>
+      <th>Rating</th>
+      <th>Reviews</th>
+      <th>Δ Week</th>
+    </tr></thead>
+    <tbody>
+    {% for r in ednc_comps %}
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="firm-badge" style="background:rgba(234,88,12,.1);color:var(--orange);">{{ r.name[:2] | upper }}</div>
+          <span style="font-weight:500;">{{ r.name }}</span>
+        </div>
+      </td>
+      <td>
+        {% if r.google_rating is not none %}
+        <span style="color:var(--yellow);font-size:14px;letter-spacing:.5px;">{% for i in range(5) %}{% if loop.index <= r.google_rating|int %}★{% else %}☆{% endif %}{% endfor %}</span>
+        <strong style="font-size:14px;{% if r.google_rating >= 4.5 %}color:var(--green-dark){% elif r.google_rating >= 4.0 %}color:var(--yellow-dark){% else %}color:var(--red-dark){% endif %};margin-left:4px;">{{ "%.1f"|format(r.google_rating) }}</strong>
+        {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+      </td>
+      <td>
+        {% if r.google_count is not none %}
+        <div style="display:flex;align-items:center;gap:8px;min-width:100px;">
+          <div style="flex:1;height:5px;background:rgba(234,88,12,.1);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:{{ (r.google_count / ednc_ns.max_count * 100)|int }}%;background:var(--orange);border-radius:3px;"></div>
+          </div>
+          <span style="font-weight:600;font-size:14px;">{{ "{:,}".format(r.google_count) }}</span>
+          {% if r.count_delta is not none and r.count_delta > 0 %}
+          <span style="font-size:11px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(249,115,22,.12);color:var(--orange-dark);">+{{ r.count_delta }}</span>
+          {% endif %}
+        </div>
+        {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+      </td>
+      <td>
+        {% if r.count_delta is not none %}
+        <span style="font-size:13px;font-weight:700;color:{% if r.count_delta > 0 %}var(--green-dark){% elif r.count_delta < 0 %}var(--red-dark){% else %}var(--muted){% endif %};">
+          {% if r.count_delta > 0 %}+{{ r.count_delta }}{% elif r.count_delta == 0 %}={% else %}{{ r.count_delta }}{% endif %}
+        </span>
+        {% else %}<span style="color:var(--muted-2);font-size:13px;">—</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="padding:20px 0;text-align:center;color:var(--muted);font-size:14px;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 8px;opacity:.4;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Review data for EDNC firms will appear after the next Monday collection (Place IDs added {{ "May 23" }}).
+  </div>
+  {% endif %}
+  </div>
+</div>
+{% endif %}
+
 <!-- Competitor review profiles -->
 <div class="card">
   <div class="section-title" onclick="toggleSection('sec-comp-profiles')" style="cursor:pointer;user-select:none;">

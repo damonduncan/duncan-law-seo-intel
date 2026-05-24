@@ -1,5 +1,5 @@
 import json
-from collections import defaultdict
+from collections import defaultdict, Counter
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse
@@ -9,12 +9,27 @@ from sqlalchemy.orm import Session
 from app.dependencies import RedirectIfNotAuthenticated
 from app.database import get_db
 from app.models.reviews import ReviewSnapshot
-from app.models.competitor import Competitor
+from app.models.competitor import Competitor, CompetitorLocation
 from app.models.alerts import JobRun
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 auth_required = RedirectIfNotAuthenticated()
+
+MARKET_TO_DISTRICT = {
+    "greensboro": "MDNC", "winston_salem": "MDNC", "high_point": "MDNC",
+    "salisbury": "MDNC", "durham": "MDNC", "concord": "MDNC",
+    "graham": "MDNC", "carthage": "MDNC", "asheboro": "MDNC",
+    "charlotte": "WDNC", "asheville": "WDNC", "waynesville": "WDNC",
+    "statesville": "WDNC", "mooresville": "WDNC", "elkin": "WDNC",
+    "north_wilkesboro": "WDNC", "morganton": "WDNC",
+    "ednc": "EDNC", "raleigh": "EDNC", "fayetteville": "EDNC",
+    "wilson": "EDNC", "wilmington": "EDNC",
+}
+OWN_MDNC_ORDER = ["greensboro", "winston_salem", "high_point", "salisbury"]
+OWN_WDNC_ORDER = ["charlotte", "asheville"]
+OWN_MDNC = frozenset(OWN_MDNC_ORDER)
+OWN_WDNC = frozenset(OWN_WDNC_ORDER)
 
 
 @router.get("/reviews", response_class=HTMLResponse)
@@ -126,6 +141,7 @@ def reviews(
         delta = (total_count - prev_total) if (total_count is not None and prev_total is not None) else None
 
         comp_rows.append({
+            "id": c.id,
             "name": c.name,
             "google_rating": avg_rating,
             "google_count": total_count,
@@ -134,6 +150,30 @@ def reviews(
         })
 
     comp_rows.sort(key=lambda r: r["google_count"] or 0, reverse=True)
+
+    # Determine primary district for each competitor from their location markets
+    all_locs = db.query(CompetitorLocation).all()
+    comp_markets: dict = defaultdict(set)
+    for loc in all_locs:
+        comp_markets[loc.competitor_id].add(loc.market)
+
+    for row in comp_rows:
+        markets = comp_markets.get(row["id"], set())
+        counts = Counter(MARKET_TO_DISTRICT[m] for m in markets if m in MARKET_TO_DISTRICT)
+        row["district"] = counts.most_common(1)[0][0] if counts else "MDNC"
+
+    mdnc_comps = [r for r in comp_rows if r["district"] == "MDNC"]
+    wdnc_comps = [r for r in comp_rows if r["district"] == "WDNC"]
+    ednc_comps = [r for r in comp_rows if r["district"] == "EDNC"]
+
+    own_mdnc_snaps = sorted(
+        [s for s in own_google_snaps if s.market in OWN_MDNC],
+        key=lambda s: OWN_MDNC_ORDER.index(s.market) if s.market in OWN_MDNC else 99,
+    )
+    own_wdnc_snaps = sorted(
+        [s for s in own_google_snaps if s.market in OWN_WDNC],
+        key=lambda s: OWN_WDNC_ORDER.index(s.market) if s.market in OWN_WDNC else 99,
+    )
 
     # Top competitors gaining reviews this period
     velocity_leaders = sorted(
@@ -158,6 +198,12 @@ def reviews(
         "competitor_count": len(comp_rows),
         "recommendations": recommendations,
         "velocity_leaders": velocity_leaders,
+        # District-grouped data
+        "mdnc_comps": mdnc_comps,
+        "wdnc_comps": wdnc_comps,
+        "ednc_comps": ednc_comps,
+        "own_mdnc_snaps": own_mdnc_snaps,
+        "own_wdnc_snaps": own_wdnc_snaps,
     })
 
 
