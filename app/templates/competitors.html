@@ -49,10 +49,13 @@
         {% endfor %}
       </td>
       <td>
-        {% if c.google_place_id %}
-        <span class="chip chip-green">✓ Set</span>
+        {% set loc_ids = c.locations | selectattr('google_place_id') | list %}
+        {% if loc_ids | length > 1 %}
+          <span class="chip chip-green">✓ {{ loc_ids | length }} offices</span>
+        {% elif c.google_place_id or loc_ids %}
+          <span class="chip chip-green">✓ Set</span>
         {% else %}
-        <span class="chip chip-yellow">Missing</span>
+          <span class="chip chip-yellow">Missing</span>
         {% endif %}
       </td>
       <td><span class="chip chip-green">Active</span></td>
