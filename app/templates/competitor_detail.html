@@ -118,7 +118,8 @@
     <thead><tr>
       <th>Market</th>
       <th>Keyword</th>
-      <th>Rank</th>
+      <th style="text-align:center;">{{ comp.name | truncate(22, True, '…') }}</th>
+      {% if own_firm %}<th style="text-align:center;color:var(--accent);">{{ own_firm.name | truncate(18, True, '…') }}</th>{% endif %}
     </tr></thead>
     <tbody>
     {% for market, keywords in pack_presence | dictsort %}
@@ -130,10 +131,39 @@
       </td>
       {% endif %}
       <td style="font-size:14px;color:var(--text-2);">{{ kw }}</td>
-      <td>
-        <span class="chip {% if rank == 1 %}chip-green{% elif rank == 2 %}chip-yellow{% else %}chip-blue{% endif %}"
-          style="font-weight:800;min-width:32px;text-align:center;">#{{ rank }}</span>
+      <td style="text-align:center;">
+        {% if rank == 1 %}
+          <span class="rank-badge rank-gold">#1</span>
+        {% elif rank <= 3 %}
+          <span class="rank-badge rank-top">#{{ rank }}</span>
+        {% elif rank <= 7 %}
+          <span class="rank-badge rank-mid">#{{ rank }}</span>
+        {% else %}
+          <span class="rank-badge rank-low">#{{ rank }}</span>
+        {% endif %}
       </td>
+      {% if own_firm %}
+      <td style="text-align:center;">
+        {% if market in own_positions and kw in own_positions[market] %}
+          {% set own_rank = own_positions[market][kw] %}
+          {% if own_rank is not none %}
+            {% if own_rank == 1 %}
+              <span class="rank-badge rank-gold">#1</span>
+            {% elif own_rank <= 3 %}
+              <span class="rank-badge rank-top">#{{ own_rank }}</span>
+            {% elif own_rank <= 7 %}
+              <span class="rank-badge rank-mid">#{{ own_rank }}</span>
+            {% else %}
+              <span class="rank-badge rank-low">#{{ own_rank }}</span>
+            {% endif %}
+          {% else %}
+            <span class="rank-badge rank-out" style="font-size:11px;">Not ranked</span>
+          {% endif %}
+        {% else %}
+          <span style="color:var(--muted-2);font-size:13px;">—</span>
+        {% endif %}
+      </td>
+      {% endif %}
     </tr>
     {% endfor %}
     {% endfor %}

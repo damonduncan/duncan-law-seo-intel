@@ -159,6 +159,38 @@ def competitor_detail(
                     break
             pack_presence.setdefault(r.market, {})[kw] = r.rank_position
 
+    # ── Own-firm rankings for head-to-head comparison ────────────────────────
+    own_firm = db.query(Competitor).filter(Competitor.is_own_firm == True).first()
+    own_positions: dict = {}   # market → {keyword_short → rank_position | None}
+    if own_firm and ranking_as_of:
+        _own_latest = (
+            db.query(cast(LocalPackRanking.scraped_at, Date))
+            .filter(LocalPackRanking.competitor_id == own_firm.id)
+            .order_by(LocalPackRanking.scraped_at.desc())
+            .first()
+        )
+        if _own_latest:
+            own_rows = (
+                db.query(LocalPackRanking)
+                .filter(
+                    LocalPackRanking.competitor_id == own_firm.id,
+                    LocalPackRanking.is_own_firm == True,
+                    cast(LocalPackRanking.scraped_at, Date) == _own_latest[0],
+                )
+                .all()
+            )
+            for r in own_rows:
+                kw = r.keyword or ""
+                for suffix in [" Greensboro", " Winston-Salem", " High Point", " Charlotte",
+                               " Salisbury", " Asheville", " Raleigh", " Fayetteville",
+                               " Wilmington", " Wilson"]:
+                    if kw.endswith(suffix):
+                        kw = kw[: -len(suffix)]
+                        break
+                own_positions.setdefault(r.market, {})[kw] = (
+                    r.rank_position if r.in_pack else None
+                )
+
     # ── PACER filing history ─────────────────────────────────────────────────
     filing_snaps = db.query(FilingSnapshot).filter(
         FilingSnapshot.competitor_id == comp_id
@@ -283,6 +315,8 @@ def competitor_detail(
         "comp":               comp,
         "ranking_as_of":      ranking_as_of,
         "pack_presence":      pack_presence,
+        "own_firm":           own_firm,
+        "own_positions":      own_positions,
         "pacer_data":         pacer_data,
         "total_count":        total_count,
         "total_prev":         total_prev,
