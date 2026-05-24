@@ -4,11 +4,15 @@ Sends a Monday morning intelligence summary to damonduncan@duncanlawonline.com
 via Resend covering:
   • Duncan Law's current Google 3-pack positions across all 6 markets
   • Review counts by market with week-over-week deltas
+  • District review intelligence (MDNC / WDNC / EDNC competitive standings)
   • Top competitor review gainers since last collection
+  • PACER filing standings per district (most recent monthly collection)
   • All unacknowledged alerts from the past week
   • Quick links back to the full dashboard
 """
+import json
 import logging
+from collections import Counter, defaultdict
 from datetime import date, timedelta, datetime, timezone
 
 from sqlalchemy import cast, Date
@@ -17,7 +21,8 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.models.alerts import Alert, DigestLog
 from app.models.base import new_uuid
-from app.models.competitor import Competitor
+from app.models.competitor import Competitor, CompetitorLocation
+from app.models.filings import FilingSnapshot
 from app.models.rankings import LocalPackRanking
 from app.models.reviews import ReviewSnapshot
 
@@ -32,6 +37,30 @@ MARKET_DISPLAY = {
     "asheville":     "Asheville",
 }
 MARKET_ORDER = list(MARKET_DISPLAY.keys())
+
+MARKET_TO_DISTRICT = {
+    "greensboro": "MDNC", "winston_salem": "MDNC", "high_point": "MDNC",
+    "salisbury": "MDNC", "durham": "MDNC", "concord": "MDNC",
+    "graham": "MDNC", "carthage": "MDNC", "asheboro": "MDNC",
+    "charlotte": "WDNC", "asheville": "WDNC", "waynesville": "WDNC",
+    "statesville": "WDNC", "mooresville": "WDNC", "elkin": "WDNC",
+    "north_wilkesboro": "WDNC", "morganton": "WDNC",
+    "ednc": "EDNC", "raleigh": "EDNC", "fayetteville": "EDNC",
+    "wilson": "EDNC", "wilmington": "EDNC",
+}
+OWN_MDNC = frozenset(["greensboro", "winston_salem", "high_point", "salisbury"])
+OWN_WDNC = frozenset(["charlotte", "asheville"])
+DISTRICT_ORDER = ["MDNC", "WDNC", "EDNC"]
+DISTRICT_LABELS = {
+    "MDNC": "Middle District NC",
+    "WDNC": "Western District NC",
+    "EDNC": "Eastern District NC",
+}
+DISTRICT_COLORS = {
+    "MDNC": ("#dbeafe", "#1e3a8a", "#2563eb"),
+    "WDNC": ("#ede9fe", "#4c1d95", "#7c3aed"),
+    "EDNC": ("#ffedd5", "#7c2d12", "#ea580c"),
+}
 
 
 def build_and_send_digest(db: Session) -> None:
@@ -182,15 +211,125 @@ def _gather_data(db: Session) -> dict:
 
     priority_action = _generate_priority(rankings_by_market, reviews_by_market)
 
+    # ── District review intelligence ──────────────────────────────────────────
+    # Map each competitor_id to its primary district via CompetitorLocation
+    all_locs = db.query(CompetitorLocation).all()
+    _loc_markets: dict = defaultdict(set)
+    for loc in all_locs:
+        if loc.market:
+            _loc_markets[loc.competitor_id].add(loc.market)
+    comp_district_map: dict = {}
+    for cid, markets in _loc_markets.items():
+        cnts = Counter(MARKET_TO_DISTRICT[m] for m in markets if m in MARKET_TO_DISTRICT)
+        if cnts:
+            comp_district_map[cid] = cnts.most_common(1)[0][0]
+
+    # Recent snapshots for all firms (last 60 days)
+    since60 = datetime.now(timezone.utc) - timedelta(days=60)
+    all_snaps_recent = (
+        db.query(ReviewSnapshot)
+        .filter(ReviewSnapshot.source == "google", ReviewSnapshot.snapped_at >= since60)
+        .order_by(ReviewSnapshot.snapped_at.desc())
+        .all()
+    )
+
+    def _dedup_snaps(snaps):
+        seen, out = set(), []
+        for s in snaps:
+            fp = json.dumps(s.snapshot_data, sort_keys=True) if s.snapshot_data else str(id(s))
+            if fp not in seen:
+                seen.add(fp)
+                out.append(s)
+        return out
+
+    all_by_comp: dict = defaultdict(list)
+    for s in all_snaps_recent:
+        all_by_comp[s.competitor_id].append(s)
+
+    district_review_standings: dict = {d: [] for d in DISTRICT_ORDER}
+
+    # Own firm — MDNC and WDNC totals from their respective office markets
+    if own_id and own_id in all_by_comp:
+        own_by_mkt: dict = defaultdict(list)
+        for s in all_by_comp[own_id]:
+            if s.market:
+                own_by_mkt[s.market].append(s)
+        own_current = {m: snaps[0] for m, snaps in own_by_mkt.items() if snaps}
+        mdnc_c = [s.review_count for m, s in own_current.items() if m in OWN_MDNC and s.review_count]
+        wdnc_c = [s.review_count for m, s in own_current.items() if m in OWN_WDNC and s.review_count]
+        if mdnc_c:
+            district_review_standings["MDNC"].append({"name": "Duncan Law", "count": sum(mdnc_c), "is_own": True})
+        if wdnc_c:
+            district_review_standings["WDNC"].append({"name": "Duncan Law", "count": sum(wdnc_c), "is_own": True})
+
+    # Competitors
+    for c in competitors_all:
+        dist = comp_district_map.get(c.id)
+        if not dist or dist not in district_review_standings:
+            continue
+        snaps = all_by_comp.get(c.id, [])
+        if not snaps:
+            continue
+        by_mkt: dict = defaultdict(list)
+        for s in snaps:
+            if s.market:
+                by_mkt[s.market].append(s)
+        current = [msnaps[0] for msnaps in by_mkt.values() if msnaps]
+        deduped = _dedup_snaps(current)
+        counts = [s.review_count for s in deduped if s.review_count is not None]
+        if counts:
+            district_review_standings[dist].append({"name": c.name, "count": sum(counts), "is_own": False})
+
+    for dist in DISTRICT_ORDER:
+        district_review_standings[dist].sort(key=lambda r: r["count"], reverse=True)
+
+    # ── PACER district standings ───────────────────────────────────────────────
+    all_filing_snaps = db.query(FilingSnapshot).all()
+    _f_deduped: dict = {}
+    for s in all_filing_snaps:
+        key = (s.competitor_id, s.attorney_id, s.district, s.chapter, s.period_start)
+        if key not in _f_deduped or s.case_count > _f_deduped[key]:
+            _f_deduped[key] = s.case_count
+
+    _dist_latest: dict = {}
+    for (cid, aid, dist, chap, per), cnt in _f_deduped.items():
+        if dist and per and (dist not in _dist_latest or per > _dist_latest[dist]):
+            _dist_latest[dist] = per
+
+    _comp_dist_counts: dict = defaultdict(lambda: defaultdict(int))
+    for (cid, aid, dist, chap, per), cnt in _f_deduped.items():
+        if dist and _dist_latest.get(dist) == per:
+            _comp_dist_counts[cid][dist] += cnt
+
+    _comp_name_map = {c.id: c.name for c in competitors_all}
+    if own_firm:
+        _comp_name_map[own_id] = own_firm.name
+
+    pacer_standings: dict = {d: [] for d in DISTRICT_ORDER}
+    for cid, dist_counts in _comp_dist_counts.items():
+        name = _comp_name_map.get(cid, "Unknown")
+        is_own = (cid == own_id)
+        for dist, count in dist_counts.items():
+            if dist in pacer_standings:
+                pacer_standings[dist].append({
+                    "name": name, "count": count, "is_own": is_own,
+                    "period": _dist_latest.get(dist),
+                })
+    for dist in DISTRICT_ORDER:
+        pacer_standings[dist].sort(key=lambda r: r["count"], reverse=True)
+        pacer_standings[dist] = pacer_standings[dist][:6]
+
     return {
-        "rankings_by_market":  rankings_by_market,
-        "reviews_by_market":   reviews_by_market,
-        "own_review_deltas":   own_review_deltas,
-        "velocity_leaders":    velocity_leaders,
-        "open_alerts":         open_alerts,
-        "rankings_as_of":      latest_date,
-        "base_url":            settings.app_base_url,
-        "priority_action":     priority_action,
+        "rankings_by_market":         rankings_by_market,
+        "reviews_by_market":          reviews_by_market,
+        "own_review_deltas":          own_review_deltas,
+        "velocity_leaders":           velocity_leaders,
+        "open_alerts":                open_alerts,
+        "rankings_as_of":             latest_date,
+        "base_url":                   settings.app_base_url,
+        "priority_action":            priority_action,
+        "district_review_standings":  district_review_standings,
+        "pacer_standings":            pacer_standings,
     }
 
 
@@ -382,6 +521,52 @@ def _build_html(ctx: dict, week_str: str) -> str:
         </p>''',
     ))
 
+    # ── District Review Intelligence section ─────────────────────────────────
+    dist_standings = ctx.get("district_review_standings", {})
+    dist_blocks = ""
+    for dist in DISTRICT_ORDER:
+        rows = dist_standings.get(dist, [])
+        if not rows:
+            continue
+        bg, fg, accent = DISTRICT_COLORS[dist]
+        label = DISTRICT_LABELS[dist]
+        row_html = ""
+        for i, row in enumerate(rows[:6]):
+            name = row["name"][:42] + ("…" if len(row["name"]) > 42 else "")
+            own_badge = (
+                ' <span style="background:#dbeafe;color:#1e40af;padding:1px 5px;'
+                'border-radius:3px;font-size:10px;font-weight:700;">You</span>'
+            ) if row["is_own"] else ""
+            bold = "font-weight:600;" if row["is_own"] else ""
+            num_color = "#059669" if i == 0 else "#374151"
+            row_html += (
+                f'<tr><td style="padding:5px 8px;font-size:13px;border-bottom:1px solid #f3f4f6;{bold}color:#374151;">'
+                f'{name}{own_badge}</td>'
+                f'<td style="padding:5px 8px;font-size:13px;border-bottom:1px solid #f3f4f6;'
+                f'text-align:right;font-weight:600;color:{num_color};">{row["count"]:,}</td></tr>'
+            )
+        dist_blocks += (
+            f'<div style="margin-bottom:14px;">'
+            f'<div style="background:{bg};border-left:3px solid {accent};padding:5px 10px;'
+            f'margin-bottom:6px;border-radius:0 4px 4px 0;">'
+            f'<span style="font-size:11px;font-weight:700;color:{fg};text-transform:uppercase;'
+            f'letter-spacing:.06em;">{dist}</span>'
+            f'<span style="font-size:11px;color:{fg};opacity:.75;margin-left:8px;">{label}</span>'
+            f'</div>'
+            f'<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">'
+            f'<tr><th style="text-align:left;font-size:10px;color:#6b7280;border-bottom:1px solid #e5e7eb;'
+            f'padding:4px 8px;text-transform:uppercase;letter-spacing:.05em;">Firm</th>'
+            f'<th style="text-align:right;font-size:10px;color:#6b7280;border-bottom:1px solid #e5e7eb;'
+            f'padding:4px 8px;text-transform:uppercase;letter-spacing:.05em;">Google Reviews</th></tr>'
+            f'{row_html}</table></div>'
+        )
+    if dist_blocks:
+        sections.append(_section(
+            "District Review Intelligence",
+            f'{dist_blocks}<p style="margin:4px 0 0;font-size:12px;color:#6b7280;">'
+            f'<a href="{base_url}/reviews" style="color:#3b82f6;">View full review data →</a></p>',
+        ))
+
     # ── Competitor activity section ───────────────────────────────────────────
     leaders = ctx.get("velocity_leaders", [])
     if leaders:
@@ -409,6 +594,57 @@ def _build_html(ctx: dict, week_str: str) -> str:
             <p style="margin-top:12px;font-size:12px;color:#6b7280;">
               <a href="{base_url}/reviews" style="color:#3b82f6;">View full review data →</a>
             </p>''',
+        ))
+
+    # ── PACER District Standings section ─────────────────────────────────────
+    pacer = ctx.get("pacer_standings", {})
+    pacer_blocks = ""
+    for dist in DISTRICT_ORDER:
+        rows = pacer.get(dist, [])
+        if not rows:
+            continue
+        bg, fg, accent = DISTRICT_COLORS[dist]
+        label = DISTRICT_LABELS[dist]
+        period_str = ""
+        if rows and rows[0].get("period"):
+            try:
+                period_str = f' — {rows[0]["period"].strftime("%b %Y")}'
+            except Exception:
+                pass
+        row_html = ""
+        for row in rows:
+            name = row["name"][:38] + ("…" if len(row["name"]) > 38 else "")
+            own_badge = (
+                ' <span style="background:#dbeafe;color:#1e40af;padding:1px 5px;'
+                'border-radius:3px;font-size:10px;font-weight:700;">You</span>'
+            ) if row["is_own"] else ""
+            bold = "font-weight:600;" if row["is_own"] else ""
+            row_html += (
+                f'<tr><td style="padding:5px 8px;font-size:13px;border-bottom:1px solid #f3f4f6;{bold}color:#374151;">'
+                f'{name}{own_badge}</td>'
+                f'<td style="padding:5px 8px;font-size:13px;border-bottom:1px solid #f3f4f6;'
+                f'text-align:right;font-weight:600;color:#374151;">{row["count"]}</td></tr>'
+            )
+        pacer_blocks += (
+            f'<div style="margin-bottom:14px;">'
+            f'<div style="background:{bg};border-left:3px solid {accent};padding:5px 10px;'
+            f'margin-bottom:6px;border-radius:0 4px 4px 0;">'
+            f'<span style="font-size:11px;font-weight:700;color:{fg};text-transform:uppercase;'
+            f'letter-spacing:.06em;">{dist}</span>'
+            f'<span style="font-size:11px;color:{fg};opacity:.75;margin-left:8px;">{label}{period_str}</span>'
+            f'</div>'
+            f'<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">'
+            f'<tr><th style="text-align:left;font-size:10px;color:#6b7280;border-bottom:1px solid #e5e7eb;'
+            f'padding:4px 8px;text-transform:uppercase;letter-spacing:.05em;">Firm</th>'
+            f'<th style="text-align:right;font-size:10px;color:#6b7280;border-bottom:1px solid #e5e7eb;'
+            f'padding:4px 8px;text-transform:uppercase;letter-spacing:.05em;">Cases (month)</th></tr>'
+            f'{row_html}</table></div>'
+        )
+    if pacer_blocks:
+        sections.append(_section(
+            "PACER Filing Standings",
+            f'{pacer_blocks}<p style="margin:4px 0 0;font-size:12px;color:#6b7280;">'
+            f'<a href="{base_url}/filings" style="color:#3b82f6;">View full filing data →</a></p>',
         ))
 
     # ── Alerts section ────────────────────────────────────────────────────────
