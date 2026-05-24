@@ -141,16 +141,26 @@
         </div>
       </td>
       <td style="font-size:14px;">
-        {% if alert.market %}<div style="font-weight:500;">{{ alert.market }}</div>{% endif %}
-        {% if alert.keyword %}<div style="color:var(--muted);">{{ alert.keyword }}</div>{% endif %}
+        {% if alert.market %}<div style="font-weight:500;">{{ alert.market.replace('_',' ').title() }}</div>{% endif %}
+        {% if alert.keyword %}<div style="color:var(--muted);font-size:13px;">{{ alert.keyword }}</div>{% endif %}
         {% if not alert.market and not alert.keyword %}<span style="color:var(--muted);">—</span>{% endif %}
       </td>
-      <td style="font-size:14px;max-width:220px;">
+      <td style="font-size:14px;max-width:240px;">
         {% if alert.detail %}
-          {% for k, v in alert.detail.items() %}
-          <div style="padding:1px 0;"><span style="color:var(--muted);">{{ k }}:</span> <span style="font-weight:500;">{{ v }}</span></div>
-          {% endfor %}
-        {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+          {% set msg   = alert.detail.get('message', '') %}
+          {% set rival = alert.detail.get('competitor', '') %}
+          {% if msg %}
+            <div style="font-weight:500;color:var(--text);line-height:1.4;">{{ msg[:120] }}</div>
+          {% endif %}
+          {% if rival %}
+            <div style="font-size:13px;color:var(--muted);margin-top:2px;">{{ rival }}</div>
+          {% endif %}
+          {% if not msg and not rival %}
+            <span style="color:var(--muted);">—</span>
+          {% endif %}
+        {% else %}
+          <span style="color:var(--muted);">—</span>
+        {% endif %}
       </td>
       <td style="font-size:14px;color:var(--muted);white-space:nowrap;">
         {{ alert.triggered_at.strftime('%b %d, %I:%M %p') if alert.triggered_at else '—' }}
@@ -169,9 +179,7 @@
       </td>
       <td>
         {% if not alert.acknowledged_at %}
-        <form method="post" action="/alerts/{{ alert.id }}/acknowledge">
-          <button type="submit" class="btn btn-ghost btn-sm">Dismiss</button>
-        </form>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="dismissAlert('{{ alert.id }}', this)">Dismiss</button>
         {% endif %}
       </td>
     </tr>
@@ -191,16 +199,16 @@
     var rows = document.querySelectorAll('tbody tr');
     var shown = 0;
     rows.forEach(function(r) {
-      var acked   = r.dataset.acked === '1';
-      var rtype   = r.dataset.type;
-      var viewOk  = view === 'all' || !acked;
-      var typeOk  = type === 'all' || rtype === type;
-      r.style.display = (viewOk && typeOk) ? '' : 'none';
-      if (viewOk && typeOk) shown++;
+      var acked  = r.dataset.acked === '1';
+      var rtype  = r.dataset.type;
+      var viewOk = view === 'all' || !acked;
+      var typeOk = type === 'all' || rtype === type;
+      var show   = viewOk && typeOk;
+      r.style.display = show ? '' : 'none';
+      if (show) { r.style.opacity = acked ? '0.4' : ''; shown++; }
     });
     document.getElementById('no-results').style.display = shown === 0 ? '' : 'none';
 
-    // View toggle styles
     var activeBtn = document.getElementById('fv-active');
     var allBtn    = document.getElementById('fv-all');
     activeBtn.style.background = view === 'active' ? 'var(--accent)' : 'transparent';
@@ -208,19 +216,39 @@
     allBtn.style.background    = view === 'all'    ? 'var(--accent)' : 'transparent';
     allBtn.style.color         = view === 'all'    ? '#fff' : 'var(--muted)';
 
-    // Type filter styles
     document.querySelectorAll('.ft-btn').forEach(function(b) {
       var active = b.dataset.ft === type;
-      b.style.background   = active ? 'var(--surface-3)' : 'transparent';
-      b.style.color        = active ? 'var(--text)' : 'var(--muted)';
-      b.style.borderColor  = active ? 'var(--border-2)' : 'var(--border)';
+      b.style.background  = active ? 'var(--surface-3)' : 'transparent';
+      b.style.color       = active ? 'var(--text)' : 'var(--muted)';
+      b.style.borderColor = active ? 'var(--border-2)' : 'var(--border)';
     });
   }
+
+  window.dismissAlert = function(alertId, btn) {
+    btn.disabled = true;
+    btn.textContent = '…';
+    fetch('/alerts/' + alertId + '/acknowledge', { method: 'POST' })
+      .then(function() {
+        var row = btn.closest('tr');
+        row.style.transition = 'opacity .25s';
+        row.style.opacity = '0';
+        setTimeout(function() {
+          row.dataset.acked = '1';
+          row.style.transition = '';
+          // Swap status chip
+          var cells = row.querySelectorAll('td');
+          if (cells[5]) cells[5].innerHTML = '<span class="chip chip-green"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Dismissed</span>';
+          if (cells[6]) cells[6].innerHTML = '';
+          apply();
+        }, 250);
+      })
+      .catch(function() { btn.disabled = false; btn.textContent = 'Dismiss'; });
+  };
 
   window.setView = function(v) { view = v; apply(); };
   window.setType = function(t) { type = t; apply(); };
 
-  apply(); // default: active only
+  apply();
 })();
 </script>
 
