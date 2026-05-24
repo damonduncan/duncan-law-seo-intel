@@ -459,9 +459,9 @@
 
 <!-- EDNC Competitor Intelligence -->
 {% if ednc_by_market %}
-<div style="border-radius:var(--r);background:rgba(234,88,12,.07);border-top:4px solid var(--orange-dark);padding:18px 24px;margin:32px 0 20px;">
+<div style="border-radius:var(--r);background:rgba(234,88,12,.07);border-top:4px solid var(--orange);padding:18px 24px;margin:32px 0 20px;">
   <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
-    <div style="font-size:32px;font-weight:900;color:var(--orange-dark);letter-spacing:-.03em;line-height:1;">EDNC</div>
+    <div style="font-size:32px;font-weight:900;color:var(--orange);letter-spacing:-.03em;line-height:1;">EDNC</div>
     <div style="width:1px;height:40px;background:rgba(234,88,12,.2);flex-shrink:0;"></div>
     <div>
       <div style="font-size:16px;font-weight:700;color:var(--text);">Eastern District of North Carolina</div>
@@ -483,7 +483,7 @@
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;">
   {% for market, keywords in ednc_by_market.items() %}
   <div style="background:var(--surface-2);border-radius:var(--r);padding:16px;border:1px solid var(--border);">
-    <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--orange-dark);margin-bottom:14px;">
+    <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--orange);margin-bottom:14px;">
       {{ EDNC_DISPLAY.get(market, market | replace('_',' ') | title) }}
     </div>
     {% for keyword, firms in keywords.items() | sort %}
