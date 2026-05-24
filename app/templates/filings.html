@@ -388,10 +388,21 @@
     <div class="value" style="color:{{ dist_color }};margin-bottom:4px;">{{ "{:,}".format(vol.current_total) }}</div>
     <div class="sub" style="margin-bottom:12px;">total cases filed</div>
     {% if vol.mom_abs is not none %}
-    <div style="font-size:13px;font-weight:700;
+    <div style="font-size:13px;font-weight:700;margin-bottom:6px;
       color:{% if vol.mom_abs > 0 %}var(--red-dark){% elif vol.mom_abs < 0 %}var(--green-dark){% else %}var(--muted){% endif %};">
       {% if vol.mom_abs > 0 %}▲ +{{ vol.mom_abs }}{% elif vol.mom_abs < 0 %}▼ {{ vol.mom_abs }}{% else %}— flat{% endif %}
       {% if vol.mom_pct is not none %}<span style="font-weight:500;color:var(--muted);">({{ vol.mom_pct }}% MoM)</span>{% endif %}
+    </div>
+    {% endif %}
+    {% if vol.avg_12m is not none %}
+    <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px;margin-top:2px;">
+      <span style="font-weight:600;color:var(--text-2);">{{ vol.hist_periods }}-mo avg:</span> {{ "{:,}".format(vol.avg_12m) }} cases
+      {% if vol.dev_pct is not none %}
+      <span style="font-weight:700;margin-left:4px;
+        color:{% if vol.dev_pct > 10 %}var(--red-dark){% elif vol.dev_pct > 0 %}var(--yellow-dark){% elif vol.dev_pct < -10 %}var(--green-dark){% elif vol.dev_pct < 0 %}var(--green-dark){% else %}var(--muted){% endif %};">
+        ({% if vol.dev_pct > 0 %}+{% endif %}{{ vol.dev_pct }}% vs avg)
+      </span>
+      {% endif %}
     </div>
     {% endif %}
     {% if vol.sparkline and vol.sparkline | length >= 2 %}

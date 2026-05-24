@@ -241,6 +241,16 @@ def filings(
         mom_abs = (current_total - prior_total) if prior_total is not None else None
         mom_pct = round((current_total - prior_total) / prior_total * 100) if prior_total else None
         spark_periods = list(reversed(periods[:6]))
+        # 12-month seasonal baseline — excludes current period
+        hist_periods = periods[1:13]
+        avg_12m = None
+        dev_abs = None
+        dev_pct = None
+        if hist_periods:
+            hist_vals = [district_period_totals.get((district, p), 0) for p in hist_periods]
+            avg_12m = round(sum(hist_vals) / len(hist_vals))
+            dev_abs = current_total - avg_12m
+            dev_pct = round(dev_abs / avg_12m * 100) if avg_12m else None
         return {
             "current_period":   periods[0].strftime("%b %Y"),
             "current_total":    current_total,
@@ -249,6 +259,10 @@ def filings(
             "mom_pct":          mom_pct,
             "sparkline":        [district_period_totals.get((district, p), 0) for p in spark_periods],
             "sparkline_labels": [p.strftime("%b '%y") for p in spark_periods],
+            "avg_12m":          avg_12m,
+            "dev_abs":          dev_abs,
+            "dev_pct":          dev_pct,
+            "hist_periods":     len(hist_periods),
         }
 
     mdnc_vol = build_district_volume("MDNC")
