@@ -745,6 +745,27 @@ def clean_district_mismatch(
     )
 
 
+@router.post("/admin/clean-ednc-own-firm-rows")
+def clean_ednc_own_firm_rows(request: Request, user: dict = Depends(auth_required), db: Session = Depends(get_db)):
+    """Delete stale own-firm ranking rows for EDNC markets (Duncan Law has no offices there)."""
+    from app.models.rankings import LocalPackRanking
+    from app.models.competitor import Competitor
+    own_firm = db.query(Competitor).filter(Competitor.is_own_firm == True).first()
+    if not own_firm:
+        return RedirectResponse(url="/rankings?msg=own_firm_not_found", status_code=303)
+    ednc_markets = ["raleigh", "fayetteville", "wilmington", "wilson"]
+    deleted = (
+        db.query(LocalPackRanking)
+        .filter(
+            LocalPackRanking.competitor_id == own_firm.id,
+            LocalPackRanking.market.in_(ednc_markets),
+        )
+        .delete(synchronize_session=False)
+    )
+    db.commit()
+    return RedirectResponse(url=f"/rankings?msg=removed+{deleted}+stale+EDNC+own-firm+rows", status_code=303)
+
+
 @router.post("/admin/run-rankings/ednc")
 def trigger_ednc_rankings(request: Request, user: dict = Depends(auth_required)):
     """Run competitor rankings for EDNC markets only — no reviews, no digest."""
