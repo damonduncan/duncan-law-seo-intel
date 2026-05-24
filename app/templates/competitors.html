@@ -6,7 +6,7 @@
 
 {% if competitors %}
 <div class="card">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
     <div class="section-title" style="margin-bottom:0;cursor:pointer;user-select:none;" onclick="toggleSection('sec-comp-table')">
       <span class="section-icon purple">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -16,31 +16,57 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
       </span>
     </div>
-    <span class="chip chip-green">All Active</span>
+    <!-- District filter chips -->
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+      <span style="font-size:13px;color:var(--muted);font-weight:600;">District:</span>
+      {% for fd, fl in [('all','All'),('MDNC','MDNC'),('WDNC','WDNC'),('EDNC','EDNC')] %}
+      <button class="dist-filter" data-dist="{{ fd }}" onclick="filterByDistrict('{{ fd }}')"
+        style="padding:3px 12px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;transition:all .12s;
+        {% if fd == 'all' %}background:var(--accent);color:#fff;border-color:var(--accent);{% else %}background:transparent;color:var(--muted);{% endif %}">
+        {{ fl }}
+      </button>
+      {% endfor %}
+      <input type="text" id="comp-search" placeholder="Search…" oninput="filterCompSearch()"
+        style="padding:4px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;width:140px;">
+    </div>
   </div>
   <div id="sec-comp-table" data-collapsible="1">
   <table>
     <thead><tr>
       <th style="width:36px;">#</th>
       <th>Firm Name</th>
+      <th style="cursor:pointer;user-select:none;" onclick="sortBy('district')">District <span id="sort-district" style="color:var(--muted-2);">↕</span></th>
       <th>Attorneys</th>
-      <th>Google Place ID</th>
-      <th>Status</th>
+      <th style="text-align:right;cursor:pointer;user-select:none;" onclick="sortBy('reviews')">Reviews <span id="sort-reviews" style="color:var(--muted-2);">↕</span></th>
+      <th style="text-align:right;cursor:pointer;user-select:none;" onclick="sortBy('pack')">Pack Mkts <span id="sort-pack" style="color:var(--muted-2);">↕</span></th>
+      <th>Place ID</th>
     </tr></thead>
-    <tbody>
+    <tbody id="comp-tbody">
     {% for c in competitors %}
-    <tr>
-      <td style="color:var(--muted-2);font-size:14px;font-weight:600;">{{ loop.index }}</td>
+    {% set district = comp_district.get(c.id, '?') %}
+    {% set reviews = comp_reviews.get(c.id) %}
+    {% set pack_mkts = comp_pack_markets.get(c.id, 0) %}
+    <tr data-dist="{{ district }}" data-name="{{ c.name | lower }}"
+        data-reviews="{{ reviews if reviews is not none else -1 }}"
+        data-pack="{{ pack_mkts }}">
+      <td style="color:var(--muted-2);font-size:14px;font-weight:600;" class="row-num">{{ loop.index }}</td>
       <td>
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="firm-badge">{{ c.name[:2] | upper }}</div>
-          <a href="/competitors/{{ c.id }}" class="firm-hover"
-            data-name="{{ c.name }}"
-            data-initials="{{ c.name[:2] | upper }}"
-            data-attorneys="{{ c.attorneys | length }}"
-            data-place="{{ '✓ Set' if c.google_place_id else 'Missing' }}"
+          <a href="/competitors/{{ c.id }}"
             style="color:var(--text);text-decoration:none;font-weight:700;">{{ c.name }}</a>
         </div>
+      </td>
+      <td>
+        {% if district == 'MDNC' %}
+          <span class="chip chip-blue" style="font-size:11px;">MDNC</span>
+        {% elif district == 'WDNC' %}
+          <span class="chip chip-purple" style="font-size:11px;">WDNC</span>
+        {% elif district == 'EDNC' %}
+          <span class="chip chip-orange" style="font-size:11px;">EDNC</span>
+        {% else %}
+          <span style="color:var(--muted-2);font-size:13px;">—</span>
+        {% endif %}
       </td>
       <td>
         {% for atty in c.attorneys %}
@@ -52,6 +78,22 @@
         </div>
         {% endfor %}
       </td>
+      <td style="text-align:right;font-weight:700;font-size:15px;">
+        {% if reviews is not none %}
+          {{ reviews }}
+        {% else %}
+          <span style="color:var(--muted-2);font-size:13px;">—</span>
+        {% endif %}
+      </td>
+      <td style="text-align:right;">
+        {% if pack_mkts > 0 %}
+          <span style="font-weight:700;color:{% if pack_mkts >= 4 %}var(--red-dark){% elif pack_mkts >= 2 %}var(--yellow-dark){% else %}var(--muted){% endif %};">
+            {{ pack_mkts }}
+          </span>
+        {% else %}
+          <span style="color:var(--muted-2);font-size:13px;">—</span>
+        {% endif %}
+      </td>
       <td>
         {% set loc_ids = c.locations | selectattr('google_place_id') | list %}
         {% if loc_ids | length > 1 %}
@@ -62,18 +104,76 @@
           <span class="chip chip-yellow">Missing</span>
         {% endif %}
       </td>
-      <td><span class="chip chip-green">Active</span></td>
     </tr>
     {% endfor %}
     </tbody>
   </table>
+  <div id="comp-no-results" style="display:none;padding:20px;text-align:center;color:var(--muted);font-size:15px;">
+    No competitors match the current filter.
+  </div>
   </div>
 </div>
 
 <div style="margin-top:14px;font-size:14px;color:var(--muted);line-height:1.7;">
-  To add, edit, or remove competitors: update <code>config/competitors.yaml</code> and redeploy.
-  The database syncs automatically on startup.
+  <strong>Pack Mkts</strong> = number of markets where this firm currently appears in the Google 3-pack. &nbsp;
+  To add or edit competitors: update <code>config/competitors.yaml</code> and redeploy.
 </div>
+
+<script>
+(function() {
+  var activeDist = 'all';
+  var sortCol = null, sortAsc = true;
+
+  function applyFilters() {
+    var query = (document.getElementById('comp-search').value || '').toLowerCase().trim();
+    var rows = document.querySelectorAll('#comp-tbody tr');
+    var visible = 0;
+    rows.forEach(function(r, i) {
+      var dist = r.dataset.dist || '';
+      var name = r.dataset.name || '';
+      var distOk = activeDist === 'all' || dist === activeDist;
+      var searchOk = !query || name.includes(query);
+      var show = distOk && searchOk;
+      r.style.display = show ? '' : 'none';
+      if (show) { visible++; r.querySelector('.row-num').textContent = visible; }
+    });
+    document.getElementById('comp-no-results').style.display = visible === 0 ? '' : 'none';
+  }
+
+  window.filterByDistrict = function(dist) {
+    activeDist = dist;
+    document.querySelectorAll('.dist-filter').forEach(function(b) {
+      var active = b.dataset.dist === dist;
+      b.style.background = active ? 'var(--accent)' : 'transparent';
+      b.style.color = active ? '#fff' : 'var(--muted)';
+      b.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+    });
+    applyFilters();
+  };
+
+  window.filterCompSearch = function() { applyFilters(); };
+
+  window.sortBy = function(col) {
+    if (sortCol === col) { sortAsc = !sortAsc; } else { sortCol = col; sortAsc = col !== 'reviews' && col !== 'pack'; }
+    ['district','reviews','pack'].forEach(function(c) {
+      var el = document.getElementById('sort-' + c);
+      if (el) el.textContent = c === col ? (sortAsc ? '↑' : '↓') : '↕';
+    });
+    var tbody = document.getElementById('comp-tbody');
+    var rows = Array.from(tbody.querySelectorAll('tr'));
+    rows.sort(function(a, b) {
+      var av, bv;
+      if (col === 'district') { av = a.dataset.dist || ''; bv = b.dataset.dist || ''; return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av); }
+      if (col === 'reviews')  { av = parseInt(a.dataset.reviews); bv = parseInt(b.dataset.reviews); }
+      if (col === 'pack')     { av = parseInt(a.dataset.pack);    bv = parseInt(b.dataset.pack);    }
+      if (isNaN(av)) av = -1; if (isNaN(bv)) bv = -1;
+      return sortAsc ? av - bv : bv - av;
+    });
+    rows.forEach(function(r) { tbody.appendChild(r); });
+    applyFilters();
+  };
+})();
+</script>
 
 {% else %}
 <div class="card">

@@ -1,5 +1,5 @@
 import json
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Request, Depends
@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.dependencies import RedirectIfNotAuthenticated
 from app.database import get_db
 from app.models.alerts import Alert
-from app.models.competitor import Competitor
+from app.models.competitor import Competitor, CompetitorLocation
 from app.models.filings import FilingSnapshot
 from app.models.rankings import LocalPackRanking
 from app.models.reviews import ReviewSnapshot
@@ -19,6 +19,17 @@ from app.models.reviews import ReviewSnapshot
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 auth_required = RedirectIfNotAuthenticated()
+
+_MARKET_TO_DISTRICT = {
+    "greensboro": "MDNC", "winston_salem": "MDNC", "high_point": "MDNC",
+    "salisbury": "MDNC", "durham": "MDNC", "concord": "MDNC",
+    "graham": "MDNC", "carthage": "MDNC", "asheboro": "MDNC",
+    "charlotte": "WDNC", "asheville": "WDNC", "waynesville": "WDNC",
+    "statesville": "WDNC", "mooresville": "WDNC", "elkin": "WDNC",
+    "north_wilkesboro": "WDNC", "morganton": "WDNC",
+    "ednc": "EDNC", "raleigh": "EDNC", "fayetteville": "EDNC",
+    "wilson": "EDNC", "wilmington": "EDNC",
+}
 
 
 @router.get("/competitors", response_class=HTMLResponse)
@@ -31,11 +42,78 @@ def competitors_list(
         Competitor.active == True, Competitor.is_own_firm == False
     ).order_by(Competitor.name).all()
 
+    comp_ids = [c.id for c in competitors]
+
+    # District — infer from CompetitorLocation markets
+    all_locs = db.query(CompetitorLocation).filter(
+        CompetitorLocation.competitor_id.in_(comp_ids)
+    ).all()
+    _loc_mkts: dict = defaultdict(set)
+    for loc in all_locs:
+        if loc.market:
+            _loc_mkts[loc.competitor_id].add(loc.market)
+    comp_district: dict = {}
+    for cid, mkts in _loc_mkts.items():
+        cnts = Counter(_MARKET_TO_DISTRICT[m] for m in mkts if m in _MARKET_TO_DISTRICT)
+        if cnts:
+            comp_district[cid] = cnts.most_common(1)[0][0]
+
+    # Google review totals — recent 60 days, deduped by snapshot_data fingerprint
+    since60 = datetime.now(timezone.utc) - timedelta(days=60)
+    review_snaps = (
+        db.query(ReviewSnapshot)
+        .filter(
+            ReviewSnapshot.competitor_id.in_(comp_ids),
+            ReviewSnapshot.source == "google",
+            ReviewSnapshot.snapped_at >= since60,
+        )
+        .order_by(ReviewSnapshot.snapped_at.desc())
+        .all()
+    )
+    _snap_by_cm: dict = {}
+    for s in review_snaps:
+        key = (s.competitor_id, s.market)
+        if key not in _snap_by_cm:
+            _snap_by_cm[key] = s
+
+    comp_reviews: dict = {}
+    _seen_fps: dict = defaultdict(set)
+    for (cid, _), s in _snap_by_cm.items():
+        fp = json.dumps(s.snapshot_data, sort_keys=True) if s.snapshot_data else str(id(s))
+        if fp not in _seen_fps[cid]:
+            _seen_fps[cid].add(fp)
+            comp_reviews[cid] = comp_reviews.get(cid, 0) + (s.review_count or 0)
+
+    # Pack market count — distinct markets competitor appears in (most recent date)
+    _latest_rank = (
+        db.query(cast(LocalPackRanking.scraped_at, Date))
+        .filter(LocalPackRanking.in_pack == True)
+        .order_by(LocalPackRanking.scraped_at.desc())
+        .first()
+    )
+    comp_pack_markets: dict = {}
+    if _latest_rank:
+        pack_rows = (
+            db.query(LocalPackRanking.competitor_id, LocalPackRanking.market)
+            .filter(
+                LocalPackRanking.in_pack == True,
+                cast(LocalPackRanking.scraped_at, Date) == _latest_rank[0],
+                LocalPackRanking.competitor_id.in_(comp_ids),
+            )
+            .distinct()
+            .all()
+        )
+        for r in pack_rows:
+            comp_pack_markets[r.competitor_id] = comp_pack_markets.get(r.competitor_id, 0) + 1
+
     return templates.TemplateResponse("competitors.html", {
-        "request": request,
-        "user": user,
-        "competitors": competitors,
-        "active_page": "competitors",
+        "request":         request,
+        "user":            user,
+        "competitors":     competitors,
+        "comp_district":   comp_district,
+        "comp_reviews":    comp_reviews,
+        "comp_pack_markets": comp_pack_markets,
+        "active_page":     "competitors",
     })
 
 
