@@ -278,6 +278,124 @@
 </div>
 {% endif %}
 
+<!-- Opportunity Matrix -->
+{% if opportunity_matrix %}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-opp-matrix')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon purple">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    </span>
+    Market Opportunity Matrix
+    <span id="chev-sec-opp-matrix" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-opp-matrix" data-collapsible="1">
+  <p style="color:var(--muted);font-size:14px;margin-bottom:20px;line-height:1.6;">
+    Markets plotted by <strong style="color:var(--text-2);">3-pack strength</strong> (% of keywords ranked) vs
+    <strong style="color:var(--text-2);">PACER district volume</strong> (total cases filed = market size).
+    <span style="color:var(--red-dark);font-weight:600;">Invest</span> markets have the highest ROI potential.
+  </p>
+
+  <!-- 2×2 quadrant visual -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;margin-bottom:24px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">
+    <!-- Top-left: high vol, low pack = INVEST -->
+    <div style="background:var(--red-light);padding:14px 16px;min-height:90px;">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--red-dark);margin-bottom:8px;">
+        ▲ High volume · ◀ Weak pack — Invest
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;">
+        {% for m in opportunity_matrix if m.quadrant == 'invest' %}
+        <span style="font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--red-dark);color:#fff;">{{ m.display }}</span>
+        {% else %}<span style="font-size:12px;color:var(--muted);">—</span>
+        {% endfor %}
+      </div>
+    </div>
+    <!-- Top-right: high vol, high pack = DEFEND -->
+    <div style="background:var(--green-light);padding:14px 16px;min-height:90px;">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--green-dark);margin-bottom:8px;">
+        ▲ High volume · ▶ Strong pack — Defend
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;">
+        {% for m in opportunity_matrix if m.quadrant == 'defend' %}
+        <span style="font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--green-dark);color:#fff;">{{ m.display }}</span>
+        {% else %}<span style="font-size:12px;color:var(--muted);">—</span>
+        {% endfor %}
+      </div>
+    </div>
+    <!-- Bottom-left: low vol, low pack = OPTIMIZE -->
+    <div style="background:var(--yellow-light);padding:14px 16px;min-height:90px;">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--yellow-dark);margin-bottom:8px;">
+        ▼ Low volume · ◀ Weak pack — Optimize
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;">
+        {% for m in opportunity_matrix if m.quadrant == 'optimize' %}
+        <span style="font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--yellow-dark);color:#fff;">{{ m.display }}</span>
+        {% else %}<span style="font-size:12px;color:var(--muted);">—</span>
+        {% endfor %}
+      </div>
+    </div>
+    <!-- Bottom-right: low vol, high pack = MONITOR -->
+    <div style="background:var(--accent-light);padding:14px 16px;min-height:90px;">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin-bottom:8px;">
+        ▼ Low volume · ▶ Strong pack — Monitor
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;">
+        {% for m in opportunity_matrix if m.quadrant == 'monitor' %}
+        <span style="font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--accent);color:#fff;">{{ m.display }}</span>
+        {% else %}<span style="font-size:12px;color:var(--muted);">—</span>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Supporting data table -->
+  <table>
+    <thead><tr>
+      <th>Market</th>
+      <th>Quadrant</th>
+      <th>3-Pack Presence</th>
+      <th>District PACER Volume</th>
+      <th>Duncan Law Share</th>
+      <th style="text-align:right;">Opp. Score</th>
+    </tr></thead>
+    <tbody>
+    {% for m in opportunity_matrix %}
+    <tr>
+      <td>
+        <div style="font-weight:600;">{{ m.display }}</div>
+        <span class="chip {% if m.district == 'MDNC' %}chip-blue{% elif m.district == 'WDNC' %}chip-purple{% else %}chip-orange{% endif %}" style="font-size:11px;margin-top:3px;">{{ m.district }}</span>
+      </td>
+      <td>
+        <span style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;background:{{ m.quad_bg }};color:{{ m.quad_color }};">{{ m.quad_label }}</span>
+      </td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;min-width:100px;">
+          <div style="flex:1;height:5px;background:var(--surface-3);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:{{ m.pack_pct }}%;background:{% if m.pack_pct >= 75 %}var(--green-dark){% elif m.pack_pct >= 50 %}var(--yellow-dark){% else %}var(--red-dark){% endif %};border-radius:3px;"></div>
+          </div>
+          <span style="font-size:13px;font-weight:700;white-space:nowrap;">{{ m.pack_pct }}% <span style="font-weight:400;color:var(--muted);">({{ m.in_pack }}/{{ m.total_kw }})</span></span>
+        </div>
+      </td>
+      <td style="font-size:14px;font-weight:600;">
+        {% if m.dist_total > 0 %}{{ "{:,}".format(m.dist_total) }} cases/mo{% else %}<span style="color:var(--muted);">—</span>{% endif %}
+      </td>
+      <td>
+        {% if m.own_share_pct is not none %}
+        <span style="font-size:14px;font-weight:700;color:{% if m.own_share_pct >= 15 %}var(--green-dark){% elif m.own_share_pct >= 8 %}var(--yellow-dark){% else %}var(--muted){% endif %};">{{ m.own_share_pct }}%</span>
+        {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+      </td>
+      <td style="text-align:right;">
+        <span style="font-size:14px;font-weight:800;color:{{ m.quad_color }};">{{ m.opportunity_score }}</span>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+
 <!-- Action center -->
 {% if action_items %}
 <div class="card" style="margin-bottom:24px;">

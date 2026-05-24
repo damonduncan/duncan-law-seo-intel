@@ -54,6 +54,7 @@ def dashboard(
     action_items = _build_action_items(db, own_firm, scorecard, competitors)
     rank_changes = _build_rank_changes(db, own_firm)
     pacer_share = _build_pacer_share(db, own_firm)
+    opportunity_matrix = _build_opportunity_matrix(db, own_firm, scorecard, pacer_share)
 
     return templates.TemplateResponse("overview.html", {
         "request": request,
@@ -67,6 +68,7 @@ def dashboard(
         "action_items": action_items,
         "rank_changes": rank_changes,
         "pacer_share": pacer_share,
+        "opportunity_matrix": opportunity_matrix,
         "active_page": "dashboard",
     })
 
@@ -391,6 +393,81 @@ def _build_rank_changes(db: Session, own_firm) -> list:
     drops.sort(key=lambda x: abs(x["delta"] or 99), reverse=True)
     gains.sort(key=lambda x: abs(x["delta"] or 99), reverse=True)
     return drops + gains
+
+
+def _build_opportunity_matrix(db: Session, own_firm, scorecard: list, pacer_share: dict) -> list:
+    """Per-market opportunity quadrant: pack strength vs PACER district volume."""
+    if not own_firm or not scorecard:
+        return []
+
+    snaps = db.query(FilingSnapshot).all()
+    dist_totals: dict = {}
+    if snaps:
+        counts: dict = {}
+        for s in snaps:
+            key = (s.competitor_id, s.attorney_id, s.district, s.chapter, s.period_start)
+            if key not in counts or s.case_count > counts[key]:
+                counts[key] = s.case_count
+        dist_latest: dict = {}
+        for (_, _, dist, _, per) in counts:
+            if dist not in dist_latest or per > dist_latest[dist]:
+                dist_latest[dist] = per
+        for district, per in dist_latest.items():
+            dist_totals[district] = sum(
+                count for (_, _, d, _, p), count in counts.items() if d == district and p == per
+            )
+
+    _m2d = {
+        "greensboro": "MDNC", "winston_salem": "MDNC", "high_point": "MDNC", "salisbury": "MDNC",
+        "charlotte": "WDNC", "asheville": "WDNC",
+    }
+    max_vol = max(dist_totals.values()) if dist_totals else 1
+    avg_vol = (sum(dist_totals.values()) / len(dist_totals)) if dist_totals else 0
+
+    matrix = []
+    for m in scorecard:
+        if m["total"] == 0:
+            continue
+        district = _m2d.get(m["market"], "MDNC")
+        pack_pct = round(m["in_pack"] / m["total"] * 100) if m["total"] > 0 else 0
+        dist_total = dist_totals.get(district, 0)
+        own_share_pct = pacer_share.get(district)
+
+        high_pack = pack_pct >= 75
+        high_vol = dist_total >= avg_vol
+
+        if high_pack and high_vol:
+            quadrant, quad_label, quad_color, quad_bg = "defend",   "Defend",   "var(--green-dark)", "var(--green-light)"
+        elif not high_pack and high_vol:
+            quadrant, quad_label, quad_color, quad_bg = "invest",   "Invest",   "var(--red-dark)",   "var(--red-light)"
+        elif high_pack and not high_vol:
+            quadrant, quad_label, quad_color, quad_bg = "monitor",  "Monitor",  "var(--accent)",     "var(--accent-light)"
+        else:
+            quadrant, quad_label, quad_color, quad_bg = "optimize", "Optimize", "var(--yellow-dark)", "var(--yellow-light)"
+
+        vol_score  = dist_total / max_vol if max_vol else 0
+        gap_score  = 1 - (pack_pct / 100)
+        opportunity_score = round((gap_score * 0.6 + vol_score * 0.4) * 100)
+
+        matrix.append({
+            "market":           m["market"],
+            "display":          m["display"],
+            "district":         district,
+            "pack_pct":         pack_pct,
+            "in_pack":          m["in_pack"],
+            "total_kw":         m["total"],
+            "dist_total":       dist_total,
+            "own_share_pct":    own_share_pct,
+            "opportunity_score": opportunity_score,
+            "quadrant":         quadrant,
+            "quad_label":       quad_label,
+            "quad_color":       quad_color,
+            "quad_bg":          quad_bg,
+        })
+
+    _qord = {"invest": 0, "optimize": 1, "defend": 2, "monitor": 3}
+    matrix.sort(key=lambda x: (_qord.get(x["quadrant"], 9), -x["opportunity_score"]))
+    return matrix
 
 
 def _build_pacer_share(db: Session, own_firm) -> dict:
