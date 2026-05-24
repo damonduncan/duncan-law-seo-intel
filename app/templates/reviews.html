@@ -149,29 +149,61 @@
     <span class="section-icon teal">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
     </span>
-    Google Rating Comparison
+    Google Ratings &amp; Review Counts
   </div>
-  <div style="max-width:60%;display:flex;flex-direction:column;gap:5px;">
-    {% if own_avg_rating %}
-    <div style="display:grid;grid-template-columns:180px 1fr 44px;gap:12px;align-items:center;padding:7px 10px;background:var(--accent-light);border-radius:var(--r-sm);">
-      <div style="font-size:13px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">★ Duncan Law</div>
-      <div style="height:8px;background:rgba(37,99,235,.15);border-radius:4px;overflow:hidden;">
-        <div style="height:100%;width:{{ (own_avg_rating|float / 5 * 100)|int }}%;background:var(--accent);border-radius:4px;"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;">
+
+    <!-- Left: rating bars -->
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px;">Avg Rating</div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        {% if own_avg_rating %}
+        <div style="display:grid;grid-template-columns:140px 1fr 38px;gap:10px;align-items:center;padding:7px 10px;background:var(--accent-light);border-radius:var(--r-sm);">
+          <div style="font-size:13px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">★ Duncan Law</div>
+          <div style="height:8px;background:rgba(37,99,235,.15);border-radius:4px;overflow:hidden;">
+            <div style="height:100%;width:{{ (own_avg_rating|float / 5 * 100)|int }}%;background:var(--accent);border-radius:4px;"></div>
+          </div>
+          <div style="font-size:13px;font-weight:800;color:var(--accent);text-align:right;">{{ own_avg_rating }}</div>
+        </div>
+        {% endif %}
+        {% for r in comp_rows %}
+        {% if r.google_rating %}
+        <div style="display:grid;grid-template-columns:140px 1fr 38px;gap:10px;align-items:center;padding:5px 10px;border-radius:var(--r-sm);">
+          <div style="font-size:13px;font-weight:500;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</div>
+          <div style="height:7px;background:var(--surface-3);border-radius:4px;overflow:hidden;">
+            <div style="height:100%;width:{{ (r.google_rating|float / 5 * 100)|int }}%;background:{% if r.google_rating >= 4.5 %}var(--green){% elif r.google_rating >= 4.0 %}var(--yellow){% else %}var(--red){% endif %};border-radius:4px;"></div>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:{% if r.google_rating >= 4.5 %}var(--green-dark){% elif r.google_rating >= 4.0 %}var(--yellow-dark){% else %}var(--red-dark){% endif %};text-align:right;">{{ "%.1f"|format(r.google_rating|float) }}</div>
+        </div>
+        {% endif %}
+        {% endfor %}
       </div>
-      <div style="font-size:13px;font-weight:800;color:var(--accent);text-align:right;">{{ own_avg_rating }}</div>
     </div>
-    {% endif %}
-    {% for r in comp_rows %}
-    {% if r.google_rating %}
-    <div style="display:grid;grid-template-columns:180px 1fr 44px;gap:12px;align-items:center;padding:5px 10px;border-radius:var(--r-sm);">
-      <div style="font-size:13px;font-weight:500;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</div>
-      <div style="height:7px;background:var(--surface-3);border-radius:4px;overflow:hidden;">
-        <div style="height:100%;width:{{ (r.google_rating|float / 5 * 100)|int }}%;background:{% if r.google_rating >= 4.5 %}var(--green){% elif r.google_rating >= 4.0 %}var(--yellow){% else %}var(--red){% endif %};border-radius:4px;"></div>
+
+    <!-- Right: review count leaderboard -->
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px;">Review Count — Top Firms</div>
+      {% set ranked = namespace(rows=[], i=0) %}
+      {% set all_rows = (comp_rows | selectattr('google_count') | list) %}
+      {% set sorted_rows = all_rows | sort(attribute='google_count', reverse=true) %}
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        {% if own_total_reviews is not none %}
+        <div style="display:grid;grid-template-columns:26px 1fr auto;gap:8px;align-items:center;padding:6px 10px;background:var(--accent-light);border-radius:var(--r-sm);">
+          <span style="font-size:11px;font-weight:800;color:var(--accent);text-align:center;">★</span>
+          <span style="font-size:13px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Duncan Law</span>
+          <span style="font-size:13px;font-weight:800;color:var(--accent);">{{ "{:,}".format(own_total_reviews) }}</span>
+        </div>
+        {% endif %}
+        {% for r in sorted_rows[:12] %}
+        <div style="display:grid;grid-template-columns:26px 1fr auto;gap:8px;align-items:center;padding:5px 10px;border-radius:var(--r-sm);">
+          <span style="font-size:11px;font-weight:700;color:var(--muted-2);text-align:center;">#{{ loop.index }}</span>
+          <span style="font-size:13px;font-weight:500;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</span>
+          <span style="font-size:13px;font-weight:700;color:var(--text);">{{ "{:,}".format(r.google_count) }}</span>
+        </div>
+        {% endfor %}
       </div>
-      <div style="font-size:13px;font-weight:700;color:{% if r.google_rating >= 4.5 %}var(--green-dark){% elif r.google_rating >= 4.0 %}var(--yellow-dark){% else %}var(--red-dark){% endif %};text-align:right;">{{ "%.1f"|format(r.google_rating|float) }}</div>
     </div>
-    {% endif %}
-    {% endfor %}
+
   </div>
 </div>
 {% endif %}
