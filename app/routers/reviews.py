@@ -175,6 +175,41 @@ def reviews(
         key=lambda s: OWN_WDNC_ORDER.index(s.market) if s.market in OWN_WDNC else 99,
     )
 
+    # Build review trend for own firm — one data point per (market, date)
+    _MARKET_COLORS = {
+        "greensboro": "#2563EB", "winston_salem": "#10B981", "high_point": "#F97316",
+        "charlotte": "#8B5CF6", "salisbury": "#EF4444", "asheville": "#14B8A6",
+    }
+    _MARKET_DISPLAY = {
+        "greensboro": "Greensboro", "winston_salem": "Winston-Salem",
+        "high_point": "High Point", "charlotte": "Charlotte",
+        "salisbury": "Salisbury", "asheville": "Asheville",
+    }
+    own_trend_raw: dict = defaultdict(dict)  # market → {date_str: count}
+    for (cid, source, market), snaps in snap_history.items():
+        if own_firm and cid == own_firm.id and source == "google" and market:
+            for s in snaps:
+                if s.review_count is not None:
+                    own_trend_raw[market][s.snapped_at.strftime("%Y-%m-%d")] = s.review_count
+
+    review_chart_data = None
+    all_trend_dates = sorted({d for mdata in own_trend_raw.values() for d in mdata})
+    if own_trend_raw and len(all_trend_dates) >= 2:
+        series = []
+        for market in OWN_MDNC_ORDER + OWN_WDNC_ORDER:
+            if market not in own_trend_raw:
+                continue
+            series.append({
+                "label": _MARKET_DISPLAY.get(market, market),
+                "color": _MARKET_COLORS.get(market, "#94A3B8"),
+                "data": [own_trend_raw[market].get(d) for d in all_trend_dates],
+            })
+        if series:
+            review_chart_data = {
+                "labels": [d[5:].replace("-", "/") for d in all_trend_dates],
+                "series": series,
+            }
+
     # Top competitors gaining reviews this period
     velocity_leaders = sorted(
         [r for r in comp_rows if r["count_delta"] is not None and r["count_delta"] > 0],
@@ -198,6 +233,7 @@ def reviews(
         "competitor_count": len(comp_rows),
         "recommendations": recommendations,
         "velocity_leaders": velocity_leaders,
+        "review_chart_data": review_chart_data,
         # District-grouped data
         "mdnc_comps": mdnc_comps,
         "wdnc_comps": wdnc_comps,

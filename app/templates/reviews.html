@@ -287,6 +287,87 @@
 </div>
 {% endif %}
 
+<!-- Review growth trend chart -->
+{% if review_chart_data %}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-review-trend')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon green">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+    </span>
+    Review Growth Trend — Duncan Law
+    <span id="chev-sec-review-trend" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-review-trend" data-collapsible="1">
+  <p style="color:var(--muted);font-size:14px;margin-bottom:20px;line-height:1.6;">
+    Weekly Google review count per office — 60-day window. An upward slope means your review campaign is working.
+    <strong style="color:var(--orange);">High Point</strong> and <strong style="color:var(--orange);">Asheville</strong> are the priority markets to watch.
+  </p>
+  <div style="position:relative;height:280px;">
+    <canvas id="review-trend-chart"></canvas>
+  </div>
+  </div>
+</div>
+<script>
+(function () {
+  var d = {{ review_chart_data | tojson }};
+  new Chart(document.getElementById('review-trend-chart'), {
+    type: 'line',
+    data: {
+      labels: d.labels,
+      datasets: d.series.map(function (s) {
+        return {
+          label: s.label,
+          data: s.data,
+          borderColor: s.color,
+          backgroundColor: s.color + '18',
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: s.color,
+          tension: 0.35,
+          spanGaps: true,
+          fill: false,
+        };
+      }),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { boxWidth: 14, padding: 16, font: { size: 12 } },
+        },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              var v = ctx.parsed.y;
+              return ' ' + ctx.dataset.label + ': ' + (v !== null ? v + ' reviews' : '—');
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(148,163,184,.12)' },
+          ticks: { font: { size: 11 }, color: '#64748B', maxRotation: 0 },
+        },
+        y: {
+          beginAtZero: false,
+          grid: { color: 'rgba(148,163,184,.12)' },
+          ticks: { font: { size: 11 }, color: '#64748B', precision: 0 },
+          title: { display: true, text: 'Google Reviews', font: { size: 11 }, color: '#64748B' },
+        },
+      },
+    },
+  });
+})();
+</script>
+{% endif %}
+
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
 <!-- DISTRICT REVIEW INTELLIGENCE                                              -->
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
