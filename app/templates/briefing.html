@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Intelligence Briefing — Duncan Law</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #1e293b;
+    background: #f8fafc;
+    padding: 32px 24px;
+  }
+  .page { max-width: 860px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 16px rgba(0,0,0,.08); overflow: hidden; }
+
+  /* Header */
+  .brf-header { background: #2563eb; color: #fff; padding: 28px 32px 24px; }
+  .brf-title { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+  .brf-sub   { font-size: 13px; opacity: .75; margin-top: 4px; }
+
+  /* Sections */
+  .section { padding: 24px 32px; border-bottom: 1px solid #e2e8f0; }
+  .section:last-child { border-bottom: none; }
+  .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #64748b; margin-bottom: 14px; }
+
+  /* KPI strip */
+  .kpi-strip { display: flex; gap: 16px; flex-wrap: wrap; }
+  .kpi { flex: 1; min-width: 120px; background: #f1f5f9; border-radius: 10px; padding: 14px 16px; }
+  .kpi .k-val { font-size: 28px; font-weight: 800; color: #1e293b; line-height: 1; }
+  .kpi .k-label { font-size: 12px; color: #64748b; margin-top: 4px; }
+  .kpi.kpi-alert .k-val { color: {% if unacked_count > 0 %}#b91c1c{% else %}#15803d{% endif %}; }
+  .kpi.kpi-pack .k-val  { color: #2563eb; }
+  .kpi.kpi-pacer .k-val { color: #7c3aed; }
+
+  /* Action items */
+  .action-list { display: flex; flex-direction: column; gap: 10px; }
+  .action-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 8px; background: #f8fafc; border-left: 3px solid #cbd5e1; }
+  .action-item.high { border-left-color: #ef4444; background: #fef2f2; }
+  .action-item.medium { border-left-color: #f59e0b; background: #fffbeb; }
+  .action-item .a-title { font-size: 13px; font-weight: 600; color: #1e293b; }
+  .action-item .a-detail { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+  /* Market table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 7px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #64748b; border-bottom: 1px solid #e2e8f0; }
+  td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  .bar-wrap { display: flex; align-items: center; gap: 7px; }
+  .bar { height: 5px; border-radius: 3px; background: #e2e8f0; flex: 1; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; }
+  .chip { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
+  .chip-green  { background: #dcfce7; color: #15803d; }
+  .chip-yellow { background: #fef9c3; color: #a16207; }
+  .chip-red    { background: #fee2e2; color: #b91c1c; }
+  .chip-blue   { background: #dbeafe; color: #1d4ed8; }
+  .chip-purple { background: #ede9fe; color: #7c3aed; }
+  .chip-orange { background: #ffedd5; color: #c2410c; }
+  .chip-gray   { background: #f1f5f9; color: #475569; }
+
+  /* Timeline */
+  .timeline { display: flex; flex-direction: column; gap: 12px; }
+  .tl-item { display: flex; gap: 12px; align-items: flex-start; }
+  .tl-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+  .tl-body { flex: 1; }
+  .tl-summary { font-size: 13px; font-weight: 500; color: #1e293b; }
+  .tl-meta    { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+  /* Footer */
+  .brf-footer { background: #f8fafc; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .brf-footer .ft-text { font-size: 12px; color: #94a3b8; }
+
+  /* Controls (no-print) */
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
+  .btn-primary { background: #2563eb; color: #fff; }
+  .btn-ghost   { background: #f1f5f9; color: #475569; }
+  .copy-status { font-size: 12px; color: #15803d; display: none; align-items: center; gap: 4px; }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .page { box-shadow: none; border-radius: 0; }
+    .no-print { display: none !important; }
+    .section { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Controls (browser only) -->
+<div class="no-print controls">
+  <button class="btn btn-primary" onclick="window.print()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    Print / Save PDF
+  </button>
+  <a href="/dashboard" class="btn btn-ghost">← Back to dashboard</a>
+  {% if share_link %}
+  <button class="btn btn-ghost" onclick="copyLink()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+    Copy share link
+  </button>
+  <span id="copy-ok" class="copy-status">✓ Copied!</span>
+  <script>
+    function copyLink() {
+      navigator.clipboard.writeText('{{ share_link }}').then(function() {
+        var el = document.getElementById('copy-ok');
+        el.style.display = 'flex';
+        setTimeout(function() { el.style.display = 'none'; }, 2000);
+      });
+    }
+  </script>
+  {% endif %}
+</div>
+
+<div class="page">
+
+  <!-- Header -->
+  <div class="brf-header">
+    <div class="brf-title">
+      {% if own_firm %}{{ own_firm.name }}{% else %}Duncan Law{% endif %} — Weekly Intelligence Briefing
+    </div>
+    <div class="brf-sub">Generated {{ generated.strftime('%B %d, %Y') }} · Local SEO &amp; PACER Competitive Intelligence</div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="section">
+    <div class="section-label">At a Glance</div>
+    <div class="kpi-strip">
+      <div class="kpi kpi-alert">
+        <div class="k-val">{{ unacked_count }}</div>
+        <div class="k-label">Active alerts</div>
+      </div>
+      <div class="kpi kpi-pack">
+        <div class="k-val">{{ in_pack_kw }}/{{ total_kw }}</div>
+        <div class="k-label">Keywords in 3-pack</div>
+      </div>
+      {% for district, share in pacer_share.items() %}
+      <div class="kpi kpi-pacer">
+        <div class="k-val">{{ share }}%</div>
+        <div class="k-label">{{ district }} PACER share</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Action items -->
+  {% if action_items %}
+  <div class="section">
+    <div class="section-label">Priority Actions</div>
+    <div class="action-list">
+      {% for item in action_items %}
+      <div class="action-item {{ item.priority }}">
+        <div>
+          <div class="a-title">{{ item.title }}</div>
+          {% if item.detail %}<div class="a-detail">{{ item.detail }}</div>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Market scorecard -->
+  {% if scorecard %}
+  <div class="section">
+    <div class="section-label">Market Scorecard</div>
+    <table>
+      <thead><tr>
+        <th>Market</th>
+        <th>3-Pack Presence</th>
+        <th>Reviews</th>
+        <th>Status</th>
+      </tr></thead>
+      <tbody>
+      {% for m in scorecard %}
+      {% if m.total > 0 or m.reviews is not none %}
+      <tr>
+        <td style="font-weight:600;">{{ m.display }}</td>
+        <td>
+          {% if m.total > 0 %}
+          <div class="bar-wrap">
+            <div class="bar"><div class="bar-fill" style="width:{{ (m.in_pack / m.total * 100)|int }}%;background:{% if m.in_pack == m.total %}#15803d{% elif m.in_pack >= m.total // 2 %}#d97706{% else %}#b91c1c{% endif %};"></div></div>
+            <span style="font-size:12px;font-weight:700;">{{ m.in_pack }}/{{ m.total }}</span>
+          </div>
+          {% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+        </td>
+        <td style="font-weight:600;">{{ m.reviews if m.reviews is not none else '—' }}</td>
+        <td>
+          {% if m.status == 'strong' %}<span class="chip chip-green">Strong</span>
+          {% elif m.status == 'ok' %}<span class="chip chip-yellow">OK</span>
+          {% elif m.status == 'needs_attention' %}<span class="chip chip-red">Needs attention</span>
+          {% else %}<span class="chip chip-gray">No data</span>{% endif %}
+        </td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- Activity feed -->
+  {% if activity_feed %}
+  <div class="section">
+    <div class="section-label">Recent Activity</div>
+    <div class="timeline">
+      {% for ev in activity_feed %}
+      <div class="tl-item">
+        <div class="tl-dot" style="background:{{ ev.color }};"></div>
+        <div class="tl-body">
+          <div class="tl-summary">
+            {% if ev.firm %}<strong>{{ ev.firm }}</strong> — {% endif %}{{ ev.summary }}
+          </div>
+          <div class="tl-meta">
+            {{ ev.ts.strftime('%b %d, %Y') if ev.ts else '—' }}{% if ev.market %} · {{ ev.market }}{% endif %}
+            {% if ev.source == 'alert' and not ev.acked %} · <span style="color:#b91c1c;font-weight:700;">Active</span>{% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Footer -->
+  <div class="brf-footer">
+    <span class="ft-text">Duncan Law SEO Intelligence Tool · Confidential</span>
+    {% if share_link %}
+    <span class="ft-text no-print">Share: <code style="font-size:11px;background:#e2e8f0;padding:2px 5px;border-radius:4px;">{{ share_link }}</code></span>
+    {% endif %}
+    <span class="ft-text">{{ generated.strftime('%B %d, %Y') }}</span>
+  </div>
+
+</div>
+</body>
+</html>

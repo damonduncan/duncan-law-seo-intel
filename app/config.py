@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     resend_from_address: str = "alerts@duncanlawonline.com"
     digest_recipient: str = "damonduncan@duncanlawonline.com"
 
+    # Briefing
+    briefing_token: str = ""   # set BRIEFING_TOKEN env var to share /briefing without OAuth
+
     # App
     app_base_url: str = "http://localhost:8000"
     environment: str = "development"

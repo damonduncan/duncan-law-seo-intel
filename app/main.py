@@ -74,6 +74,7 @@ from app.routers.filings import router as filings_router
 from app.routers.competitors import router as competitors_router
 from app.routers.alerts import router as alerts_router
 from app.routers.admin import router as admin_router
+from app.routers.briefing import router as briefing_router
 
 app.include_router(overview_router)
 app.include_router(rankings_router)
@@ -82,6 +83,7 @@ app.include_router(filings_router)
 app.include_router(competitors_router)
 app.include_router(alerts_router)
 app.include_router(admin_router)
+app.include_router(briefing_router)
 
 templates = Jinja2Templates(directory="app/templates")
 
