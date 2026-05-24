@@ -22,6 +22,20 @@ EDNC_DISPLAY = {
     "wilmington": "Wilmington",
     "wilson": "Wilson",
 }
+MDNC_MARKETS = {"greensboro", "winston_salem", "high_point"}
+MDNC_ORDER = ["greensboro", "winston_salem", "high_point"]
+MDNC_DISPLAY = {
+    "greensboro": "Greensboro",
+    "winston_salem": "Winston-Salem",
+    "high_point": "High Point",
+}
+WDNC_MARKETS = {"charlotte", "salisbury", "asheville"}
+WDNC_ORDER = ["charlotte", "salisbury", "asheville"]
+WDNC_DISPLAY = {
+    "charlotte": "Charlotte",
+    "salisbury": "Salisbury",
+    "asheville": "Asheville",
+}
 MARKET_ORDER = ["greensboro", "winston_salem", "high_point", "charlotte", "salisbury", "asheville"]
 
 _CITY_SUFFIXES = {
@@ -173,6 +187,29 @@ def rankings(
         for market, kws in sorted(ednc_by_market.items())
     }
 
+    # MDNC and WDNC competitor intelligence — built from current_pack (own-firm markets)
+    mdnc_by_market: dict = defaultdict(lambda: defaultdict(list))
+    wdnc_by_market: dict = defaultdict(lambda: defaultdict(list))
+    for r in current_pack:
+        firm_name = (r.result_data.get("title") if r.result_data else None)
+        if r.is_own_firm:
+            firm_name = own_firm.name if own_firm else "Duncan Law"
+        kw_short = _strip_city(r.keyword or "", r.market)
+        entry = {"rank": r.rank_position, "name": firm_name or "—", "is_own": bool(r.is_own_firm)}
+        if r.market in MDNC_MARKETS:
+            mdnc_by_market[r.market][kw_short].append(entry)
+        elif r.market in WDNC_MARKETS:
+            wdnc_by_market[r.market][kw_short].append(entry)
+
+    mdnc_by_market = {
+        market: {kw: sorted(firms, key=lambda x: x["rank"]) for kw, firms in kws.items()}
+        for market, kws in mdnc_by_market.items()
+    }
+    wdnc_by_market = {
+        market: {kw: sorted(firms, key=lambda x: x["rank"]) for kw, firms in kws.items()}
+        for market, kws in wdnc_by_market.items()
+    }
+
     # Keyword gap analysis: keyword_short → market → {firms: [{rank, name, is_own}], own_present: bool}
     gap_by_kw: dict = defaultdict(lambda: defaultdict(list))
     for r in current_pack:
@@ -217,5 +254,11 @@ def rankings(
         "own_firm": own_firm,
         "ednc_by_market": ednc_by_market,
         "EDNC_DISPLAY": EDNC_DISPLAY,
+        "mdnc_by_market": mdnc_by_market,
+        "MDNC_DISPLAY": MDNC_DISPLAY,
+        "MDNC_ORDER": MDNC_ORDER,
+        "wdnc_by_market": wdnc_by_market,
+        "WDNC_DISPLAY": WDNC_DISPLAY,
+        "WDNC_ORDER": WDNC_ORDER,
         "MARKET_ORDER": MARKET_ORDER,
     })

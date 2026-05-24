@@ -337,6 +337,104 @@
 </div>
 {% endif %}
 
+<!-- MDNC Competitor Intelligence -->
+{% if mdnc_by_market %}
+<div class="card" style="margin-top:24px;">
+  <div class="section-title">
+    <span class="section-icon" style="background:rgba(16,185,129,.12);color:#059669;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    </span>
+    MDNC Competitor Intelligence
+    <span class="chip chip-green" style="margin-left:8px;font-size:12px;">Duncan Law active</span>
+  </div>
+  <p style="color:var(--muted);font-size:14px;margin-bottom:20px;line-height:1.6;">Who holds the 3-pack in Middle District NC — Greensboro, Winston-Salem, and High Point. Duncan Law's positions are highlighted in blue.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;">
+  {% for market in MDNC_ORDER %}
+  {% set keywords = mdnc_by_market.get(market, {}) %}
+  {% if keywords %}
+  <div style="background:var(--surface-2);border-radius:var(--r);padding:16px;border:1px solid var(--border);">
+    <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#059669;margin-bottom:14px;">
+      {{ MDNC_DISPLAY.get(market, market | replace('_',' ') | title) }}
+    </div>
+    {% for keyword, firms in keywords.items() | sort %}
+    <div style="margin-bottom:12px;">
+      <div style="font-size:12px;color:var(--muted-2);font-weight:600;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ keyword }}</div>
+      {% for firm in firms %}
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px;{% if firm.is_own %}background:rgba(37,99,235,.04);margin:0 -4px;padding-left:4px;padding-right:4px;{% endif %}">
+        {% if firm.rank == 1 %}
+        <span class="rank-badge rank-gold" style="font-size:11px;min-width:26px;height:20px;padding:0 4px;">#1</span>
+        {% elif firm.rank <= 3 %}
+        <span class="rank-badge rank-top" style="font-size:11px;min-width:26px;height:20px;padding:0 4px;">#{{ firm.rank }}</span>
+        {% else %}
+        <span class="rank-badge rank-mid" style="font-size:11px;min-width:26px;height:20px;padding:0 4px;">#{{ firm.rank }}</span>
+        {% endif %}
+        {% if firm.is_own %}
+        <span style="color:var(--accent);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ firm.name }}</span>
+        {% else %}
+        <span style="color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ firm.name }}</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% if not loop.last %}<div style="height:1px;background:var(--border);margin:8px 0;"></div>{% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- WDNC Competitor Intelligence -->
+{% if wdnc_by_market %}
+<div class="card" style="margin-top:24px;">
+  <div class="section-title">
+    <span class="section-icon" style="background:rgba(139,92,246,.12);color:#7c3aed;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    </span>
+    WDNC Competitor Intelligence
+    <span class="chip chip-purple" style="margin-left:8px;font-size:12px;">Duncan Law active</span>
+  </div>
+  <p style="color:var(--muted);font-size:14px;margin-bottom:20px;line-height:1.6;">Who holds the 3-pack in Western District NC — Charlotte, Salisbury, and Asheville. Duncan Law's positions are highlighted in blue.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;">
+  {% for market in WDNC_ORDER %}
+  {% set keywords = wdnc_by_market.get(market, {}) %}
+  {% if keywords %}
+  <div style="background:var(--surface-2);border-radius:var(--r);padding:16px;border:1px solid var(--border);">
+    <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#7c3aed;margin-bottom:14px;">
+      {{ WDNC_DISPLAY.get(market, market | replace('_',' ') | title) }}
+    </div>
+    {% for keyword, firms in keywords.items() | sort %}
+    <div style="margin-bottom:12px;">
+      <div style="font-size:12px;color:var(--muted-2);font-weight:600;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ keyword }}</div>
+      {% for firm in firms %}
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px;{% if firm.is_own %}background:rgba(37,99,235,.04);margin:0 -4px;padding-left:4px;padding-right:4px;{% endif %}">
+        {% if firm.rank == 1 %}
+        <span class="rank-badge rank-gold" style="font-size:11px;min-width:26px;height:20px;padding:0 4px;">#1</span>
+        {% elif firm.rank <= 3 %}
+        <span class="rank-badge rank-top" style="font-size:11px;min-width:26px;height:20px;padding:0 4px;">#{{ firm.rank }}</span>
+        {% else %}
+        <span class="rank-badge rank-mid" style="font-size:11px;min-width:26px;height:20px;padding:0 4px;">#{{ firm.rank }}</span>
+        {% endif %}
+        {% if firm.is_own %}
+        <span style="color:var(--accent);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ firm.name }}</span>
+        {% else %}
+        <span style="color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ firm.name }}</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% if not loop.last %}<div style="height:1px;background:var(--border);margin:8px 0;"></div>{% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 <!-- EDNC Competitor Intelligence -->
 {% if ednc_by_market %}
 <div class="card" style="margin-top:24px;">
