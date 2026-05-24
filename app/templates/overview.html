@@ -363,21 +363,43 @@
     <span class="section-icon teal">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     </span>
-    Data Collection
+    Data Collection — Run History
+    {% if job_runs %}
+    <span style="margin-left:auto;font-size:13px;color:var(--muted);font-weight:400;">last {{ job_runs | length }} runs</span>
+    {% endif %}
   </div>
-  {% if last_job %}
+  {% if job_runs %}
   <table>
-    <thead><tr><th>Job</th><th>Last Run</th><th>Status</th><th>Records</th></tr></thead>
-    <tbody><tr>
-      <td style="font-weight:500;">{{ last_job.job_name | title }}</td>
-      <td style="color:var(--muted);">{{ last_job.started_at.strftime('%b %d %Y, %I:%M %p') if last_job.started_at else '—' }}</td>
-      <td>
-        {% if last_job.status == 'success' %}<span class="chip chip-green">✓ Success</span>
-        {% elif last_job.status == 'failed' %}<span class="chip chip-red">Failed</span>
-        {% else %}<span class="chip chip-yellow">{{ last_job.status }}</span>{% endif %}
+    <thead><tr>
+      <th>Job</th>
+      <th>Started</th>
+      <th>Duration</th>
+      <th>Status</th>
+      <th>Records</th>
+      <th>Error</th>
+    </tr></thead>
+    <tbody>
+    {% for entry in job_runs %}
+    {% set j = entry.job %}
+    <tr style="{% if j.status == 'failed' %}background:rgba(244,63,94,.03);{% endif %}">
+      <td style="font-weight:600;white-space:nowrap;">{{ j.job_name | replace('_', ' ') | title }}</td>
+      <td style="font-size:13px;color:var(--muted);white-space:nowrap;">
+        {{ j.started_at.strftime('%b %d, %I:%M %p') if j.started_at else '—' }}
       </td>
-      <td style="font-weight:600;">{{ last_job.records_processed or '—' }}</td>
-    </tr></tbody>
+      <td style="font-size:13px;color:var(--muted);white-space:nowrap;">{{ entry.duration }}</td>
+      <td>
+        {% if j.status == 'success' %}<span class="chip chip-green">✓ Success</span>
+        {% elif j.status == 'failed' %}<span class="chip chip-red">Failed</span>
+        {% elif j.status == 'running' %}<span class="chip chip-blue">Running</span>
+        {% else %}<span class="chip chip-yellow">{{ j.status }}</span>{% endif %}
+      </td>
+      <td style="font-weight:600;color:var(--text-2);">{{ j.records_processed if j.records_processed is not none else '—' }}</td>
+      <td style="font-size:12px;color:var(--red-dark);max-width:220px;">
+        {% if j.error_detail %}{{ j.error_detail[:80] }}{% if j.error_detail | length > 80 %}…{% endif %}{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
   </table>
   {% else %}
   <p style="color:var(--muted);font-size:15px;padding-bottom:4px;">No jobs have run yet. Data collection starts automatically on the next scheduled window.</p>

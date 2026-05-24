@@ -34,7 +34,20 @@ def dashboard(
     ).all()
     own_firm = db.query(Competitor).filter(Competitor.is_own_firm == True).first()
     unacked_alerts = db.query(Alert).filter(Alert.acknowledged_at == None).count()
-    last_job = db.query(JobRun).order_by(JobRun.started_at.desc()).first()
+    job_runs_raw = db.query(JobRun).order_by(JobRun.started_at.desc()).limit(30).all()
+    last_job = job_runs_raw[0] if job_runs_raw else None
+
+    def _fmt_duration(j) -> str:
+        if not (j.completed_at and j.started_at):
+            return "—"
+        secs = max(0, (j.completed_at - j.started_at).total_seconds())
+        if secs < 60:
+            return f"{int(secs)}s"
+        if secs < 3600:
+            return f"{int(secs // 60)}m {int(secs % 60)}s"
+        return f"{int(secs // 3600)}h {int((secs % 3600) // 60)}m"
+
+    job_runs = [{"job": j, "duration": _fmt_duration(j)} for j in job_runs_raw]
 
     scorecard = _build_scorecard(db, own_firm)
     action_items = _build_action_items(db, own_firm, scorecard, competitors)
@@ -46,6 +59,7 @@ def dashboard(
         "competitors": competitors,
         "unacked_alerts": unacked_alerts,
         "last_job": last_job,
+        "job_runs": job_runs,
         "scorecard": scorecard,
         "action_items": action_items,
         "active_page": "dashboard",
