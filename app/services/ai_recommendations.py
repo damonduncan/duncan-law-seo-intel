@@ -1,8 +1,8 @@
-"""Weekly AI-generated action recommendations via Claude API.
+"""Weekly AI-generated 4-week SEO roadmap via Claude API.
 
-Called once during the Monday digest build. Returns a list of 4-6 prioritized,
-specific action items grounded in that week's actual performance data.
-Returns [] on any failure so the digest still sends.
+Called once during the Monday digest build. Returns a sequential week-by-week
+action plan grounded in that week's actual performance data.
+Returns {} on any failure so the digest still sends without this section.
 """
 import json
 import logging
@@ -25,63 +25,71 @@ def _build_prompt(ctx: dict) -> str:
         "Offices: Greensboro, Winston-Salem, High Point, Charlotte, Salisbury, and Asheville.",
         "Tracked federal court districts: MDNC (Middle NC) and WDNC (Western NC).",
         "",
+        "KEY SEO PRINCIPLE: Google reviews are the #1 ranking lever for local pack positions.",
+        "Review outreach this week produces ranking improvements in 2-4 weeks, not immediately.",
+        "This means the roadmap must sequence reviews BEFORE expecting ranking gains.",
+        "",
     ]
 
     # Rankings
-    lines.append("## Google 3-Pack Rankings")
+    lines.append("## Current Google 3-Pack Rankings")
     for market, label in _MARKET_DISPLAY.items():
         data = ctx.get("rankings_by_market", {}).get(market)
         if data:
             status = f"{data['in_pack']}/{data['total']} keywords in pack"
             gaps = data.get("gaps", [])
-            gap_str = f", missing keywords: {', '.join(gaps[:3])}" if gaps else ""
+            gap_str = f" — missing: {', '.join(gaps[:3])}" if gaps else " — fully in pack"
             lines.append(f"  {label}: {status}{gap_str}")
         else:
-            lines.append(f"  {label}: no ranking data")
+            lines.append(f"  {label}: no data yet")
 
-    # Reviews vs competitors
+    # Reviews with competitor comparison
     lines.append("")
-    lines.append("## Google Reviews — Duncan Law vs. Top Competitor per Market")
+    lines.append("## Google Reviews — Duncan Law vs. Top Market Competitor")
     reviews = ctx.get("reviews_by_market", {})
     own_deltas = ctx.get("own_review_deltas", {})
     velocity_map = {v["display"]: v for v in ctx.get("market_velocity", [])}
     for market, label in _MARKET_DISPLAY.items():
         data = reviews.get(market)
         if not data:
-            lines.append(f"  {label}: no review data")
+            lines.append(f"  {label}: no data")
             continue
         count = data.get("review_count", 0)
         delta = own_deltas.get(market, 0)
         vel = velocity_map.get(label)
-        rival_str = ""
-        if vel:
+        if vel and vel["rival_count"] > count:
+            gap = vel["rival_count"] - count
             rd = vel["rival_delta"]
             rival_str = (
-                f" | top rival: {vel['rival_name']} "
-                f"({vel['rival_count']} reviews, +{rd}/wk)"
+                f" | rival: {vel['rival_name']} has {vel['rival_count']} "
+                f"(+{rd}/wk) — gap: {gap} reviews"
             )
-        lines.append(f"  {label}: Duncan Law {count} reviews (+{delta}/wk){rival_str}")
+            proj = vel.get("proj_text", "")
+            rival_str += f" | projection: {proj}"
+        elif vel:
+            rival_str = f" | leading {vel['rival_name']} ({vel['rival_count']} reviews)"
+        else:
+            rival_str = ""
+        delta_str = f"+{delta}" if delta >= 0 else str(delta)
+        lines.append(f"  {label}: Duncan Law {count} reviews ({delta_str}/wk){rival_str}")
 
-    # Pack entries this week
+    # Pack activity this week
     pack_entries = ctx.get("pack_entries_by_market", {})
     if pack_entries:
         lines.append("")
-        lines.append("## Competitors That Entered Our 3-Pack This Week")
+        lines.append("## New Competitor 3-Pack Entries This Week")
         for market, entries in pack_entries.items():
             label = _MARKET_DISPLAY.get(market, market.replace("_", " ").title())
             for e in entries[:4]:
                 pos = f"#{e['position']}" if e.get("position") else "unknown position"
-                lines.append(
-                    f"  {label}: {e['competitor']} entered at {pos} "
-                    f"for keyword '{e['keyword']}'"
-                )
+                lines.append(f"  {label}: {e['competitor']} entered at {pos} for '{e['keyword']}'")
 
-    # Open alerts (non-pack-entry)
+    # Alerts
     open_alerts = ctx.get("open_alerts", [])
     if open_alerts:
         lines.append("")
         lines.append("## Open Alerts")
-        for a in open_alerts[:6]:
+        for a in open_alerts[:5]:
             msg = ""
             if hasattr(a, "detail") and a.detail:
                 msg = a.detail.get("message", "")
@@ -89,45 +97,110 @@ def _build_prompt(ctx: dict) -> str:
                 msg = a.alert_type
             lines.append(f"  - {str(msg)[:120]}")
 
-    # PACER standings
+    # PACER
     pacer = ctx.get("pacer_standings", {})
     if any(pacer.values()):
         lines.append("")
-        lines.append("## PACER Bankruptcy Filing Standings (most recent month)")
+        lines.append("## PACER Bankruptcy Filings — Most Recent Month")
         for dist, rows in pacer.items():
             if not rows:
                 continue
             top = rows[0]
             own_row = next((r for r in rows if r.get("is_own")), None)
             own_str = f"Duncan Law: {own_row['count']} cases" if own_row else "Duncan Law: not in top 6"
-            lines.append(
-                f"  {dist}: leader {top['name']} ({top['count']} cases). {own_str}."
-            )
+            lines.append(f"  {dist}: leader {top['name']} ({top['count']} cases) | {own_str}")
 
     lines += [
         "",
         "---",
-        "Based on the data above, generate exactly 5 prioritized action items for this week.",
-        "Rules:",
-        "- Be specific: name actual competitors, actual review counts, actual keywords.",
-        "- Every action must be something a lawyer or their staff can do this week.",
-        "- Rank by expected impact on Google 3-pack visibility.",
-        "- Do not repeat the same advice for multiple markets — consolidate where possible.",
+        "TASK: Create a 4-week sequential SEO action roadmap for Duncan Law.",
         "",
-        "Return ONLY a valid JSON array. No markdown fences, no explanation, no preamble.",
-        'Schema: [{"priority":1,"category":"reviews|rankings|gbp|pacer","market":"Market Name or All Markets","headline":"Max 8 words","action":"Specific step, max 40 words","why":"Data point, max 25 words","impact":"high|medium|low"}]',
+        "Sequencing rules (follow these strictly):",
+        "1. Week 1 = highest-urgency actions only. Max 3 tasks. Focus on the 1-2 markets",
+        "   with the biggest review gaps AND active pack issues.",
+        "2. Week 2 = follow up on week 1 + expand to next-priority market.",
+        "   Never put the same market+action combo in consecutive weeks.",
+        "3. Week 3 = secondary markets, GBP profile checks, monitoring tasks.",
+        "4. Week 4 = progress review, sustained cadence, forward-looking adjustments.",
+        "5. Reviews always precede ranking expectations by 2-4 weeks — reflect this.",
+        "6. Each task must be completable in under 30 minutes by a law firm staff member.",
+        "7. Be specific: use actual competitor names, review counts, and keywords from the data.",
+        "",
+        "Return ONLY valid JSON. No markdown, no explanation.",
+        "Schema:",
+        '{',
+        '  "weeks": [',
+        '    {',
+        '      "week": 1,',
+        '      "theme": "6 words max describing this week\'s focus",',
+        '      "tasks": [',
+        '        {',
+        '          "task": "Specific action step, max 40 words",',
+        '          "market": "Market name or All Markets",',
+        '          "why": "The data point driving this, max 20 words",',
+        '          "minutes": 15',
+        '        }',
+        '      ]',
+        '    }',
+        '  ]',
+        '}',
     ]
 
     return "\n".join(lines)
 
 
-def generate_recommendations(ctx: dict) -> list:
-    """Return list of recommendation dicts. Always safe to call — returns [] on failure."""
+def _parse_response(raw: str) -> dict:
+    """Parse and validate Claude's JSON response. Returns {} if invalid."""
+    if raw.startswith("```"):
+        parts = raw.split("```")
+        raw = parts[1] if len(parts) > 1 else raw
+        if raw.startswith("json"):
+            raw = raw[4:]
+    raw = raw.strip()
+
+    data = json.loads(raw)
+    if not isinstance(data, dict) or "weeks" not in data:
+        logger.warning("AI roadmap: unexpected response shape")
+        return {}
+
+    weeks = data["weeks"]
+    if not isinstance(weeks, list) or len(weeks) == 0:
+        return {}
+
+    out_weeks = []
+    for w in weeks[:4]:
+        if not isinstance(w, dict):
+            continue
+        tasks = []
+        for t in w.get("tasks", [])[:4]:
+            if not isinstance(t, dict) or not t.get("task"):
+                continue
+            tasks.append({
+                "task":    str(t.get("task", ""))[:200],
+                "market":  str(t.get("market", ""))[:40],
+                "why":     str(t.get("why", ""))[:150],
+                "minutes": int(t.get("minutes", 20)),
+            })
+        if tasks:
+            out_weeks.append({
+                "week":  int(w.get("week", len(out_weeks) + 1)),
+                "theme": str(w.get("theme", ""))[:60],
+                "tasks": tasks,
+            })
+
+    if not out_weeks:
+        return {}
+
+    return {"weeks": out_weeks}
+
+
+def generate_recommendations(ctx: dict) -> dict:
+    """Build and return a 4-week roadmap dict. Returns {} on any failure."""
     try:
         from app.config import settings
         if not settings.anthropic_api_key:
-            logger.info("ANTHROPIC_API_KEY not configured — skipping AI recommendations")
-            return []
+            logger.info("ANTHROPIC_API_KEY not configured — skipping AI roadmap")
+            return {}
 
         import anthropic
         client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
@@ -135,43 +208,21 @@ def generate_recommendations(ctx: dict) -> list:
         prompt = _build_prompt(ctx)
         message = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=1200,
+            max_tokens=1800,
             messages=[{"role": "user", "content": prompt}],
         )
 
         raw = message.content[0].text.strip()
+        result = _parse_response(raw)
 
-        # Strip markdown code fence if the model wraps output anyway
-        if raw.startswith("```"):
-            parts = raw.split("```")
-            raw = parts[1] if len(parts) > 1 else raw
-            if raw.startswith("json"):
-                raw = raw[4:]
-        raw = raw.strip()
+        if result:
+            total_tasks = sum(len(w["tasks"]) for w in result["weeks"])
+            logger.info(f"AI roadmap generated: {len(result['weeks'])} weeks, {total_tasks} tasks")
+        else:
+            logger.warning("AI roadmap: parse returned empty result")
 
-        recs = json.loads(raw)
-        if not isinstance(recs, list):
-            logger.warning("AI recommendations: unexpected response shape")
-            return []
-
-        out = []
-        for r in recs[:6]:
-            if not isinstance(r, dict):
-                continue
-            out.append({
-                "priority": int(r.get("priority", 9)),
-                "category": str(r.get("category", "rankings")),
-                "market":   str(r.get("market", "")),
-                "headline": str(r.get("headline", ""))[:80],
-                "action":   str(r.get("action", ""))[:200],
-                "why":      str(r.get("why", ""))[:150],
-                "impact":   str(r.get("impact", "medium")),
-            })
-
-        out.sort(key=lambda x: x["priority"])
-        logger.info(f"AI recommendations generated: {len(out)} items")
-        return out
+        return result
 
     except Exception as e:
-        logger.error(f"AI recommendations failed: {e}", exc_info=True)
-        return []
+        logger.error(f"AI roadmap generation failed: {e}", exc_info=True)
+        return {}

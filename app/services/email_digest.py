@@ -498,56 +498,75 @@ def _build_html(ctx: dict, week_str: str) -> str:
       <div style="font-size:13px;color:{fg};opacity:.85;line-height:1.6;">{pa.get("body", "")}</div>
     </td></tr>""")
 
-    # ── AI Action Plan section ────────────────────────────────────────────────
-    ai_recs = ctx.get("ai_recommendations", [])
-    if ai_recs:
-        _cat_icons = {
-            "reviews":  "★",
-            "rankings": "◎",
-            "gbp":      "📍",
-            "pacer":    "⚖",
-        }
-        _impact_colors = {
-            "high":   ("#fee2e2", "#991b1b"),
-            "medium": ("#fef3c7", "#92400e"),
-            "low":    ("#d1fae5", "#065f46"),
-        }
-        rec_rows = ""
-        for i, rec in enumerate(ai_recs):
-            icon = _cat_icons.get(rec["category"], "→")
-            ibg, ifg = _impact_colors.get(rec["impact"], ("#f3f4f6", "#374151"))
-            border = "border-top:1px solid #e5e7eb;" if i > 0 else ""
-            rec_rows += (
-                f'<tr><td style="padding:14px 0;{border}">'
-                f'<table width="100%" cellpadding="0" cellspacing="0"><tr>'
-                f'<td style="width:28px;vertical-align:top;padding-top:1px;">'
-                f'<span style="display:inline-flex;align-items:center;justify-content:center;'
-                f'width:22px;height:22px;border-radius:50%;background:#f3f4f6;'
-                f'font-size:11px;font-weight:700;color:#374151;">{rec["priority"]}</span>'
-                f'</td>'
-                f'<td style="padding-left:10px;vertical-align:top;">'
-                f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">'
-                f'<span style="background:{ibg};color:{ifg};padding:1px 7px;border-radius:3px;'
-                f'font-size:10px;font-weight:700;text-transform:uppercase;">{rec["impact"]}</span>'
-                f'<span style="font-size:11px;color:#6b7280;">{icon} {rec["category"].upper()}'
-                + (f' — {rec["market"]}' if rec["market"] and rec["market"] != "All Markets" else "")
-                + f'</span>'
+    # ── 4-Week Roadmap section ────────────────────────────────────────────────
+    ai_roadmap = ctx.get("ai_recommendations", {})
+    roadmap_weeks = ai_roadmap.get("weeks", []) if isinstance(ai_roadmap, dict) else []
+    if roadmap_weeks:
+        _week_accents = ["#2563eb", "#7c3aed", "#059669", "#d97706"]
+        _week_bgs     = ["#dbeafe", "#ede9fe", "#d1fae5", "#fef3c7"]
+        _week_fgs     = ["#1e3a8a", "#4c1d95", "#065f46", "#78350f"]
+
+        week_blocks = ""
+        for w in roadmap_weeks:
+            idx   = min(w["week"] - 1, 3)
+            acc   = _week_accents[idx]
+            wbg   = _week_bgs[idx]
+            wfg   = _week_fgs[idx]
+            label = f"WEEK {w['week']} OF 4"
+            theme = w["theme"]
+            total_min = sum(t["minutes"] for t in w["tasks"])
+
+            task_rows = ""
+            for t in w["tasks"]:
+                mkt_badge = ""
+                if t["market"] and t["market"] != "All Markets":
+                    mkt_badge = (
+                        f'<span style="background:#f3f4f6;color:#374151;padding:1px 6px;'
+                        f'border-radius:3px;font-size:10px;font-weight:600;margin-right:6px;">'
+                        f'{t["market"]}</span>'
+                    )
+                task_rows += (
+                    f'<tr><td style="padding:10px 0;border-bottom:1px solid #f3f4f6;">'
+                    f'<div style="display:flex;align-items:flex-start;gap:8px;">'
+                    f'<span style="color:{acc};font-size:14px;line-height:1;margin-top:1px;flex-shrink:0;">☐</span>'
+                    f'<div style="flex:1;">'
+                    f'<div style="font-size:13px;color:#111827;line-height:1.5;margin-bottom:3px;">'
+                    f'{mkt_badge}{t["task"]}</div>'
+                    f'<div style="font-size:11px;color:#6b7280;">'
+                    f'{t["why"]} &nbsp;·&nbsp; ~{t["minutes"]} min'
+                    f'</div>'
+                    f'</div>'
+                    f'</div>'
+                    f'</td></tr>'
+                )
+
+            week_blocks += (
+                f'<div style="margin-bottom:16px;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">'
+                f'<div style="background:{wbg};border-left:4px solid {acc};padding:8px 12px;'
+                f'display:flex;align-items:center;justify-content:space-between;">'
+                f'<div>'
+                f'<span style="font-size:10px;font-weight:700;color:{wfg};'
+                f'text-transform:uppercase;letter-spacing:.07em;">{label}</span>'
+                f'<span style="font-size:13px;font-weight:600;color:{wfg};margin-left:10px;">{theme}</span>'
                 f'</div>'
-                f'<div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:4px;">{rec["headline"]}</div>'
-                f'<div style="font-size:13px;color:#374151;line-height:1.5;margin-bottom:4px;">{rec["action"]}</div>'
-                f'<div style="font-size:12px;color:#6b7280;font-style:italic;">{rec["why"]}</div>'
-                f'</td></tr></table>'
-                f'</td></tr>'
+                f'<span style="font-size:11px;color:{wfg};opacity:.7;">~{total_min} min total</span>'
+                f'</div>'
+                f'<div style="padding:0 12px;">'
+                f'<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">'
+                f'{task_rows}'
+                f'</table>'
+                f'</div>'
+                f'</div>'
             )
+
         sections.append(_section(
-            "This Week's Action Plan",
-            f'''<p style="margin:0 0 12px;font-size:12px;color:#6b7280;">
-              AI-generated from current rankings, reviews, and alert data
+            "4-Week SEO Roadmap",
+            f'''<p style="margin:0 0 14px;font-size:12px;color:#6b7280;">
+              Sequenced by impact and dependency — reviews in early weeks produce ranking gains by week 3–4.
+              Generated from this week's live data.
             </p>
-            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-              {rec_rows}
-            </table>
-            <p style="margin-top:12px;font-size:12px;color:#6b7280;">
+            {week_blocks}
+            <p style="margin-top:4px;font-size:12px;color:#6b7280;">
               <a href="{base_url}/dashboard" style="color:#3b82f6;">Open full dashboard →</a>
             </p>''',
         ))
