@@ -120,11 +120,22 @@
       <th>Keyword</th>
       <th style="text-align:center;">{{ comp.name | truncate(22, True, '…') }}</th>
       {% if own_firm %}<th style="text-align:center;color:var(--accent);">{{ own_firm.name | truncate(18, True, '…') }}</th>{% endif %}
+      <th style="text-align:center;">Result</th>
     </tr></thead>
     <tbody>
     {% for market, keywords in pack_presence | dictsort %}
     {% for kw, rank in keywords | dictsort %}
-    <tr>
+    {% set own_rank = own_positions.get(market, {}).get(kw) %}
+    {% if own_firm and own_rank is not none %}
+      {% if own_rank < rank %}{% set row_bg = "background:rgba(16,185,129,0.06);" %}
+      {% elif own_rank > rank %}{% set row_bg = "background:rgba(239,68,68,0.05);" %}
+      {% else %}{% set row_bg = "" %}{% endif %}
+    {% elif own_firm %}
+      {% set row_bg = "background:rgba(239,68,68,0.05);" %}
+    {% else %}
+      {% set row_bg = "" %}
+    {% endif %}
+    <tr style="{{ row_bg }}">
       {% if loop.index == 1 %}
       <td style="font-weight:600;{% if keywords | length > 1 %}vertical-align:top;{% endif %}" rowspan="{{ keywords | length }}">
         {{ market | replace('_', ' ') | title }}
@@ -144,26 +155,40 @@
       </td>
       {% if own_firm %}
       <td style="text-align:center;">
-        {% if market in own_positions and kw in own_positions[market] %}
-          {% set own_rank = own_positions[market][kw] %}
+        {% if own_rank is not none %}
+          {% if own_rank == 1 %}
+            <span class="rank-badge rank-gold">#1</span>
+          {% elif own_rank <= 3 %}
+            <span class="rank-badge rank-top">#{{ own_rank }}</span>
+          {% elif own_rank <= 7 %}
+            <span class="rank-badge rank-mid">#{{ own_rank }}</span>
+          {% else %}
+            <span class="rank-badge rank-low">#{{ own_rank }}</span>
+          {% endif %}
+        {% else %}
+          <span class="rank-badge rank-out" style="font-size:11px;">Not ranked</span>
+        {% endif %}
+      </td>
+      {% endif %}
+      <td style="text-align:center;white-space:nowrap;">
+        {% if own_firm %}
           {% if own_rank is not none %}
-            {% if own_rank == 1 %}
-              <span class="rank-badge rank-gold">#1</span>
-            {% elif own_rank <= 3 %}
-              <span class="rank-badge rank-top">#{{ own_rank }}</span>
-            {% elif own_rank <= 7 %}
-              <span class="rank-badge rank-mid">#{{ own_rank }}</span>
+            {% if own_rank < rank %}
+              {% set delta = rank - own_rank %}
+              <span style="color:#10b981;font-size:12px;font-weight:700;">▲ We lead<br><span style="font-weight:400;font-size:11px;">+{{ delta }} spot{{ 's' if delta != 1 else '' }}</span></span>
+            {% elif own_rank > rank %}
+              {% set delta = own_rank - rank %}
+              <span style="color:#ef4444;font-size:12px;font-weight:700;">▼ Behind<br><span style="font-weight:400;font-size:11px;">{{ delta }} spot{{ 's' if delta != 1 else '' }}</span></span>
             {% else %}
-              <span class="rank-badge rank-low">#{{ own_rank }}</span>
+              <span style="color:var(--muted);font-size:12px;font-weight:600;">— Tied</span>
             {% endif %}
           {% else %}
-            <span class="rank-badge rank-out" style="font-size:11px;">Not ranked</span>
+            <span style="color:#ef4444;font-size:12px;font-weight:700;">✕ Not ranked</span>
           {% endif %}
         {% else %}
           <span style="color:var(--muted-2);font-size:13px;">—</span>
         {% endif %}
       </td>
-      {% endif %}
     </tr>
     {% endfor %}
     {% endfor %}
