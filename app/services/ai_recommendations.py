@@ -73,6 +73,25 @@ def _build_prompt(ctx: dict) -> str:
         delta_str = f"+{delta}" if delta >= 0 else str(delta)
         lines.append(f"  {label}: Duncan Law {count} reviews ({delta_str}/wk){rival_str}")
 
+    # Gap to rank #1 (review count needed to match the firm currently holding #1)
+    g1 = ctx.get("gap_to_1_by_market", {})
+    if g1:
+        lines.append("")
+        lines.append("## Reviews Needed to Match Rank-#1 Firm (per market)")
+        for market, label in _MARKET_DISPLAY.items():
+            info = g1.get(market)
+            if not info:
+                continue
+            if info.get("is_leading"):
+                lines.append(f"  {label}: Duncan Law leads in reviews (Review leader)")
+            elif info.get("gap") is not None:
+                rival = info.get("rank1_name", "—")
+                r1rev = info.get("rank1_reviews", "—")
+                lines.append(
+                    f"  {label}: need +{info['gap']} reviews to match #1 "
+                    f"({rival}, {r1rev} reviews)"
+                )
+
     # Pack activity this week
     pack_entries = ctx.get("pack_entries_by_market", {})
     if pack_entries:

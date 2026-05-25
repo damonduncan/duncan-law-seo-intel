@@ -401,6 +401,54 @@ def _gather_data(db: Session) -> dict:
         pacer_standings[dist].sort(key=lambda r: r["count"], reverse=True)
         pacer_standings[dist] = pacer_standings[dist][:6]
 
+    # Gap-to-#1 by market: avg review count of rank-1 pack firms vs own-firm reviews
+    # Uses rating_count from LocalPackRanking.result_data (DataForSEO Maps API).
+    _pack_latest = (
+        db.query(cast(LocalPackRanking.scraped_at, Date))
+        .filter(
+            LocalPackRanking.market.in_(list(MARKET_DISPLAY.keys())),
+            LocalPackRanking.in_pack == True,
+        )
+        .order_by(LocalPackRanking.scraped_at.desc())
+        .first()
+    )
+    gap_to_1_by_market: dict = {}
+    if _pack_latest:
+        _pack_date = _pack_latest[0]
+        _r1_rows = (
+            db.query(LocalPackRanking)
+            .filter(
+                LocalPackRanking.rank_position == 1,
+                LocalPackRanking.in_pack == True,
+                LocalPackRanking.market.in_(list(MARKET_DISPLAY.keys())),
+                cast(LocalPackRanking.scraped_at, Date) == _pack_date,
+            )
+            .all()
+        )
+        _r1_counts: dict = defaultdict(list)
+        _r1_names: dict = {}
+        for r in _r1_rows:
+            rd = r.result_data or {}
+            rc = rd.get("rating_count")
+            if rc is not None:
+                _r1_counts[r.market].append(rc)
+            if r.market not in _r1_names:
+                _r1_names[r.market] = (
+                    rd.get("title", "—") if not r.is_own_firm
+                    else (own_firm.name if own_firm else "Duncan Law")
+                )
+        for market, counts in _r1_counts.items():
+            avg_rank1 = round(sum(counts) / len(counts))
+            own_rev = reviews_by_market.get(market, {}).get("review_count")
+            gap = (avg_rank1 - own_rev) if own_rev is not None else None
+            gap_to_1_by_market[market] = {
+                "rank1_name":    _r1_names.get(market, "—"),
+                "rank1_reviews": avg_rank1,
+                "own_reviews":   own_rev,
+                "gap":           gap,
+                "is_leading":    gap is not None and gap <= 0,
+            }
+
     return {
         "rankings_by_market":         rankings_by_market,
         "reviews_by_market":          reviews_by_market,
@@ -414,6 +462,7 @@ def _gather_data(db: Session) -> dict:
         "pacer_standings":            pacer_standings,
         "market_velocity":            market_velocity,
         "pack_entries_by_market":     dict(pack_entries_by_market),
+        "gap_to_1_by_market":         gap_to_1_by_market,
     }
 
 
@@ -674,13 +723,15 @@ def _build_html(ctx: dict, week_str: str) -> str:
 
     # ── Reviews section ───────────────────────────────────────────────────────
     review_rows = ""
-    own_deltas = ctx.get("own_review_deltas", {})
+    own_deltas   = ctx.get("own_review_deltas", {})
+    g1_by_market = ctx.get("gap_to_1_by_market", {})
     for market in MARKET_ORDER:
-        label = MARKET_DISPLAY.get(market, market)
-        data  = ctx["reviews_by_market"].get(market)
-        delta = own_deltas.get(market)
+        label    = MARKET_DISPLAY.get(market, market)
+        data     = ctx["reviews_by_market"].get(market)
+        delta    = own_deltas.get(market)
+        gap_info = g1_by_market.get(market)
         if not data:
-            review_rows += _tr(label, "—", "—", "—", "")
+            review_rows += _tr(label, "—", "—", "—", "—", "")
             continue
         count  = data["review_count"]
         rating = data["rating"]
@@ -703,7 +754,19 @@ def _build_html(ctx: dict, week_str: str) -> str:
                 delta_cell = '<span style="color:#9ca3af;">+0</span>'
         else:
             delta_cell = '<span style="color:#9ca3af;">—</span>'
-        review_rows += _tr(label, stars, badge, delta_cell, note)
+        if gap_info and gap_info["is_leading"]:
+            gap_cell = '<span style="color:#059669;font-weight:600;">Leading ✓</span>'
+        elif gap_info and gap_info["gap"] is not None and gap_info["gap"] > 0:
+            rival = gap_info["rank1_name"]
+            rival_short = (rival[:22] + "…") if len(rival) > 22 else rival
+            gap_cell = (
+                f'<span style="color:#ea580c;font-weight:700;">+{gap_info["gap"]}</span>'
+                f'<br><span style="font-size:10px;color:#9ca3af;">vs {rival_short}'
+                f' ({gap_info["rank1_reviews"]})</span>'
+            )
+        else:
+            gap_cell = '<span style="color:#9ca3af;">—</span>'
+        review_rows += _tr(label, stars, badge, gap_cell, delta_cell, note)
 
     sections.append(_section(
         "Duncan Law — Google Reviews by Market",
@@ -712,6 +775,7 @@ def _build_html(ctx: dict, week_str: str) -> str:
             <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Market</th>
             <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Rating</th>
             <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Reviews</th>
+            <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Gap to #1</th>
             <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Δ Week</th>
             <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Action</th>
           </tr>
