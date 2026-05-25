@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     pacer_client_code: str = ""
     pacer_password_expires: Optional[str] = None
 
+    # AI recommendations
+    anthropic_api_key: str = ""
+
     # Email
     resend_api_key: str = ""
     resend_from_address: str = "alerts@duncanlawonline.com"

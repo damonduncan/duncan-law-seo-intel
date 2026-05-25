@@ -214,57 +214,126 @@ def _build_scorecard(db: Session, own_firm) -> list:
 def _build_action_items(db: Session, own_firm, scorecard: list, competitors: list) -> list:
     items = []
 
-    # 1. Markets with zero 3-pack presence despite having ranking data
-    for m in scorecard:
-        if m["status"] == "needs_attention" and m["total"] > 0 and m["in_pack"] == 0:
-            items.append({
-                "priority": "high",
-                "color": "red",
-                "title": f"Not ranking in {m['display']} — 0 of {m['total']} keywords in 3-pack",
-                "detail": "Review your Google Business Profile listing and local signals for this market.",
-                "link": "/rankings",
-                "link_text": "View rankings",
-            })
-
-    # 2. Urgent unacknowledged alerts (pack drops / competitor entries)
+    # 1. Immediate alerts — pack drops (own firm)
     urgent_alerts = (
         db.query(Alert)
         .filter(Alert.acknowledged_at == None, Alert.severity == "immediate")
         .order_by(Alert.triggered_at.desc())
-        .limit(2)
+        .limit(3)
         .all()
     )
-    type_labels = {
-        "pack_drop": "Your firm dropped from the 3-pack",
-        "competitor_pack_entry": "A competitor entered the 3-pack",
-    }
     for a in urgent_alerts:
-        label = type_labels.get(a.alert_type, a.alert_type)
         market_str = f" in {a.market.replace('_', ' ').title()}" if a.market else ""
         msg = (a.detail or {}).get("message", "")
         items.append({
-            "priority": "high",
+            "priority": "urgent",
             "color": "red",
-            "title": f"{label}{market_str}",
-            "detail": msg[:120] if msg else "",
+            "category": "rankings",
+            "title": f"Pack drop detected{market_str}",
+            "detail": msg[:120] if msg else "Your firm dropped from the 3-pack. Check your GBP listing immediately.",
             "link": "/alerts",
-            "link_text": "View alerts",
+            "link_text": "View alert",
         })
 
-    # 3. Markets where own-firm reviews are below 10 (weak social proof)
+    # 2. Markets completely out of the pack
     for m in scorecard:
-        if m["reviews"] is not None and m["reviews"] < 10:
-            cnt = m["reviews"]
+        if m["total"] > 0 and m["in_pack"] == 0:
+            top = m.get("top_comp")
+            if top and top.get("reviews"):
+                rival_reviews = top["reviews"]
+                own_reviews = m.get("reviews") or 0
+                gap = rival_reviews - own_reviews
+                rival_name = top["name"][:28] + "…" if len(top["name"]) > 28 else top["name"]
+                detail = (
+                    f"{rival_name} holds the #1 spot with {rival_reviews} reviews "
+                    f"— you have {own_reviews} (gap: {gap}). "
+                    f"Request reviews from {m['display']} clients this week."
+                )
+            else:
+                detail = "Review your Google Business Profile listing and local signals for this market."
             items.append({
-                "priority": "medium",
-                "color": "yellow",
-                "title": f"Low review count in {m['display']} ({cnt} review{'s' if cnt != 1 else ''})",
-                "detail": "Aim for 30+ reviews to compete reliably in the local pack.",
-                "link": "/reviews",
-                "link_text": "View reviews",
+                "priority": "high",
+                "color": "red",
+                "category": "rankings",
+                "title": f"Not in 3-pack for {m['display']} — 0/{m['total']} keywords",
+                "detail": detail,
+                "link": "/rankings",
+                "link_text": "View rankings",
             })
 
-    # 4. Top competitor gaining review momentum (≥5 new reviews since last snapshot)
+    # 3. Review gap relative to the top competitor in-market
+    for m in scorecard:
+        own_reviews = m.get("reviews")
+        if own_reviews is None:
+            continue
+        top = m.get("top_comp")
+        if not top or not top.get("reviews"):
+            continue
+        rival_reviews = top["reviews"]
+        gap = rival_reviews - own_reviews
+        if gap <= 0:
+            continue
+
+        rival_name = top["name"][:28] + "…" if len(top["name"]) > 28 else top["name"]
+
+        if own_reviews < 10:
+            priority, color = "high", "orange"
+            action_hint = f"Request reviews from {m['display']} clients — aim for 10+ to qualify for the pack."
+        elif own_reviews < 30:
+            priority, color = "medium", "yellow"
+            action_hint = f"Ask 3-4 satisfied {m['display']} clients this week — 30+ reviews improves ranking stability."
+        elif gap >= 15:
+            priority, color = "medium", "yellow"
+            action_hint = f"Maintain a steady review request cadence in {m['display']} to stay competitive."
+        else:
+            continue
+
+        items.append({
+            "priority": priority,
+            "color": color,
+            "category": "reviews",
+            "title": f"Review gap in {m['display']}: {own_reviews} vs {rival_reviews} ({rival_name})",
+            "detail": action_hint,
+            "link": "/reviews",
+            "link_text": "View reviews",
+        })
+
+    # 4. Convergence alerts — competitors closing on Duncan Law's position
+    convergence_alerts = (
+        db.query(Alert)
+        .filter(
+            Alert.acknowledged_at == None,
+            Alert.alert_type == "pack_convergence",
+        )
+        .order_by(Alert.triggered_at.desc())
+        .limit(2)
+        .all()
+    )
+    for a in convergence_alerts:
+        detail_d = a.detail or {}
+        comp_name = detail_d.get("competitor_name", "A competitor")
+        first_r   = detail_d.get("competitor_rank_first")
+        last_r    = detail_d.get("competitor_rank_latest")
+        own_r     = detail_d.get("own_rank")
+        kw        = a.keyword or detail_d.get("keyword", "")
+        market_str = a.market.replace("_", " ").title() if a.market else ""
+        trend_str = f"improved from #{first_r} to #{last_r}" if first_r and last_r else "is improving"
+        own_str   = f" (you're at #{own_r})" if own_r else ""
+        short_comp = comp_name[:28] + "…" if len(comp_name) > 28 else comp_name
+        items.append({
+            "priority": "medium",
+            "color": "orange",
+            "category": "rankings",
+            "title": f"{short_comp} closing on your {market_str} position",
+            "detail": (
+                f"{comp_name} {trend_str} for '{kw}'{own_str} over 30 days. "
+                "Request reviews from this market to widen your lead."
+            ),
+            "link": "/alerts",
+            "link_text": "View alert",
+        })
+
+    # 5. Top competitor gaining review momentum (≥5 new reviews)
     if own_firm:
         comp_snaps = (
             db.query(ReviewSnapshot)
@@ -288,22 +357,36 @@ def _build_action_items(db: Session, own_firm, scorecard: list, competitors: lis
                 delta = snaps[0].review_count - snaps[1].review_count
                 if delta >= 5:
                     gainers.append((delta, cid, comp_name_map.get(cid, cid)))
-
         gainers.sort(reverse=True)
         for delta, cid, name in gainers[:1]:
             short = name if len(name) <= 30 else name[:29] + "…"
             items.append({
-                "priority": "medium",
-                "color": "orange",
-                "title": f"{short} gaining review momentum (+{delta} recently)",
-                "detail": "This competitor is building social proof faster than average — monitor closely.",
+                "priority": "low",
+                "color": "blue",
+                "category": "reviews",
+                "title": f"{short} — +{delta} reviews recently",
+                "detail": "This competitor is running a review campaign. Consider timing your own outreach.",
                 "link": f"/competitors/{cid}",
                 "link_text": "View profile",
             })
 
-    # High-priority first, cap at 5
-    items.sort(key=lambda x: 0 if x["priority"] == "high" else 1)
-    return items[:5]
+    # 6. Markets fully in-pack with strong reviews — positive reinforcement
+    strong = [m for m in scorecard if m["status"] == "strong"]
+    if strong and len(items) < 4:
+        names = ", ".join(m["display"] for m in strong[:3])
+        items.append({
+            "priority": "low",
+            "color": "green",
+            "category": "rankings",
+            "title": f"Strong — maintain review cadence in {names}",
+            "detail": "All keywords in pack with 30+ reviews. One review request per client keeps you there.",
+            "link": "/rankings",
+            "link_text": "View rankings",
+        })
+
+    _pord = {"urgent": 0, "high": 1, "medium": 2, "low": 3}
+    items.sort(key=lambda x: _pord.get(x["priority"], 9))
+    return items[:7]
 
 
 def _build_rank_changes(db: Session, own_firm) -> list:

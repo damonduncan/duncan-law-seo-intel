@@ -464,23 +464,31 @@
     {% for item in action_items %}
     <div style="display:flex;align-items:flex-start;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);{% if loop.last %}border-bottom:none;{% endif %}">
       <div style="width:32px;height:32px;border-radius:9px;background:var(--{{ item.color }}-light);color:var(--{{ item.color }}-dark);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
-        {% if item.priority == 'high' %}
+        {% if item.category == 'reviews' %}
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        {% elif item.priority == 'urgent' or item.priority == 'high' %}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        {% elif item.priority == 'low' %}
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
         {% else %}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         {% endif %}
       </div>
       <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap;">
-          {% if item.priority == 'high' %}
+          {% if item.priority == 'urgent' %}
           <span class="chip chip-red">Urgent</span>
-          {% else %}
+          {% elif item.priority == 'high' %}
+          <span class="chip chip-orange">Action needed</span>
+          {% elif item.priority == 'medium' %}
           <span class="chip chip-yellow">Monitor</span>
+          {% else %}
+          <span class="chip chip-green">Maintain</span>
           {% endif %}
           <div style="font-size:14px;font-weight:600;color:var(--text);">{{ item.title }}</div>
         </div>
         {% if item.detail %}
-        <div style="font-size:13px;color:var(--muted);margin-top:1px;">{{ item.detail }}</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:1px;line-height:1.5;">{{ item.detail }}</div>
         {% endif %}
       </div>
       <a href="{{ item.link }}" style="font-size:13px;color:var(--accent);font-weight:600;white-space:nowrap;text-decoration:none;flex-shrink:0;align-self:center;padding-left:8px;">{{ item.link_text }} →</a>
