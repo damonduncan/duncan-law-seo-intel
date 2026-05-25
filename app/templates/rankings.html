@@ -104,10 +104,32 @@
                   {% endif %}
                   {% if p.delta and p.delta.delta is not none %}
                     {% if p.delta.delta < 0 %}
-                      <span style="font-size:11px;font-weight:700;color:var(--green-dark);">↑{{ p.delta.delta|abs }}</span>
+                      <span style="font-size:11px;font-weight:700;color:var(--green-dark);">↑{{ p.delta.delta|abs }}<span style="font-size:9px;font-weight:400;opacity:.7;">7d</span></span>
                     {% elif p.delta.delta > 0 %}
-                      <span style="font-size:11px;font-weight:700;color:var(--red-dark);">↓{{ p.delta.delta }}</span>
+                      <span style="font-size:11px;font-weight:700;color:var(--red-dark);">↓{{ p.delta.delta }}<span style="font-size:9px;font-weight:400;opacity:.7;">7d</span></span>
                     {% endif %}
+                  {% endif %}
+                  {% if p.traj %}
+                    <div style="display:flex;gap:5px;margin-top:1px;">
+                      {% if p.traj['30d_delta'] is not none %}
+                        {% if p.traj['30d_delta'] < 0 %}
+                          <span style="font-size:10px;color:var(--green-dark);">↑{{ p.traj['30d_delta']|abs }}<span style="opacity:.55;">30d</span></span>
+                        {% elif p.traj['30d_delta'] > 0 %}
+                          <span style="font-size:10px;color:var(--red-dark);">↓{{ p.traj['30d_delta'] }}<span style="opacity:.55;">30d</span></span>
+                        {% else %}
+                          <span style="font-size:10px;color:var(--muted);">—<span style="opacity:.55;">30d</span></span>
+                        {% endif %}
+                      {% endif %}
+                      {% if p.traj['60d_delta'] is not none %}
+                        {% if p.traj['60d_delta'] < 0 %}
+                          <span style="font-size:10px;color:var(--green-dark);">↑{{ p.traj['60d_delta']|abs }}<span style="opacity:.55;">60d</span></span>
+                        {% elif p.traj['60d_delta'] > 0 %}
+                          <span style="font-size:10px;color:var(--red-dark);">↓{{ p.traj['60d_delta'] }}<span style="opacity:.55;">60d</span></span>
+                        {% else %}
+                          <span style="font-size:10px;color:var(--muted);">—<span style="opacity:.55;">60d</span></span>
+                        {% endif %}
+                      {% endif %}
+                    </div>
                   {% endif %}
                 </div>
               {% else %}
@@ -145,7 +167,9 @@
       <th>Keyword</th>
       <th>Market</th>
       <th>Position</th>
-      <th>Δ Week</th>
+      <th>7d Δ</th>
+      <th>30d Δ</th>
+      <th>60d Δ</th>
       <th>Trend</th>
       <th>Last Checked</th>
     </tr></thead>
@@ -153,7 +177,7 @@
     {% set ns = namespace(prev_kw='__none__') %}
     {% for p in positions %}
     {% if p.keyword_short != ns.prev_kw and ns.prev_kw != '__none__' %}
-    <tr><td colspan="6" style="padding:0;height:1px;background:var(--border);"></td></tr>
+    <tr><td colspan="8" style="padding:0;height:1px;background:var(--border);"></td></tr>
     {% endif %}
     {% set ns.prev_kw = p.keyword_short %}
     <tr>
@@ -181,6 +205,34 @@
             <span style="font-size:13px;font-weight:700;color:var(--green-dark);">↑ {{ d|abs }}</span>
           {% elif d > 0 %}
             <span style="font-size:13px;font-weight:700;color:var(--red-dark);">↓ {{ d }}</span>
+          {% else %}
+            <span style="font-size:13px;color:var(--muted);">—</span>
+          {% endif %}
+        {% else %}
+          <span style="font-size:13px;color:var(--muted);">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if p.traj and p.traj['30d_delta'] is not none %}
+          {% set d30 = p.traj['30d_delta'] %}
+          {% if d30 < 0 %}
+            <span style="font-size:13px;font-weight:700;color:var(--green-dark);">↑ {{ d30|abs }}</span>
+          {% elif d30 > 0 %}
+            <span style="font-size:13px;font-weight:700;color:var(--red-dark);">↓ {{ d30 }}</span>
+          {% else %}
+            <span style="font-size:13px;color:var(--muted);">—</span>
+          {% endif %}
+        {% else %}
+          <span style="font-size:13px;color:var(--muted);">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if p.traj and p.traj['60d_delta'] is not none %}
+          {% set d60 = p.traj['60d_delta'] %}
+          {% if d60 < 0 %}
+            <span style="font-size:13px;font-weight:700;color:var(--green-dark);">↑ {{ d60|abs }}</span>
+          {% elif d60 > 0 %}
+            <span style="font-size:13px;font-weight:700;color:var(--red-dark);">↓ {{ d60 }}</span>
           {% else %}
             <span style="font-size:13px;color:var(--muted);">—</span>
           {% endif %}
@@ -217,8 +269,8 @@
   <span class="rank-badge rank-top">#2–3</span><span style="font-size:14px;color:var(--muted);">Green — In pack</span>
   <span class="rank-badge rank-mid">#4–7</span><span style="font-size:14px;color:var(--muted);">Amber — Competitive</span>
   <span class="rank-badge rank-low">#8+</span><span style="font-size:14px;color:var(--muted);">Red — Watch</span>
-  <span style="margin-left:12px;font-size:14px;color:var(--green-dark);font-weight:700;">↑ N</span><span style="font-size:14px;color:var(--muted);">Improved vs. 1 week ago</span>
-  <span style="font-size:14px;color:var(--red-dark);font-weight:700;">↓ N</span><span style="font-size:14px;color:var(--muted);">Declined vs. 1 week ago</span>
+  <span style="margin-left:12px;font-size:14px;color:var(--green-dark);font-weight:700;">↑ N</span><span style="font-size:14px;color:var(--muted);">Improved (7d · 30d · 60d)</span>
+  <span style="font-size:14px;color:var(--red-dark);font-weight:700;">↓ N</span><span style="font-size:14px;color:var(--muted);">Declined (7d · 30d · 60d)</span>
 </div>
 
 <!-- Rank Trend — tabbed by market -->

@@ -111,7 +111,13 @@ def rankings(
             chart_data[market] = {"labels": date_labels, "series": series}
 
     # Week-over-week delta: market → kw_short → {current, prior, delta}
-    week_ago_str = (date.today() - timedelta(days=7)).strftime("%Y-%m-%d")
+    week_ago_str   = (date.today() - timedelta(days=7)).strftime("%Y-%m-%d")
+    thirty_ago_str = (date.today() - timedelta(days=30)).strftime("%Y-%m-%d")
+    sixty_ago_str  = (date.today() - timedelta(days=60)).strftime("%Y-%m-%d")
+
+    def _rank_delta(cur, past):
+        return (cur - past) if cur is not None and past is not None else None
+
     week_delta: dict = {}
     for market, kw_dict in trend_raw.items():
         week_delta[market] = {}
@@ -120,10 +126,32 @@ def rankings(
             current_rank = day_ranks[date_keys[-1]] if date_keys else None
             prior_days = [d for d in date_keys if d <= week_ago_str]
             prior_rank = day_ranks[prior_days[-1]] if prior_days else None
-            delta = (current_rank - prior_rank
-                     if current_rank is not None and prior_rank is not None
-                     else None)
-            week_delta[market][kw] = {"current": current_rank, "prior": prior_rank, "delta": delta}
+            week_delta[market][kw] = {
+                "current": current_rank,
+                "prior":   prior_rank,
+                "delta":   _rank_delta(current_rank, prior_rank),
+            }
+
+    # 30/60-day trajectory per keyword (derived from trend_raw — no extra DB query)
+    trajectory: dict = {}
+    for market, kw_dict in trend_raw.items():
+        trajectory[market] = {}
+        for kw, day_ranks in kw_dict.items():
+            date_keys = sorted(day_ranks.keys())
+            if not date_keys:
+                continue
+            current_rank = day_ranks[date_keys[-1]]
+            thirty_days  = [d for d in date_keys if d <= thirty_ago_str]
+            sixty_days   = [d for d in date_keys if d <= sixty_ago_str]
+            pos_30 = day_ranks[thirty_days[-1]] if thirty_days else None
+            pos_60 = day_ranks[sixty_days[-1]]  if sixty_days  else None
+            trajectory[market][kw] = {
+                "current":   current_rank,
+                "30d_pos":   pos_30,
+                "30d_delta": _rank_delta(current_rank, pos_30),
+                "60d_pos":   pos_60,
+                "60d_delta": _rank_delta(current_rank, pos_60),
+            }
 
     # positions list — drives Current Positions table with pre-computed delta
     seen_pos: set = set()
@@ -135,15 +163,17 @@ def rankings(
         seen_pos.add(key)
         kw_short = _strip_city(r.keyword or "", r.market)
         delta_info = week_delta.get(r.market, {}).get(kw_short)
+        traj_info  = trajectory.get(r.market, {}).get(kw_short)
         positions.append({
-            "keyword": r.keyword,
+            "keyword":       r.keyword,
             "keyword_short": kw_short,
-            "city": r.city,
-            "market": r.market,
-            "in_pack": r.in_pack,
+            "city":          r.city,
+            "market":        r.market,
+            "in_pack":       r.in_pack,
             "rank_position": r.rank_position,
-            "scraped_at": r.scraped_at,
-            "delta": delta_info,
+            "scraped_at":    r.scraped_at,
+            "delta":         delta_info,
+            "traj":          traj_info,
         })
     positions.sort(key=lambda x: (x["keyword"] or "", x["city"] or ""))
 
