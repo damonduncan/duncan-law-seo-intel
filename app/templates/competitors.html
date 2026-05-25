@@ -38,6 +38,7 @@
       <th style="cursor:pointer;user-select:none;" onclick="sortBy('district')">District <span id="sort-district" style="color:var(--muted-2);">↕</span></th>
       <th>Attorneys</th>
       <th style="text-align:right;cursor:pointer;user-select:none;" onclick="sortBy('reviews')">Reviews <span id="sort-reviews" style="color:var(--muted-2);">↕</span></th>
+      <th style="text-align:right;cursor:pointer;user-select:none;" onclick="sortBy('delta30')" title="Net review gain in the last ~30 days">30d Δ <span id="sort-delta30" style="color:var(--muted-2);">↕</span></th>
       <th style="text-align:right;cursor:pointer;user-select:none;" onclick="sortBy('pack')">Pack Mkts <span id="sort-pack" style="color:var(--muted-2);">↕</span></th>
       <th>Place ID</th>
     </tr></thead>
@@ -45,9 +46,11 @@
     {% for c in competitors %}
     {% set district = comp_district.get(c.id, '?') %}
     {% set reviews = comp_reviews.get(c.id) %}
+    {% set delta30 = comp_review_delta_30d.get(c.id) %}
     {% set pack_mkts = comp_pack_markets.get(c.id, 0) %}
     <tr data-dist="{{ district }}" data-name="{{ c.name | lower }}"
         data-reviews="{{ reviews if reviews is not none else -1 }}"
+        data-delta30="{{ delta30 if delta30 is not none else -999 }}"
         data-pack="{{ pack_mkts }}">
       <td style="color:var(--muted-2);font-size:14px;font-weight:600;" class="row-num">{{ loop.index }}</td>
       <td>
@@ -81,6 +84,17 @@
       <td style="text-align:right;font-weight:700;font-size:15px;">
         {% if reviews is not none %}
           {{ reviews }}
+        {% else %}
+          <span style="color:var(--muted-2);font-size:13px;">—</span>
+        {% endif %}
+      </td>
+      <td style="text-align:right;font-weight:700;font-size:14px;">
+        {% if delta30 is not none and delta30 > 0 %}
+          <span style="color:{% if delta30 >= 10 %}var(--orange){% elif delta30 >= 4 %}var(--yellow-dark){% else %}var(--text-2){% endif %};">+{{ delta30 }}</span>
+        {% elif delta30 is not none and delta30 < 0 %}
+          <span style="color:var(--muted);">{{ delta30 }}</span>
+        {% elif delta30 == 0 %}
+          <span style="color:var(--muted-2);font-size:13px;">+0</span>
         {% else %}
           <span style="color:var(--muted-2);font-size:13px;">—</span>
         {% endif %}
@@ -154,8 +168,8 @@
   window.filterCompSearch = function() { applyFilters(); };
 
   window.sortBy = function(col) {
-    if (sortCol === col) { sortAsc = !sortAsc; } else { sortCol = col; sortAsc = col !== 'reviews' && col !== 'pack'; }
-    ['district','reviews','pack'].forEach(function(c) {
+    if (sortCol === col) { sortAsc = !sortAsc; } else { sortCol = col; sortAsc = col !== 'reviews' && col !== 'pack' && col !== 'delta30'; }
+    ['district','reviews','delta30','pack'].forEach(function(c) {
       var el = document.getElementById('sort-' + c);
       if (el) el.textContent = c === col ? (sortAsc ? '↑' : '↓') : '↕';
     });
@@ -165,6 +179,7 @@
       var av, bv;
       if (col === 'district') { av = a.dataset.dist || ''; bv = b.dataset.dist || ''; return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av); }
       if (col === 'reviews')  { av = parseInt(a.dataset.reviews); bv = parseInt(b.dataset.reviews); }
+      if (col === 'delta30')  { av = parseInt(a.dataset.delta30); bv = parseInt(b.dataset.delta30); }
       if (col === 'pack')     { av = parseInt(a.dataset.pack);    bv = parseInt(b.dataset.pack);    }
       if (isNaN(av)) av = -1; if (isNaN(bv)) bv = -1;
       return sortAsc ? av - bv : bv - av;

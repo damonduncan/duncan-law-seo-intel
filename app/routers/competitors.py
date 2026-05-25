@@ -50,8 +50,11 @@ def competitors_list(
         if cnts:
             comp_district[cid] = cnts.most_common(1)[0][0]
 
-    # Google review totals — recent 60 days, deduped by snapshot_data fingerprint
-    since60 = datetime.now(timezone.utc) - timedelta(days=60)
+    # Google review totals + 30-day delta — recent 60 days, deduped by snapshot_data fingerprint
+    now = datetime.now(timezone.utc)
+    since60 = now - timedelta(days=60)
+    _baseline_threshold = now - timedelta(days=20)  # snap must be ≥20 days old to use as 30d base
+
     review_snaps = (
         db.query(ReviewSnapshot)
         .filter(
@@ -62,19 +65,28 @@ def competitors_list(
         .order_by(ReviewSnapshot.snapped_at.desc())
         .all()
     )
-    _snap_by_cm: dict = {}
+
+    # Group all snaps per (competitor_id, market), newest-first
+    _snaps_by_cm: dict = defaultdict(list)
     for s in review_snaps:
-        key = (s.competitor_id, s.market)
-        if key not in _snap_by_cm:
-            _snap_by_cm[key] = s
+        _snaps_by_cm[(s.competitor_id, s.market)].append(s)
 
     comp_reviews: dict = {}
+    comp_review_delta_30d: dict = {}
     _seen_fps: dict = defaultdict(set)
-    for (cid, _), s in _snap_by_cm.items():
-        fp = json.dumps(s.snapshot_data, sort_keys=True) if s.snapshot_data else str(id(s))
+
+    for (cid, _market), snaps in _snaps_by_cm.items():
+        current = snaps[0]  # newest
+        fp = json.dumps(current.snapshot_data, sort_keys=True) if current.snapshot_data else str(id(current))
         if fp not in _seen_fps[cid]:
             _seen_fps[cid].add(fp)
-            comp_reviews[cid] = comp_reviews.get(cid, 0) + (s.review_count or 0)
+            comp_reviews[cid] = comp_reviews.get(cid, 0) + (current.review_count or 0)
+
+        # 30-day delta: compare current to the newest snap that's ≥20 days old
+        older = [s for s in snaps if s.snapped_at <= _baseline_threshold]
+        if older and current.review_count is not None and older[0].review_count is not None:
+            delta = current.review_count - older[0].review_count
+            comp_review_delta_30d[cid] = comp_review_delta_30d.get(cid, 0) + delta
 
     # Pack market count — distinct markets competitor appears in (most recent date)
     _latest_rank = (
@@ -99,13 +111,14 @@ def competitors_list(
             comp_pack_markets[r.competitor_id] = comp_pack_markets.get(r.competitor_id, 0) + 1
 
     return templates.TemplateResponse("competitors.html", {
-        "request":         request,
-        "user":            user,
-        "competitors":     competitors,
-        "comp_district":   comp_district,
-        "comp_reviews":    comp_reviews,
-        "comp_pack_markets": comp_pack_markets,
-        "active_page":     "competitors",
+        "request":               request,
+        "user":                  user,
+        "competitors":           competitors,
+        "comp_district":         comp_district,
+        "comp_reviews":          comp_reviews,
+        "comp_review_delta_30d": comp_review_delta_30d,
+        "comp_pack_markets":     comp_pack_markets,
+        "active_page":           "competitors",
     })
 
 
