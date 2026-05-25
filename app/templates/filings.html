@@ -574,6 +574,7 @@
           </th>
           {% endfor %}
           <th style="text-align:right;">MoM</th>
+          <th style="text-align:right;">vs. {{ mom_data.baseline_months }}-mo Avg</th>
         </tr></thead>
         <tbody>
         {% for row in mom_data.rows %}
@@ -621,6 +622,39 @@
               {% endif %}
             {% else %}
               <span style="color:var(--muted-2);font-size:14px;">new</span>
+            {% endif %}
+          </td>
+          <td style="text-align:right;">
+            {% if row.baseline_dev_pct is not none %}
+              {% set bp = row.baseline_dev_pct %}
+              {% if row.is_own %}
+                {# Own firm: above baseline = good (green), below = bad (red) #}
+                {% if bp > 10 %}
+                  <span style="color:var(--green-dark);font-weight:700;">+{{ bp }}%</span>
+                {% elif bp > 0 %}
+                  <span style="color:var(--green-dark);font-size:14px;">+{{ bp }}%</span>
+                {% elif bp < -10 %}
+                  <span style="color:var(--red-dark);font-weight:700;">{{ bp }}%</span>
+                {% elif bp < 0 %}
+                  <span style="color:var(--red-dark);font-size:14px;">{{ bp }}%</span>
+                {% else %}
+                  <span style="color:var(--muted);font-size:14px;">avg</span>
+                {% endif %}
+              {% else %}
+                {# Competitors: above baseline = threat (orange/red), below = easing (green) #}
+                {% if bp > 20 %}
+                  <span class="chip chip-red" style="font-size:12px;">▲ +{{ bp }}%</span>
+                {% elif bp > 0 %}
+                  <span style="color:var(--yellow-dark);font-size:14px;font-weight:700;">+{{ bp }}%</span>
+                {% elif bp < 0 %}
+                  <span style="color:var(--green-dark);font-size:14px;">{{ bp }}%</span>
+                {% else %}
+                  <span style="color:var(--muted);font-size:14px;">avg</span>
+                {% endif %}
+              {% endif %}
+              <div style="font-size:10px;color:var(--muted-2);">avg: {{ row.baseline_avg }}</div>
+            {% else %}
+              <span style="color:var(--muted-2);font-size:13px;">—</span>
             {% endif %}
           </td>
         </tr>

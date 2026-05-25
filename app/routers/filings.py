@@ -196,13 +196,14 @@ def filings(
     ednc_trend = build_trend("EDNC")
 
     def build_mom_table(district: str) -> dict:
-        dist_periods = sorted(
+        all_dist_periods = sorted(
             {per for (cid, dist2, per) in firm_period_totals if dist2 == district},
             reverse=True,
-        )[:6]
-        if len(dist_periods) < 2:
+        )
+        if len(all_dist_periods) < 2:
             return {}
-        display_periods = list(reversed(dist_periods))  # oldest → newest left-to-right
+        display_periods = list(reversed(all_dist_periods[:6]))  # oldest → newest
+        baseline_periods = all_dist_periods[1:13]               # up to 12 months prior
         period_totals = [
             district_period_totals.get((district, per), 0) for per in display_periods
         ]
@@ -221,20 +222,35 @@ def filings(
                 round(count / total * 100) if total else 0
                 for count, total in zip(data, period_totals)
             ]
+            # Seasonal baseline: trailing 12-month average (excludes current period)
+            if baseline_periods:
+                b_vals = [firm_period_totals.get((cid, district, p), 0) for p in baseline_periods]
+                avg_baseline = round(sum(b_vals) / len(b_vals)) if b_vals else None
+            else:
+                avg_baseline = None
+            if avg_baseline:
+                baseline_dev_abs = latest - avg_baseline
+                baseline_dev_pct = round(baseline_dev_abs / avg_baseline * 100)
+            else:
+                baseline_dev_abs = baseline_dev_pct = None
             rows.append({
-                "firm":    comp.name,
-                "is_own":  comp.is_own_firm,
-                "data":    data,
-                "shares":  shares,
-                "mom_abs": mom_abs,
-                "mom_pct": mom_pct,
-                "latest":  latest,
+                "firm":             comp.name,
+                "is_own":           comp.is_own_firm,
+                "data":             data,
+                "shares":           shares,
+                "mom_abs":          mom_abs,
+                "mom_pct":          mom_pct,
+                "latest":           latest,
+                "baseline_avg":     avg_baseline,
+                "baseline_dev_abs": baseline_dev_abs,
+                "baseline_dev_pct": baseline_dev_pct,
             })
         rows.sort(key=lambda r: (not r["is_own"], -(r["latest"] or 0)))
         return {
-            "labels":        [p.strftime("%b '%y") for p in display_periods],
-            "rows":          rows,
-            "period_totals": period_totals,
+            "labels":          [p.strftime("%b '%y") for p in display_periods],
+            "rows":            rows,
+            "period_totals":   period_totals,
+            "baseline_months": len(baseline_periods),
         }
 
     mdnc_mom = build_mom_table("MDNC")
