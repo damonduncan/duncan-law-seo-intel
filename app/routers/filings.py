@@ -203,6 +203,9 @@ def filings(
         if len(dist_periods) < 2:
             return {}
         display_periods = list(reversed(dist_periods))  # oldest → newest left-to-right
+        period_totals = [
+            district_period_totals.get((district, per), 0) for per in display_periods
+        ]
         rows = []
         for cid in {cid for (cid, dist2, _) in firm_period_totals if dist2 == district}:
             comp = comp_map.get(cid)
@@ -214,18 +217,24 @@ def filings(
             latest, prev = data[-1], data[-2]
             mom_abs = latest - prev
             mom_pct = round((latest - prev) / prev * 100) if prev else None
+            shares = [
+                round(count / total * 100) if total else 0
+                for count, total in zip(data, period_totals)
+            ]
             rows.append({
                 "firm":    comp.name,
                 "is_own":  comp.is_own_firm,
                 "data":    data,
+                "shares":  shares,
                 "mom_abs": mom_abs,
                 "mom_pct": mom_pct,
                 "latest":  latest,
             })
         rows.sort(key=lambda r: (not r["is_own"], -(r["latest"] or 0)))
         return {
-            "labels": [p.strftime("%b '%y") for p in display_periods],
-            "rows":   rows,
+            "labels":        [p.strftime("%b '%y") for p in display_periods],
+            "rows":          rows,
+            "period_totals": period_totals,
         }
 
     mdnc_mom = build_mom_table("MDNC")
