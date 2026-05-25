@@ -136,9 +136,46 @@ def _gather_data(db: Session) -> dict:
             else:
                 m["gaps"].append(r.keyword)
 
+    # Prior-week rankings for rank direction arrows (5–11 days before latest_date)
+    prior_positions_by_market: dict = {}
+    if own_id and latest_date:
+        prior_row = (
+            db.query(LocalPackRanking.scraped_at)
+            .filter(
+                LocalPackRanking.competitor_id == own_id,
+                LocalPackRanking.is_own_firm == True,
+                cast(LocalPackRanking.scraped_at, Date) >= latest_date - timedelta(days=11),
+                cast(LocalPackRanking.scraped_at, Date) < latest_date,
+            )
+            .order_by(LocalPackRanking.scraped_at.desc())
+            .first()
+        )
+        if prior_row:
+            prior_date = prior_row[0].date()
+            for r in (
+                db.query(LocalPackRanking)
+                .filter(
+                    LocalPackRanking.competitor_id == own_id,
+                    LocalPackRanking.is_own_firm == True,
+                    cast(LocalPackRanking.scraped_at, Date) == prior_date,
+                )
+                .all()
+            ):
+                if r.in_pack and r.rank_position:
+                    prior_positions_by_market.setdefault(r.market, []).append(r.rank_position)
+
+    rank_direction: dict = {}
+    for market, data in rankings_by_market.items():
+        cur = data.get("positions", [])
+        prior = prior_positions_by_market.get(market, [])
+        if cur and prior:
+            delta = sum(prior) / len(prior) - sum(cur) / len(cur)
+            rank_direction[market] = "up" if delta > 0.3 else ("down" if delta < -0.3 else "same")
+
     # Latest own-firm review snapshot per market + week-over-week deltas
     reviews_by_market: dict = {}
     own_review_deltas: dict = {}
+    own_review_rates: dict = {}
     if own_id:
         snaps = (
             db.query(ReviewSnapshot)
@@ -163,6 +200,7 @@ def _gather_data(db: Session) -> dict:
                     and msnaps[0].review_count is not None
                     and msnaps[1].review_count is not None):
                 own_review_deltas[market] = msnaps[0].review_count - msnaps[1].review_count
+            own_review_rates[market] = _rolling_weekly_rate(msnaps)
 
     # Competitor review velocity leaders (top gainers since last collection)
     velocity_leaders: list = []
@@ -336,7 +374,7 @@ def _gather_data(db: Session) -> dict:
         own_count = reviews_by_market.get(market, {}).get("review_count")
         if own_count is None:
             continue
-        own_delta = own_review_deltas.get(market) or 0
+        own_delta = own_review_rates.get(market) or 0
         top_rival_name = None
         top_rival_count = 0
         top_rival_delta = 0
@@ -347,11 +385,7 @@ def _gather_data(db: Session) -> dict:
             if cnt > top_rival_count:
                 top_rival_count = cnt
                 top_rival_name = _comp_name_map.get(comp_id, "Unknown")
-                if len(snaps) >= 2 and snaps[1].review_count is not None:
-                    _raw = snaps[0].review_count - snaps[1].review_count
-                    top_rival_delta = _raw if abs(_raw) <= 50 else 0
-                else:
-                    top_rival_delta = 0
+                top_rival_delta = _rolling_weekly_rate(snaps)
         if not top_rival_name:
             continue
         gap = top_rival_count - own_count
@@ -441,8 +475,10 @@ def _gather_data(db: Session) -> dict:
 
     return {
         "rankings_by_market":         rankings_by_market,
+        "rank_direction":             rank_direction,
         "reviews_by_market":          reviews_by_market,
         "own_review_deltas":          own_review_deltas,
+        "own_review_rates":           own_review_rates,
         "velocity_leaders":           velocity_leaders,
         "open_alerts":                open_alerts,
         "rankings_as_of":             latest_date,
@@ -642,6 +678,10 @@ def _build_html(ctx: dict, week_str: str) -> str:
         else:
             badge = _badge("red", "Not in pack")
 
+        direction = ctx.get("rank_direction", {}).get(market, "same")
+        arrow, arrow_color = {"up": ("↑", "#059669"), "down": ("↓", "#dc2626"), "same": ("→", "#9ca3af")}.get(direction, ("—", "#9ca3af"))
+        arrow_html = f'<span style="color:{arrow_color};font-weight:700;font-size:14px;">{arrow}</span>'
+
         gap_text = ""
         if gaps:
             short_kw = gaps[0].replace(" Greensboro", "").replace(" Winston-Salem", "") \
@@ -649,7 +689,7 @@ def _build_html(ctx: dict, week_str: str) -> str:
                                .replace(" Salisbury", "").replace(" Asheville", "")
             gap_label = f"{len(gaps)} gap{'s' if len(gaps) > 1 else ''}: {short_kw}"
             gap_text = f'<div style="font-size:11px;color:#dc2626;margin-top:2px;">{gap_label}</div>'
-        rank_rows += _tr(label, pos_str, badge, gap_text)
+        rank_rows += _tr(label, pos_str, arrow_html, badge, gap_text)
 
     sections.append(_section(
         f'3-Pack Positions' + (f' — as of {as_of.strftime("%b %d")}' if as_of else ''),
@@ -657,6 +697,7 @@ def _build_html(ctx: dict, week_str: str) -> str:
           <tr>
             <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Market</th>
             <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Positions</th>
+            <th style="text-align:center;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Week</th>
             <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Status</th>
             <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Note</th>
           </tr>
@@ -785,17 +826,18 @@ def _build_html(ctx: dict, week_str: str) -> str:
         for v in vel:
             od = v["own_delta"]
             rd = v["rival_delta"]
-            own_d_str   = (f"+{od}" if od > 0 else str(od)) if od != 0 else "±0"
-            rival_d_str = (f"+{rd}" if rd > 0 else str(rd)) if rd != 0 else "±0"
+            _fmt = lambda v: f"+{round(v, 1)}" if v > 0 else (str(round(v, 1)) if v != 0 else "±0")
+            own_d_str   = _fmt(od)
+            rival_d_str = _fmt(rd)
             pc = v["proj_color"]
             vel_rows += (
                 f'<tr>'
                 f'<td style="padding:8px;font-size:13px;border-bottom:1px solid #f3f4f6;font-weight:600;">{v["display"]}</td>'
                 f'<td style="padding:8px;font-size:13px;border-bottom:1px solid #f3f4f6;">'
-                f'  {v["own_count"]:,} <span style="color:#9ca3af;font-size:11px;">({own_d_str}/wk)</span></td>'
+                f'  {v["own_count"]:,} <span style="color:#9ca3af;font-size:11px;">({own_d_str}/wk avg)</span></td>'
                 f'<td style="padding:8px;font-size:13px;border-bottom:1px solid #f3f4f6;color:#374151;">'
                 f'  {v["rival_name"]}<br>'
-                f'  <span style="font-size:11px;color:#9ca3af;">{v["rival_count"]:,} ({rival_d_str}/wk)</span></td>'
+                f'  <span style="font-size:11px;color:#9ca3af;">{v["rival_count"]:,} ({rival_d_str}/wk avg)</span></td>'
                 f'<td style="padding:8px;font-size:13px;border-bottom:1px solid #f3f4f6;">'
                 f'  <span style="background:{bg_map.get(pc,"#f3f4f6")};color:{color_map.get(pc,"#374151")};'
                 f'padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">{v["proj_text"]}</span>'
@@ -976,6 +1018,27 @@ def _build_html(ctx: dict, week_str: str) -> str:
             '<p style="font-size:13px;color:#059669;">✓ No open alerts — all clear</p>',
         ))
 
+    # ── One Action block ─────────────────────────────────────────────────────
+    pa = ctx.get("priority_action", {})
+    if pa.get("level") in ("high", "medium"):
+        action_bg    = "#7f1d1d" if pa["level"] == "high" else "#1e3a8a"
+        action_label = "#fca5a5" if pa["level"] == "high" else "#93c5fd"
+        action_btn   = "#ef4444" if pa["level"] == "high" else "#3b82f6"
+        sections.append(
+            f'<tr><td style="padding:24px;background:{action_bg};">'
+            f'<div style="text-align:center;">'
+            f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;'
+            f'letter-spacing:.08em;color:{action_label};margin-bottom:10px;">This Week\'s One Action</div>'
+            f'<div style="font-size:16px;font-weight:700;color:#ffffff;margin-bottom:6px;">'
+            f'{pa.get("headline", "")}</div>'
+            f'<div style="font-size:13px;color:#e2e8f0;opacity:.85;margin-bottom:16px;line-height:1.5;">'
+            f'{pa.get("body", "")[:160]}</div>'
+            f'<a href="{base_url}/dashboard" style="background:{action_btn};color:#ffffff;'
+            f'padding:10px 28px;border-radius:6px;text-decoration:none;font-size:13px;'
+            f'font-weight:600;display:inline-block;">Open Dashboard →</a>'
+            f'</div></td></tr>'
+        )
+
     body = "\n".join(sections)
 
     return f"""<!DOCTYPE html>
@@ -1011,6 +1074,19 @@ def _build_html(ctx: dict, week_str: str) -> str:
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _rolling_weekly_rate(snaps: list, n_weeks: int = 4) -> float:
+    """Average weekly review gain over the last n_weeks of history (snaps sorted newest-first)."""
+    valid = [s for s in snaps if s.review_count is not None]
+    if len(valid) < 2:
+        return 0.0
+    window = valid[:n_weeks + 1]
+    newest, oldest = window[0], window[-1]
+    if newest.review_count <= oldest.review_count:
+        return 0.0
+    elapsed = (newest.snapped_at - oldest.snapped_at).total_seconds() / 86400
+    return (newest.review_count - oldest.review_count) / (elapsed / 7) if elapsed >= 1 else 0.0
+
 
 def _section(title: str, content: str) -> str:
     return f"""<tr><td style="padding:20px 24px;border-bottom:1px solid #e5e7eb;">

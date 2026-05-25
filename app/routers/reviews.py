@@ -84,14 +84,12 @@ def reviews(
     own_avg_rating = round(sum(own_ratings) / len(own_ratings), 1) if own_ratings else None
     own_total_reviews = sum(own_counts) if own_counts else None
 
-    # Own firm per-market week-over-week deltas
-    prev_own = prev_index.get(own_firm.id, {}).get("google", []) if own_firm else []
-    prev_own_by_market = {s.market: s for s in prev_own}
+    # Own firm per-market rolling weekly rates (4-week average)
     own_snap_deltas: dict = {}
     for s in own_google_snaps:
-        prev = prev_own_by_market.get(s.market)
-        if prev and s.review_count is not None and prev.review_count is not None:
-            own_snap_deltas[s.market] = s.review_count - prev.review_count
+        if s.market:
+            history = snap_history[(own_firm.id, "google", s.market)]
+            own_snap_deltas[s.market] = _rolling_weekly_rate(history)
 
     # Competitor rows
     competitors = (
@@ -128,12 +126,18 @@ def reviews(
         prev_total = sum(prev_counts) if prev_counts else None
         delta = (total_count - prev_total) if (total_count is not None and prev_total is not None) else None
 
+        weekly_rate = round(sum(
+            _rolling_weekly_rate(snap_history[(c.id, "google", s.market)])
+            for s in google_snaps if s.market
+        ), 1)
+
         comp_rows.append({
             "id": c.id,
             "name": c.name,
             "google_rating": avg_rating,
             "google_count": total_count,
             "count_delta": delta,
+            "weekly_rate": weekly_rate,
             "last_updated": google_snaps[0].snapped_at if google_snaps else None,
         })
 
@@ -244,6 +248,19 @@ _OWN_MARKETS_META = [
 ]
 
 
+def _rolling_weekly_rate(snaps: list, n_weeks: int = 4) -> float:
+    """Average weekly review gain over the last n_weeks of history (snaps sorted newest-first)."""
+    valid = [s for s in snaps if s.review_count is not None]
+    if len(valid) < 2:
+        return 0.0
+    window = valid[:n_weeks + 1]
+    newest, oldest = window[0], window[-1]
+    if newest.review_count <= oldest.review_count:
+        return 0.0
+    elapsed = (newest.snapped_at - oldest.snapped_at).total_seconds() / 86400
+    return (newest.review_count - oldest.review_count) / (elapsed / 7) if elapsed >= 1 else 0.0
+
+
 def _build_velocity_projections(own_google_snaps: list, own_snap_deltas: dict, comp_rows: list) -> list:
     own_by_market = {s.market: s for s in own_google_snaps}
     dist_comps: dict = defaultdict(list)
@@ -263,7 +280,7 @@ def _build_velocity_projections(own_google_snaps: list, own_snap_deltas: dict, c
             continue
         top_rival = max(rivals, key=lambda r: r["google_count"] or 0)
         rival_count = top_rival["google_count"] or 0
-        rival_rate = top_rival["count_delta"] or 0
+        rival_rate = top_rival.get("weekly_rate") or 0
 
         gap = rival_count - own_count  # positive = rival ahead
 
@@ -281,7 +298,7 @@ def _build_velocity_projections(own_google_snaps: list, own_snap_deltas: dict, c
                 proj_type = "trailing_widening"
                 proj_weeks = None
                 if rate_diff < 0:
-                    proj_text = f"Gap widening — rival +{abs(rate_diff)}/wk faster"
+                    proj_text = f"Gap widening — rival +{abs(round(rate_diff, 1))}/wk faster"
                 else:
                     proj_text = "Static — matching rival's pace"
         elif gap < 0:
