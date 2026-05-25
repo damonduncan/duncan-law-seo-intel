@@ -247,10 +247,11 @@ def _build_action_items(db: Session, own_firm, scorecard: list, competitors: lis
                 own_reviews = m.get("reviews") or 0
                 gap = rival_reviews - own_reviews
                 rival_name = top["name"][:28] + "…" if len(top["name"]) > 28 else top["name"]
+                weeks_3pw = max(1, round(gap / 3)) if gap > 0 else 0
                 detail = (
-                    f"{rival_name} holds the #1 spot with {rival_reviews} reviews "
-                    f"— you have {own_reviews} (gap: {gap}). "
-                    f"Request reviews from {m['display']} clients this week."
+                    f"{rival_name} holds #1 with {rival_reviews} reviews — you have {own_reviews} "
+                    f"(gap: {gap}). At 3 reviews/week, that's ~{weeks_3pw} week{'s' if weeks_3pw != 1 else ''} "
+                    f"to close. Ask 3 {m['display']} clients this week to start."
                 )
             else:
                 detail = "Review your Google Business Profile listing and local signals for this market."
@@ -279,15 +280,28 @@ def _build_action_items(db: Session, own_firm, scorecard: list, competitors: lis
 
         rival_name = top["name"][:28] + "…" if len(top["name"]) > 28 else top["name"]
 
+        weeks_3pw = max(1, round(gap / 3))
+        weeks_2pw = max(1, round(gap / 2))
+
         if own_reviews < 10:
             priority, color = "high", "orange"
-            action_hint = f"Request reviews from {m['display']} clients — aim for 10+ to qualify for the pack."
+            action_hint = (
+                f"You have {own_reviews} review{'s' if own_reviews != 1 else ''} — {rival_name} has {rival_reviews} "
+                f"(gap: {gap}). At 3/week you close this in {weeks_3pw} week{'s' if weeks_3pw != 1 else ''}. "
+                f"Ask 3 {m['display']} clients this week."
+            )
         elif own_reviews < 30:
             priority, color = "medium", "yellow"
-            action_hint = f"Ask 3-4 satisfied {m['display']} clients this week — 30+ reviews improves ranking stability."
+            action_hint = (
+                f"You have {own_reviews}, {rival_name} has {rival_reviews} (gap: {gap}). "
+                f"At 3/week you close this in {weeks_3pw} weeks — ask 3 {m['display']} clients this week to start."
+            )
         elif gap >= 15:
             priority, color = "medium", "yellow"
-            action_hint = f"Maintain a steady review request cadence in {m['display']} to stay competitive."
+            action_hint = (
+                f"Gap is {gap} reviews. At 2/week you'd close this in {weeks_2pw} weeks. "
+                f"Ask 1–2 {m['display']} clients per case until you match {rival_name}."
+            )
         else:
             continue
 
