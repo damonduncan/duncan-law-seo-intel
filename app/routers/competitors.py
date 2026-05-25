@@ -21,16 +21,7 @@ router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 auth_required = RedirectIfNotAuthenticated()
 
-_MARKET_TO_DISTRICT = {
-    "greensboro": "MDNC", "winston_salem": "MDNC", "high_point": "MDNC",
-    "salisbury": "MDNC", "durham": "MDNC", "concord": "MDNC",
-    "graham": "MDNC", "carthage": "MDNC", "asheboro": "MDNC",
-    "charlotte": "WDNC", "asheville": "WDNC", "waynesville": "WDNC",
-    "statesville": "WDNC", "mooresville": "WDNC", "elkin": "WDNC",
-    "north_wilkesboro": "WDNC", "morganton": "WDNC",
-    "ednc": "EDNC", "raleigh": "EDNC", "fayetteville": "EDNC",
-    "wilson": "EDNC", "wilmington": "EDNC",
-}
+from app.constants import MARKET_TO_DISTRICT as _MARKET_TO_DISTRICT
 
 
 @router.get("/competitors", response_class=HTMLResponse)

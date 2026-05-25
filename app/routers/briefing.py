@@ -10,6 +10,7 @@ from app.routers.overview import (
     _build_scorecard,
     _build_action_items,
     _build_pacer_share,
+    _compute_filing_counts,
     _build_activity_feed,
 )
 from app.models.competitor import Competitor
@@ -42,7 +43,8 @@ def briefing(
 
     scorecard      = _build_scorecard(db, own_firm)
     action_items   = _build_action_items(db, own_firm, scorecard, competitors)
-    pacer_share    = _build_pacer_share(db, own_firm)
+    fc_counts, fc_dist_latest = _compute_filing_counts(db)
+    pacer_share    = _build_pacer_share(own_firm, fc_counts, fc_dist_latest)
     activity_feed  = _build_activity_feed(db, own_firm)
 
     unacked_count  = db.query(Alert).filter(Alert.acknowledged_at == None).count()

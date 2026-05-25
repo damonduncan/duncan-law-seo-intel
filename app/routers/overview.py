@@ -57,7 +57,9 @@ def dashboard(
     fc_counts, fc_dist_latest = _compute_filing_counts(db)
     pacer_share = _build_pacer_share(own_firm, fc_counts, fc_dist_latest)
     opportunity_matrix = _build_opportunity_matrix(own_firm, scorecard, pacer_share, fc_counts, fc_dist_latest)
-    activity_feed = _build_activity_feed(db, own_firm)
+    _all_activity = _build_activity_feed(db, own_firm)
+    activity_feed = _all_activity[:30]
+    activity_total = len(_all_activity)
 
     return templates.TemplateResponse("overview.html", {
         "request": request,
@@ -73,6 +75,7 @@ def dashboard(
         "pacer_share": pacer_share,
         "opportunity_matrix": opportunity_matrix,
         "activity_feed": activity_feed,
+        "activity_total": activity_total,
         "active_page": "dashboard",
     })
 
@@ -567,7 +570,7 @@ def _build_activity_feed(db: Session, own_firm) -> list:
         })
 
     events.sort(key=lambda e: e["ts"], reverse=True)
-    return events[:30]
+    return events
 
 
 def _compute_filing_counts(db: Session) -> tuple:

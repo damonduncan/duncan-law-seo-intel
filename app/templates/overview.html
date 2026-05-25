@@ -142,8 +142,8 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     </div>
     <div class="label">Keywords Tracked</div>
-    <div class="value">24</div>
-    <div class="sub">4 keywords × 6 cities</div>
+    <div class="value">{{ scorecard | sum(attribute='total') }}</div>
+    <div class="sub">4 keywords × {{ scorecard | selectattr('total', 'gt', 0) | list | length }} markets</div>
   </div>
 
   <div class="stat-card {% if unacked_alerts > 0 %}stat-red{% else %}stat-green{% endif %}">
@@ -404,7 +404,7 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     </span>
     Competitor Activity Feed
-    <span style="margin-left:8px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--surface-3);color:var(--muted);">{{ activity_feed | length }} events</span>
+    <span style="margin-left:8px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--surface-3);color:var(--muted);">{{ activity_total }} events</span>
     <span id="chev-sec-activity" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </span>
@@ -443,6 +443,11 @@
     </div>
     {% endfor %}
   </div>
+  {% if activity_total > activity_feed | length %}
+  <p style="text-align:center;font-size:13px;color:var(--muted-2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
+    Showing {{ activity_feed | length }} most recent of {{ activity_total }} events in the last 90 days
+  </p>
+  {% endif %}
   </div>
 </div>
 {% endif %}
@@ -841,7 +846,7 @@
       <button type="submit" class="btn btn-ghost btn-sm">Clean PACER Dupes</button>
     </form>
     <form method="post" action="/admin/clear-filings">
-      <button type="submit" class="btn btn-danger btn-sm">Clear Filing Data</button>
+      <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('This will permanently delete ALL PACER filing data. This cannot be undone. Are you sure?')">Clear Filing Data</button>
     </form>
   </div>
   </div>

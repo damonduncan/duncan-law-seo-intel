@@ -33,33 +33,7 @@ PCL_SEARCH_URL  = "https://pcl.uscourts.gov/pcl/pages/search/findParty.jsf"
 
 DISTRICT_TO_COURT = {"MDNC": "ncmb", "WDNC": "ncwb", "EDNC": "nceb"}
 
-MARKET_TO_DISTRICT = {
-    # MDNC — Middle District of North Carolina
-    "greensboro":    "MDNC",
-    "winston_salem": "MDNC",
-    "high_point":    "MDNC",
-    "salisbury":     "MDNC",
-    "durham":        "MDNC",
-    "concord":       "MDNC",
-    "graham":        "MDNC",
-    "carthage":      "MDNC",
-    "asheboro":      "MDNC",
-    # WDNC — Western District of North Carolina
-    "charlotte":        "WDNC",
-    "asheville":        "WDNC",
-    "waynesville":      "WDNC",
-    "statesville":      "WDNC",
-    "mooresville":      "WDNC",
-    "elkin":            "WDNC",
-    "north_wilkesboro": "WDNC",
-    "morganton":        "WDNC",
-    # EDNC — Eastern District of North Carolina
-    "ednc":          "EDNC",   # legacy catch-all tag
-    "raleigh":       "EDNC",
-    "fayetteville":  "EDNC",
-    "wilson":        "EDNC",
-    "wilmington":    "EDNC",
-}
+from app.constants import MARKET_TO_DISTRICT
 
 NAV_TIMEOUT    = 45_000   # ms — per navigation
 ACTION_TIMEOUT = 10_000   # ms — per element action

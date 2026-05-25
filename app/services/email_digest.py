@@ -25,6 +25,7 @@ from app.models.competitor import Competitor, CompetitorLocation
 from app.models.filings import FilingSnapshot
 from app.models.rankings import LocalPackRanking
 from app.models.reviews import ReviewSnapshot
+from app.constants import MARKET_TO_DISTRICT
 
 logger = logging.getLogger(__name__)
 
@@ -37,17 +38,6 @@ MARKET_DISPLAY = {
     "asheville":     "Asheville",
 }
 MARKET_ORDER = list(MARKET_DISPLAY.keys())
-
-MARKET_TO_DISTRICT = {
-    "greensboro": "MDNC", "winston_salem": "MDNC", "high_point": "MDNC",
-    "salisbury": "MDNC", "durham": "MDNC", "concord": "MDNC",
-    "graham": "MDNC", "carthage": "MDNC", "asheboro": "MDNC",
-    "charlotte": "WDNC", "asheville": "WDNC", "waynesville": "WDNC",
-    "statesville": "WDNC", "mooresville": "WDNC", "elkin": "WDNC",
-    "north_wilkesboro": "WDNC", "morganton": "WDNC",
-    "ednc": "EDNC", "raleigh": "EDNC", "fayetteville": "EDNC",
-    "wilson": "EDNC", "wilmington": "EDNC",
-}
 OWN_MDNC = frozenset(["greensboro", "winston_salem", "high_point", "salisbury"])
 OWN_WDNC = frozenset(["charlotte", "asheville"])
 DISTRICT_ORDER = ["MDNC", "WDNC", "EDNC"]
