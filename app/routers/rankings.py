@@ -334,6 +334,77 @@ def rankings(
                     and mkt_data["own_reviews"] is not None):
                 mkt_data["gap"] = mkt_data["rank1_reviews"] - mkt_data["own_reviews"]
 
+    # Keyword opportunity scoring — ranks every (market, keyword) by winnability
+    _MARKET_DISPLAY = {
+        "greensboro": "Greensboro", "winston_salem": "Winston-Salem",
+        "high_point": "High Point", "charlotte": "Charlotte",
+        "salisbury": "Salisbury", "asheville": "Asheville",
+    }
+
+    def _opp_score(own_rank, review_gap, delta_30d) -> int:
+        # Position component (0–40): how close to #1?
+        if own_rank is None:
+            pos = 15
+        elif own_rank == 2:
+            pos = 40
+        elif own_rank == 3:
+            pos = 28
+        else:
+            pos = max(0, 40 - (own_rank - 1) * 8)
+
+        # Review gap component (0–40): how many reviews to reach #1?
+        if review_gap is None:
+            gap = 15
+        elif review_gap <= 0:
+            gap = 40
+        elif review_gap <= 10:
+            gap = 35
+        elif review_gap <= 25:
+            gap = 25
+        elif review_gap <= 50:
+            gap = 15
+        elif review_gap <= 100:
+            gap = 8
+        else:
+            gap = 2
+
+        # Trajectory component (0–20): improving / stable / declining?
+        if delta_30d is None:
+            traj = 10
+        elif delta_30d < 0:
+            traj = 20
+        elif delta_30d == 0:
+            traj = 10
+        else:
+            traj = 0
+
+        return min(100, pos + gap + traj)
+
+    opportunities = []
+    for market, kw_dict in trajectory.items():
+        if market not in OWN_FIRM_MARKETS:
+            continue
+        for kw, traj in kw_dict.items():
+            own_rank  = traj.get("current")
+            delta_30d = traj.get("30d_delta")
+            if own_rank == 1:
+                continue  # already #1 — not an opportunity
+            g1 = gap_to_1.get(kw, {}).get(market, {})
+            review_gap = 0 if g1.get("is_leading") else g1.get("gap")
+            score = _opp_score(own_rank, review_gap, delta_30d)
+            opportunities.append({
+                "market":         market,
+                "market_display": _MARKET_DISPLAY.get(market, market),
+                "keyword":        kw,
+                "own_rank":       own_rank,
+                "review_gap":     review_gap,
+                "rank1_name":     g1.get("rank1_name"),
+                "delta_30d":      delta_30d,
+                "score":          score,
+            })
+    opportunities.sort(key=lambda x: -x["score"])
+    top_opportunities = opportunities[:8]
+
     in_pack_count = sum(1 for r in latest_by_keyword.values() if r.in_pack)
     total_keywords = len(latest_by_keyword)
     has_data = total_keywords > 0
@@ -361,6 +432,7 @@ def rankings(
         "WDNC_DISPLAY": WDNC_DISPLAY,
         "WDNC_ORDER": WDNC_ORDER,
         "MARKET_ORDER": MARKET_ORDER,
-        "position_grid": position_grid,
-        "kw_order": kw_order,
+        "position_grid":      position_grid,
+        "kw_order":           kw_order,
+        "top_opportunities":  top_opportunities,
     })

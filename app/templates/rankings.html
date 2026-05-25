@@ -47,6 +47,97 @@
   </div>
 </div>
 
+<!-- Keyword Opportunity Scores -->
+{% if top_opportunities %}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-opportunities')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon" style="background:rgba(99,102,241,0.12);color:#6366f1;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </span>
+    Top Keyword Opportunities
+    <span style="font-size:13px;color:var(--muted);font-weight:400;margin-left:8px;">ranked by winnability score</span>
+    <span id="chev-sec-opportunities" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-opportunities" data-collapsible="1">
+  <table>
+    <thead><tr>
+      <th style="width:52px;text-align:center;">Score</th>
+      <th>Market</th>
+      <th>Keyword</th>
+      <th style="text-align:center;">Our Rank</th>
+      <th style="text-align:center;">Reviews Needed</th>
+      <th style="text-align:center;">30d Trend</th>
+      <th style="font-size:12px;color:var(--muted);">#1 Holder</th>
+    </tr></thead>
+    <tbody>
+    {% for opp in top_opportunities %}
+    {% if opp.score >= 70 %}{% set sc = "#10b981" %}{% set sbg = "rgba(16,185,129,0.12)" %}{% set slabel = "Prime" %}
+    {% elif opp.score >= 50 %}{% set sc = "#6366f1" %}{% set sbg = "rgba(99,102,241,0.12)" %}{% set slabel = "Strong" %}
+    {% elif opp.score >= 30 %}{% set sc = "#f59e0b" %}{% set sbg = "rgba(245,158,11,0.10)" %}{% set slabel = "Possible" %}
+    {% else %}{% set sc = "var(--muted)" %}{% set sbg = "var(--surface-2)" %}{% set slabel = "Reach" %}{% endif %}
+    <tr>
+      <td style="text-align:center;padding:10px 8px;">
+        <span style="display:inline-flex;flex-direction:column;align-items:center;background:{{ sbg }};color:{{ sc }};border-radius:8px;padding:4px 8px;min-width:44px;">
+          <span style="font-size:16px;font-weight:800;line-height:1.1;">{{ opp.score }}</span>
+          <span style="font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;opacity:.8;">{{ slabel }}</span>
+        </span>
+      </td>
+      <td>
+        <span style="font-size:12px;font-weight:600;background:var(--surface-2);color:var(--muted);border-radius:10px;padding:2px 9px;white-space:nowrap;">{{ opp.market_display }}</span>
+      </td>
+      <td style="font-size:14px;font-weight:500;">{{ opp.keyword }}</td>
+      <td style="text-align:center;">
+        {% if opp.own_rank == 2 %}
+          <span class="rank-badge rank-top">#2</span>
+        {% elif opp.own_rank == 3 %}
+          <span class="rank-badge rank-mid">#3</span>
+        {% elif opp.own_rank %}
+          <span class="rank-badge rank-low">#{{ opp.own_rank }}</span>
+        {% else %}
+          <span style="font-size:12px;color:var(--muted-2);">Not ranked</span>
+        {% endif %}
+      </td>
+      <td style="text-align:center;">
+        {% if opp.review_gap is not none %}
+          {% if opp.review_gap <= 0 %}
+            <span style="color:#10b981;font-size:13px;font-weight:600;">Leading ✓</span>
+          {% else %}
+            <span style="font-size:13px;font-weight:600;color:{% if opp.review_gap <= 15 %}#10b981{% elif opp.review_gap <= 40 %}#f59e0b{% else %}#ef4444{% endif %};">+{{ opp.review_gap }}</span>
+            <span style="font-size:11px;color:var(--muted);"> reviews</span>
+          {% endif %}
+        {% else %}
+          <span style="color:var(--muted-2);font-size:13px;">—</span>
+        {% endif %}
+      </td>
+      <td style="text-align:center;">
+        {% if opp.delta_30d is not none %}
+          {% if opp.delta_30d < 0 %}
+            <span style="color:#10b981;font-size:13px;font-weight:600;">▲ {{ opp.delta_30d | abs }}</span>
+          {% elif opp.delta_30d > 0 %}
+            <span style="color:#ef4444;font-size:13px;font-weight:600;">▼ {{ opp.delta_30d }}</span>
+          {% else %}
+            <span style="color:var(--muted);font-size:13px;">→ stable</span>
+          {% endif %}
+        {% else %}
+          <span style="color:var(--muted-2);font-size:13px;">—</span>
+        {% endif %}
+      </td>
+      <td style="font-size:13px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        {{ opp.rank1_name or '—' }}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div style="margin-top:12px;font-size:11px;color:var(--muted);padding:0 4px;">
+    Score = position (40) + review gap (40) + 30-day trajectory (20). #1 positions excluded — those are wins to defend, not chase.
+  </div>
+  </div><!-- /sec-opportunities -->
+</div>
+{% endif %}
+
 <!-- Position Snapshot Grid -->
 {% if position_grid %}
 <div class="card" style="margin-bottom:24px;">
