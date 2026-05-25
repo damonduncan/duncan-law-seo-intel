@@ -128,6 +128,8 @@ def competitor_detail(
     request: Request,
     user: dict = Depends(auth_required),
     db: Session = Depends(get_db),
+    kw: str = Query(None),
+    market: str = Query(None),
 ):
     comp = db.query(Competitor).filter(Competitor.id == comp_id).first()
     if not comp:
@@ -385,4 +387,6 @@ def competitor_detail(
         "comp_review_chart":  comp_review_chart,
         "recent_alerts":      recent_alerts,
         "sentiment":          sentiment,
+        "from_kw":            kw,
+        "from_market":        market,
     })

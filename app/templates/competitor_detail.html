@@ -2,12 +2,26 @@
 {% block title %}{{ comp.name }}{% endblock %}
 {% block content %}
 
-<div style="margin-bottom:20px;">
+<div style="margin-bottom:{% if from_kw and from_market %}12{% else %}20{% endif %}px;">
   <a href="/competitors" style="font-size:13px;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:5px;">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
     All Competitors
   </a>
 </div>
+
+{% if from_kw and from_market %}
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:10px 16px;background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.2);border-radius:var(--r-sm);">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="flex-shrink:0;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+  <span style="font-size:13px;color:var(--muted);">From Rankings:</span>
+  <span style="font-size:13px;font-weight:700;color:var(--accent);">{{ from_kw }}</span>
+  <span style="font-size:13px;color:var(--muted-2);">·</span>
+  <span style="font-size:13px;font-weight:600;color:var(--text-2);">{{ from_market | replace('_', ' ') | title }}</span>
+  <a href="/rankings" style="margin-left:auto;font-size:12px;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    Back to Rankings
+  </a>
+</div>
+{% endif %}
 
 <!-- Firm header card -->
 <div class="card" style="margin-bottom:24px;">
@@ -597,4 +611,17 @@
 </div>
 {% endif %}
 
+{% if from_market and comp_rank_chart %}
+<script>
+(function() {
+  var fromMarket = {{ from_market | tojson }};
+  var chartData = {{ comp_rank_chart | tojson }};
+  if (fromMarket && chartData[fromMarket] && typeof window.showCompTab === 'function') {
+    window.showCompTab(fromMarket);
+    var el = document.getElementById('sec-cd-rankings');
+    if (el) { setTimeout(function() { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150); }
+  }
+})();
+</script>
+{% endif %}
 {% endblock %}

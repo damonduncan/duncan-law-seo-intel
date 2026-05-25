@@ -880,10 +880,20 @@
         + '</tr></thead><tbody>';
       md.firms.forEach(function(f) {
         var rc = f.rank === 1 ? 'rank-gold' : f.rank <= 3 ? 'rank-top' : f.rank <= 7 ? 'rank-mid' : 'rank-low';
-        var ns = f.is_own ? 'font-weight:700;color:var(--accent);' : 'color:var(--text-2);';
+        var nameCell;
+        if (f.is_own) {
+          nameCell = '<span style="font-weight:700;color:var(--accent);">' + f.name + '</span>';
+        } else if (f.id) {
+          var href = '/competitors/' + f.id + '?kw=' + encodeURIComponent(kw) + '&market=' + encodeURIComponent(market);
+          nameCell = '<a href="' + href + '" style="color:var(--text-2);text-decoration:none;font-weight:500;" title="View ' + f.name.replace(/"/g, '&quot;') + ' profile →">'
+            + f.name
+            + ' <span style="font-size:11px;color:var(--muted-2);">↗</span></a>';
+        } else {
+          nameCell = '<span style="color:var(--text-2);">' + f.name + '</span>';
+        }
         body += '<tr>'
           + '<td style="padding:9px 10px;border-bottom:1px solid var(--border);"><span class="rank-badge ' + rc + '" style="font-size:12px;">#' + f.rank + '</span></td>'
-          + '<td style="padding:9px 10px;border-bottom:1px solid var(--border);font-size:13px;' + ns + '">' + f.name + '</td>'
+          + '<td style="padding:9px 10px;border-bottom:1px solid var(--border);font-size:13px;">' + nameCell + '</td>'
           + '</tr>';
       });
       body += '</tbody></table>';

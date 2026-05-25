@@ -275,6 +275,7 @@ def rankings(
             "rank": r.rank_position,
             "name": firm_name or "—",
             "is_own": bool(r.is_own_firm),
+            "id": r.competitor_id,
         })
 
     tracked_kws = sorted(set(_strip_city(p["keyword"] or "", p["market"]) for p in positions))
