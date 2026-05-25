@@ -193,7 +193,9 @@ def _gather_data(db: Session) -> dict:
                 and pair[0].review_count is not None
                 and pair[1].review_count is not None):
             delta = pair[0].review_count - pair[1].review_count
-            if delta > 0:
+            # Cap at 50 — larger deltas are scraper artifacts (new GBP location
+            # picked up in one run, not actual reviews gained in a week)
+            if 0 < delta <= 50:
                 velocity_leaders.append({
                     "name":  c.name,
                     "delta": delta,
@@ -214,12 +216,18 @@ def _gather_data(db: Session) -> dict:
         .all()
     )
     pack_entries_by_market: dict = defaultdict(list)
+    _seen_pack_entries: dict = defaultdict(set)
     for a in pack_entry_alerts:
-        pack_entries_by_market[a.market].append({
-            "competitor": a.detail.get("competitor_name", "Unknown") if a.detail else "Unknown",
-            "keyword":    a.keyword or a.detail.get("keyword", "—") if a.detail else "—",
-            "position":   a.detail.get("position") if a.detail else None,
-        })
+        comp_name = a.detail.get("competitor_name", "Unknown") if a.detail else "Unknown"
+        keyword   = a.keyword or (a.detail.get("keyword", "—") if a.detail else "—")
+        entry_key = (comp_name, keyword)
+        if entry_key not in _seen_pack_entries[a.market]:
+            _seen_pack_entries[a.market].add(entry_key)
+            pack_entries_by_market[a.market].append({
+                "competitor": comp_name,
+                "keyword":    keyword,
+                "position":   a.detail.get("position") if a.detail else None,
+            })
 
     # Unacknowledged alerts (excluding pack entries — covered in their own section)
     open_alerts = (
@@ -349,11 +357,11 @@ def _gather_data(db: Session) -> dict:
             if cnt > top_rival_count:
                 top_rival_count = cnt
                 top_rival_name = _comp_name_map.get(comp_id, "Unknown")
-                top_rival_delta = (
-                    snaps[0].review_count - snaps[1].review_count
-                    if len(snaps) >= 2 and snaps[1].review_count is not None
-                    else 0
-                )
+                if len(snaps) >= 2 and snaps[1].review_count is not None:
+                    _raw = snaps[0].review_count - snaps[1].review_count
+                    top_rival_delta = _raw if abs(_raw) <= 50 else 0
+                else:
+                    top_rival_delta = 0
         if not top_rival_name:
             continue
         gap = top_rival_count - own_count
