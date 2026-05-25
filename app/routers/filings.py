@@ -312,6 +312,26 @@ def filings(
                     if parts:
                         tracked_last_names[d].add(parts[-1].lower())
 
+    # Surface high-volume untracked attorneys from discovery data
+    _SURFACE_THRESHOLD = 5  # cases/month minimum to flag
+
+    def _surface_untracked(discovery, tracked_set):
+        if not discovery or not discovery.get("top_filers"):
+            return []
+        out = []
+        for f in discovery["top_filers"]:
+            name = (f.get("attorney") or "").strip()
+            if not name:
+                continue
+            last = name.split()[-1].lower()
+            if last not in tracked_set and f.get("cases", 0) >= _SURFACE_THRESHOLD:
+                out.append({"attorney": name, "cases": f["cases"]})
+        return out  # already sorted by cases desc
+
+    surfaced_mdnc = _surface_untracked(mdnc_discovery, tracked_last_names["MDNC"])
+    surfaced_wdnc = _surface_untracked(wdnc_discovery, tracked_last_names["WDNC"])
+    surfaced_ednc = _surface_untracked(ednc_discovery, tracked_last_names["EDNC"])
+
     return templates.TemplateResponse("filings.html", {
         "request":        request,
         "user":           user,
@@ -338,4 +358,7 @@ def filings(
         "mdnc_vol":       mdnc_vol,
         "wdnc_vol":       wdnc_vol,
         "ednc_vol":       ednc_vol,
+        "surfaced_mdnc":  surfaced_mdnc,
+        "surfaced_wdnc":  surfaced_wdnc,
+        "surfaced_ednc":  surfaced_ednc,
     })

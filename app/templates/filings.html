@@ -321,16 +321,24 @@
       <thead><tr>
         <th style="width:44px;">#</th>
         <th>Attorney (as appears in PACER)</th>
+        <th style="text-align:right;">Cases</th>
         <th>In Config?</th>
       </tr></thead>
       <tbody>
       {% for filer in discovery.top_filers %}
       {% set filer_last = filer.attorney.split()[-1] | lower %}
-      <tr>
+      {% set is_tracked = filer_last in tracked_names %}
+      {% set is_hot = not is_tracked and filer.cases >= 5 %}
+      <tr style="{% if is_hot %}background:rgba(234,88,12,0.06);{% endif %}">
         <td style="color:var(--muted);font-size:14px;font-weight:600;">{{ loop.index }}</td>
-        <td style="font-size:15px;">{{ filer.attorney }}</td>
-        {% if filer_last in tracked_names %}
+        <td style="font-size:15px;{% if is_hot %}font-weight:600;{% endif %}">{{ filer.attorney }}</td>
+        <td style="text-align:right;font-size:14px;font-weight:{% if is_hot %}700{% else %}500{% endif %};color:{% if is_hot %}var(--orange){% else %}var(--text-2){% endif %};">
+          {{ filer.cases }}
+        </td>
+        {% if is_tracked %}
         <td><span class="chip chip-green">✓ Tracked</span></td>
+        {% elif is_hot %}
+        <td><span class="chip chip-orange" style="font-size:11px;">⚠ Not tracked</span></td>
         {% else %}
         <td style="color:var(--muted-2);font-size:14px;">—</td>
         {% endif %}
@@ -353,6 +361,55 @@
   </div>
 </div>
 {% endmacro %}
+
+<!-- Untracked Attorney Surfacing Banner -->
+{% set any_surfaced = surfaced_mdnc or surfaced_wdnc or surfaced_ednc %}
+{% if any_surfaced %}
+<div class="card" style="margin-bottom:24px;border-left:4px solid var(--orange);">
+  <div class="section-title" onclick="toggleSection('sec-surfaced')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon orange">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </span>
+    Untracked Attorneys Filing Significant Volume
+    <span style="font-size:13px;color:var(--muted);font-weight:400;margin-left:8px;">≥5 cases/mo · not in competitors.yaml</span>
+    <span id="chev-sec-surfaced" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-surfaced" data-collapsible="1">
+  <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6;">
+    These attorneys appear in recent PACER discovery reports with meaningful volume but aren't in
+    <code>config/competitors.yaml</code>. Add them to start tracking their review counts, rankings, and filing trends.
+  </p>
+  <table>
+    <thead><tr>
+      <th>District</th>
+      <th>Attorney Name</th>
+      <th style="text-align:right;">Cases (last month)</th>
+      <th>Action</th>
+    </tr></thead>
+    <tbody>
+    {% for dist_label, surfaced_list in [('MDNC', surfaced_mdnc), ('WDNC', surfaced_wdnc), ('EDNC', surfaced_ednc)] %}
+    {% for s in surfaced_list %}
+    <tr>
+      <td>
+        <span class="chip {% if dist_label == 'MDNC' %}chip-blue{% elif dist_label == 'WDNC' %}chip-purple{% else %}chip-orange{% endif %}" style="font-size:12px;font-weight:800;">{{ dist_label }}</span>
+      </td>
+      <td style="font-size:15px;font-weight:600;">{{ s.attorney }}</td>
+      <td style="text-align:right;">
+        <span style="font-size:15px;font-weight:700;color:{% if s.cases >= 20 %}var(--red-dark){% elif s.cases >= 10 %}var(--yellow-dark){% else %}var(--text-2){% endif %};">
+          {{ s.cases }}
+        </span>
+      </td>
+      <td style="font-size:13px;color:var(--muted);">Add to competitors.yaml → sync config</td>
+    </tr>
+    {% endfor %}
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
 
 <!-- Market Volume Overview -->
 {% set any_vol = mdnc_vol or wdnc_vol or ednc_vol %}
