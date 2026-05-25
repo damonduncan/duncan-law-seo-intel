@@ -410,14 +410,37 @@
     </span>
   </div>
   <div id="sec-activity" data-collapsible="1">
-  <p style="color:var(--muted);font-size:14px;margin-bottom:20px;line-height:1.6;">
+  <p style="color:var(--muted);font-size:14px;margin-bottom:14px;line-height:1.6;">
     Chronological log of competitor events — pack movements, review gains, and intelligence alerts from the last 90 days.
   </p>
+
+  <!-- Filter bar -->
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+    <span style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Filter:</span>
+    {% for fval, flabel in [('all','All'),('rankings','Rankings'),('reviews','Reviews'),('pacer','PACER')] %}
+    <button class="af-type-btn" data-ftype="{{ fval }}"
+      style="padding:3px 12px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;transition:all .12s;
+      {% if fval == 'all' %}background:var(--accent);color:#fff;border-color:var(--accent);{% else %}background:transparent;color:var(--muted);{% endif %}">
+      {{ flabel }}
+    </button>
+    {% endfor %}
+    <select id="af-market-sel"
+      style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;background:var(--surface);color:var(--muted);outline:none;margin-left:4px;">
+      <option value="">All Markets</option>
+    </select>
+    <span id="af-count" style="margin-left:auto;font-size:12px;color:var(--muted-2);"></span>
+  </div>
+
   <div style="position:relative;padding-left:28px;">
     <!-- Vertical timeline line -->
     <div style="position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:var(--border);border-radius:1px;"></div>
     {% for ev in activity_feed %}
-    <div style="position:relative;margin-bottom:{% if not loop.last %}16px{% else %}0{% endif %};">
+    {% if ev.event_type in ['pack_drop', 'competitor_pack_entry', 'pack_convergence'] %}{% set ev_type_group = 'rankings' %}
+    {% elif ev.event_type in ['review_gap', 'review_gain'] %}{% set ev_type_group = 'reviews' %}
+    {% elif ev.event_type == 'pacer_volume_spike' %}{% set ev_type_group = 'pacer' %}
+    {% else %}{% set ev_type_group = 'other' %}{% endif %}
+    <div class="af-row" data-type="{{ ev_type_group }}" data-market="{{ ev.market | lower | replace(' ', '_') }}"
+      style="position:relative;margin-bottom:16px;">
       <!-- Timeline dot -->
       <div style="position:absolute;left:-24px;top:3px;width:12px;height:12px;border-radius:50%;background:{{ ev.color }};border:2px solid var(--surface);box-shadow:0 0 0 1px {{ ev.color }};flex-shrink:0;"></div>
       <div style="display:flex;align-items:flex-start;gap:12px;justify-content:space-between;flex-wrap:wrap;">
@@ -442,14 +465,76 @@
       </div>
     </div>
     {% endfor %}
+    <div id="af-empty" style="display:none;padding:20px 0;text-align:center;color:var(--muted);font-size:14px;">No events match the current filter.</div>
   </div>
-  {% if activity_total > activity_feed | length %}
-  <p style="text-align:center;font-size:13px;color:var(--muted-2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
-    Showing {{ activity_feed | length }} most recent of {{ activity_total }} events in the last 90 days
+  <p id="af-footer" style="text-align:center;font-size:13px;color:var(--muted-2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
+    Showing all {{ activity_total }} events from the last 90 days
   </p>
-  {% endif %}
   </div>
 </div>
+
+<script>
+(function() {
+  var activeType = 'all';
+  var activeMarket = '';
+
+  // Populate market select from distinct markets in the feed
+  var rows = document.querySelectorAll('.af-row');
+  var markets = [];
+  rows.forEach(function(r) {
+    var m = r.getAttribute('data-market');
+    if (m && m !== '' && markets.indexOf(m) === -1) markets.push(m);
+  });
+  markets.sort();
+  var sel = document.getElementById('af-market-sel');
+  markets.forEach(function(m) {
+    var opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = m.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+    sel.appendChild(opt);
+  });
+
+  function applyFilters() {
+    var visible = 0;
+    rows.forEach(function(r) {
+      var typeOk = activeType === 'all' || r.getAttribute('data-type') === activeType;
+      var mktOk  = activeMarket === '' || r.getAttribute('data-market') === activeMarket;
+      var show = typeOk && mktOk;
+      r.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    var total = rows.length;
+    var empty = document.getElementById('af-empty');
+    var footer = document.getElementById('af-footer');
+    var count = document.getElementById('af-count');
+    if (empty) empty.style.display = visible === 0 ? '' : 'none';
+    if (count) count.textContent = visible === total ? '' : visible + ' of ' + total + ' shown';
+    if (footer) footer.textContent = visible === total
+      ? 'Showing all ' + total + ' events from the last 90 days'
+      : 'Showing ' + visible + ' of ' + total + ' events (filtered)';
+  }
+
+  document.querySelectorAll('.af-type-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      activeType = this.getAttribute('data-ftype');
+      document.querySelectorAll('.af-type-btn').forEach(function(b) {
+        var active = b.getAttribute('data-ftype') === activeType;
+        b.style.background = active ? 'var(--accent)' : 'transparent';
+        b.style.color = active ? '#fff' : 'var(--muted)';
+        b.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+      });
+      applyFilters();
+    });
+  });
+
+  if (sel) sel.addEventListener('change', function() {
+    activeMarket = this.value;
+    applyFilters();
+  });
+
+  applyFilters();
+})();
+</script>
 {% endif %}
 
 <!-- Action center -->

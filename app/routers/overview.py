@@ -58,7 +58,7 @@ def dashboard(
     pacer_share = _build_pacer_share(own_firm, fc_counts, fc_dist_latest)
     opportunity_matrix = _build_opportunity_matrix(own_firm, scorecard, pacer_share, fc_counts, fc_dist_latest)
     _all_activity = _build_activity_feed(db, own_firm)
-    activity_feed = _all_activity[:30]
+    activity_feed = _all_activity
     activity_total = len(_all_activity)
 
     return templates.TemplateResponse("overview.html", {
