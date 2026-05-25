@@ -462,7 +462,7 @@
       <tr style="{% if not md.own_present and md.firms | length > 0 %}background:rgba(244,63,94,.04);{% elif md.own_present %}background:rgba(37,99,235,.03);{% endif %}">
         <td style="font-weight:600;font-size:14px;">{{ market | replace('_', ' ') | title }}</td>
         {% for slot in range(3) %}
-        <td style="font-size:14px;">
+        <td style="font-size:14px;vertical-align:top;">
           {% if slot < md.firms | length %}
             {% set firm = md.firms[slot] %}
             {% if firm.is_own %}
@@ -470,20 +470,40 @@
             {% else %}
             <span style="color:var(--text-2);">{{ firm.name | truncate(28, true, '…') }}</span>
             {% endif %}
+            {% if slot == 0 %}
+              {% set g1 = gap_to_1.get(kw, {}).get(market) %}
+              {% if g1 and g1.rank1_reviews is not none %}
+                <div style="font-size:11px;color:var(--muted);margin-top:2px;">{{ g1.rank1_reviews }} reviews</div>
+              {% endif %}
+            {% endif %}
           {% else %}
           <span style="color:var(--border-2);">—</span>
           {% endif %}
         </td>
         {% endfor %}
-        <td>
+        <td style="vertical-align:top;">
+          {% set g1 = gap_to_1.get(kw, {}).get(market) %}
           {% if not md.firms %}
           <span style="color:var(--muted-2);font-size:13px;">no data</span>
           {% elif md.own_present %}
             {% for f in md.firms if f.is_own %}
             <span class="rank-badge {% if f.rank == 1 %}rank-gold{% else %}rank-top{% endif %}">#{{ f.rank }}</span>
             {% endfor %}
+            {% if g1 and g1.own_reviews is not none %}
+              <div style="font-size:11px;color:var(--muted);margin-top:3px;">{{ g1.own_reviews }} reviews</div>
+            {% endif %}
+            {% if g1 and g1.gap is not none and g1.gap > 0 %}
+              <div style="font-size:11px;color:var(--orange);font-weight:600;margin-top:2px;">+{{ g1.gap }} to reach #1</div>
+            {% elif g1 and g1.is_leading %}
+              <div style="font-size:11px;color:var(--green-dark);font-weight:600;margin-top:2px;">Review leader ✓</div>
+            {% endif %}
           {% else %}
           <span class="chip chip-red" style="font-size:12px;">✗ Missing</span>
+            {% if g1 and g1.gap is not none %}
+              <div style="font-size:11px;color:var(--muted);margin-top:4px;">
+                {% if g1.own_reviews is not none %}{{ g1.own_reviews }} reviews · {% endif %}Need +{{ g1.gap }} to match #1
+              </div>
+            {% endif %}
           {% endif %}
         </td>
       </tr>

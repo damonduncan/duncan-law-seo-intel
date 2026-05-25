@@ -9,6 +9,7 @@ from app.dependencies import RedirectIfNotAuthenticated
 from app.database import get_db
 from app.models.rankings import LocalPackRanking
 from app.models.competitor import Competitor
+from app.models.reviews import ReviewSnapshot
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -288,6 +289,51 @@ def rankings(
             }
         gap_data[kw] = markets_data
 
+    # Own-firm review counts by market — latest snapshot per market
+    own_reviews_by_market: dict = {}
+    if own_firm_id:
+        rev_snaps = (
+            db.query(ReviewSnapshot)
+            .filter(
+                ReviewSnapshot.competitor_id == own_firm_id,
+                ReviewSnapshot.source == "google",
+                ReviewSnapshot.market.in_(list(OWN_FIRM_MARKETS)),
+            )
+            .order_by(ReviewSnapshot.snapped_at.desc())
+            .all()
+        )
+        for s in rev_snaps:
+            if s.market and s.market not in own_reviews_by_market and s.review_count is not None:
+                own_reviews_by_market[s.market] = s.review_count
+
+    # Gap to #1: kw_short → market → {rank1_name, rank1_reviews, own_reviews, gap, is_leading}
+    # Uses rating_count from result_data (DataForSEO Maps API) for competitor review counts.
+    gap_to_1: dict = {}
+    for r in current_pack:
+        kw_short = _strip_city(r.keyword or "", r.market)
+        mkt_data = gap_to_1.setdefault(kw_short, {}).setdefault(r.market, {
+            "rank1_name":    None,
+            "rank1_reviews": None,
+            "own_reviews":   own_reviews_by_market.get(r.market),
+            "gap":           None,
+            "is_leading":    False,
+        })
+        if r.rank_position == 1:
+            rd = r.result_data or {}
+            mkt_data["rank1_reviews"] = rd.get("rating_count")
+            if r.is_own_firm:
+                mkt_data["rank1_name"]  = own_firm.name if own_firm else "Duncan Law"
+                mkt_data["is_leading"]  = True
+            else:
+                mkt_data["rank1_name"] = rd.get("title", "—")
+    for kw_data in gap_to_1.values():
+        for mkt_data in kw_data.values():
+            if mkt_data["is_leading"]:
+                mkt_data["gap"] = 0
+            elif (mkt_data["rank1_reviews"] is not None
+                    and mkt_data["own_reviews"] is not None):
+                mkt_data["gap"] = mkt_data["rank1_reviews"] - mkt_data["own_reviews"]
+
     in_pack_count = sum(1 for r in latest_by_keyword.values() if r.in_pack)
     total_keywords = len(latest_by_keyword)
     has_data = total_keywords > 0
@@ -304,6 +350,7 @@ def rankings(
         "current_pack": current_pack,
         "chart_data": chart_data,
         "gap_data": gap_data,
+        "gap_to_1": gap_to_1,
         "own_firm": own_firm,
         "ednc_by_market": ednc_by_market,
         "EDNC_DISPLAY": EDNC_DISPLAY,
