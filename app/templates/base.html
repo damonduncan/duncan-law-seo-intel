@@ -1272,6 +1272,14 @@
 
   <div class="nav-spacer"></div>
 
+  <a href="/admin" class="{% if active_page == 'admin' %}active{% endif %}" data-label="Admin"
+     style="margin:0 10px 4px;border-radius:var(--r-sm);">
+    <span class="nav-icon" style="{% if active_page == 'admin' %}background:rgba(100,116,139,.15);color:#64748b;{% else %}background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);{% endif %}">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </span>
+    <span class="nav-label" style="{% if active_page != 'admin' %}color:rgba(255,255,255,.45);{% endif %}">Admin</span>
+  </a>
+
   <button id="nav-kcmd" onclick="cpOpen()" style="display:flex;align-items:center;gap:8px;margin:0 10px 6px;padding:8px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);color:rgba(255,255,255,.45);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;transition:background .15s,color .15s;width:calc(100% - 20px);" onmouseenter="this.style.background='rgba(255,255,255,.11)';this.style.color='rgba(255,255,255,.75)'" onmouseleave="this.style.background='rgba(255,255,255,.06)';this.style.color='rgba(255,255,255,.45)'">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     Quick navigate

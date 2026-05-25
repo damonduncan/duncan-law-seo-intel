@@ -14,6 +14,41 @@ auth_required = RedirectIfNotAuthenticated()
 templates = Jinja2Templates(directory="app/templates")
 
 
+@router.get("/admin", response_class=HTMLResponse)
+def admin_panel(
+    request: Request,
+    user: dict = Depends(auth_required),
+    db: Session = Depends(get_db),
+    msg: str = "",
+):
+    from app.models.alerts import JobRun
+    job_runs_raw = (
+        db.query(JobRun)
+        .order_by(JobRun.started_at.desc())
+        .limit(20)
+        .all()
+    )
+
+    def _fmt_duration(j):
+        if not (j.completed_at and j.started_at):
+            return "—"
+        secs = max(0, (j.completed_at - j.started_at).total_seconds())
+        if secs < 60:
+            return f"{int(secs)}s"
+        if secs < 3600:
+            return f"{int(secs // 60)}m {int(secs % 60)}s"
+        return f"{int(secs // 3600)}h {int((secs % 3600) // 60)}m"
+
+    job_runs = [{"job": j, "duration": _fmt_duration(j)} for j in job_runs_raw]
+    return templates.TemplateResponse("admin.html", {
+        "request":    request,
+        "user":       user,
+        "active_page": "admin",
+        "job_runs":   job_runs,
+        "msg":        msg,
+    })
+
+
 @router.post("/admin/clear-filings")
 def clear_filings(request: Request, user: dict = Depends(auth_required), db: Session = Depends(get_db)):
     """Delete all filing snapshots so bad data doesn't persist on the Filings page."""
