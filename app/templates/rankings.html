@@ -504,6 +504,7 @@
   // Init first visible tab
   var firstMarket = Object.keys(rankData)[0];
   if (firstMarket) { buildRankChart(firstMarket); activeMarket = firstMarket; }
+  window._kwRankData = rankData;
 })();
 </script>
 {% endif %}
@@ -829,7 +830,7 @@
 
 <!-- Keyword Drill-Down Modal -->
 <div id="kw-modal" style="display:none;position:fixed;inset:0;z-index:900;background:rgba(15,17,23,.5);align-items:center;justify-content:center;">
-  <div style="background:var(--surface);border-radius:var(--r);padding:24px;max-width:420px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.22);border:1px solid var(--border);">
+  <div style="background:var(--surface);border-radius:var(--r);padding:24px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.22);border:1px solid var(--border);">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;">
       <div>
         <div id="kw-modal-kw" style="font-size:15px;font-weight:700;color:var(--text);"></div>
@@ -846,6 +847,7 @@
 <script>
 (function() {
   var gapData = {{ gap_data | tojson }};
+  var _modalChart = null;
 
   window.openDrillDown = function(kw, market) {
     var md = (gapData[kw] || {})[market];
@@ -853,11 +855,25 @@
     document.getElementById('kw-modal-market').textContent =
       market.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
 
+    // Destroy previous chart before touching the DOM
+    if (_modalChart) { _modalChart.destroy(); _modalChart = null; }
+
     var body = '';
+    var hasTrendData = false;
+    var rdm = window._kwRankData && window._kwRankData[market];
+    if (rdm) {
+      var kwSeries = rdm.series.find(function(s) { return s.label === kw; });
+      if (kwSeries && kwSeries.data.some(function(v) { return v != null; })) {
+        hasTrendData = true;
+      }
+    }
+
     if (!md || !md.firms || !md.firms.length) {
       body = '<p style="color:var(--muted);font-size:14px;">No data available.</p>';
     } else {
-      body += '<table style="width:100%;border-collapse:collapse;">';
+      // Current snapshot table
+      body += '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Today\'s 3-pack</div>';
+      body += '<table style="width:100%;border-collapse:collapse;margin-bottom:' + (hasTrendData ? '20' : '0') + 'px;">';
       body += '<thead><tr>'
         + '<th style="text-align:left;padding:6px 10px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid var(--border);">Rank</th>'
         + '<th style="text-align:left;padding:6px 10px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid var(--border);">Firm</th>'
@@ -872,16 +888,89 @@
       });
       body += '</tbody></table>';
       if (!md.own_present) {
-        body += '<div style="margin-top:12px;padding:9px 12px;background:rgba(244,63,94,.08);border-radius:6px;font-size:13px;color:var(--red-dark);font-weight:600;">'
+        body += '<div style="margin-top:4px;margin-bottom:' + (hasTrendData ? '16' : '0') + 'px;padding:9px 12px;background:rgba(244,63,94,.08);border-radius:6px;font-size:13px;color:var(--red-dark);font-weight:600;">'
           + 'Duncan Law not in 3-pack for this keyword</div>';
       }
+      // 90-day trend chart placeholder
+      if (hasTrendData) {
+        body += '<div style="border-top:1px solid var(--border);padding-top:16px;">'
+          + '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Duncan Law · 90-day rank trend</div>'
+          + '<div style="position:relative;height:150px;"><canvas id="kw-modal-chart"></canvas></div>'
+          + '</div>';
+      }
     }
+
     document.getElementById('kw-modal-body').innerHTML = body;
-    var modal = document.getElementById('kw-modal');
-    modal.style.display = 'flex';
+
+    // Build chart after innerHTML is set so canvas exists in DOM
+    if (hasTrendData) {
+      var ownFirm = md.firms.find(function(f) { return f.is_own; });
+      var isLeading = ownFirm && ownFirm.rank === 1;
+      var lineColor = isLeading ? '#10b981' : '#2563eb';
+      var kwS = window._kwRankData[market].series.find(function(s) { return s.label === kw; });
+      _modalChart = new Chart(document.getElementById('kw-modal-chart'), {
+        type: 'line',
+        data: {
+          labels: window._kwRankData[market].labels,
+          datasets: [{
+            label: 'Duncan Law',
+            data: kwS.data,
+            borderColor: lineColor,
+            backgroundColor: 'transparent',
+            tension: 0.35,
+            fill: false,
+            spanGaps: false,
+            pointRadius: 2,
+            pointHoverRadius: 4,
+            pointBackgroundColor: lineColor,
+            pointBorderColor: '#fff',
+            pointBorderWidth: 1.5,
+            borderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  return 'Duncan Law: ' + (ctx.parsed.y != null ? '#' + ctx.parsed.y : 'not ranked');
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              reverse: true,
+              min: 1,
+              suggestedMax: 5,
+              ticks: {
+                stepSize: 1,
+                color: '#64748B',
+                font: { size: 10 },
+                callback: function(v) { return '#' + v; },
+              },
+              grid: { color: 'rgba(226,232,240,.7)' },
+              border: { display: false },
+            },
+            x: {
+              ticks: { color: '#94A3B8', maxTicksLimit: 8, font: { size: 9 } },
+              grid: { display: false },
+              border: { display: false },
+            },
+          },
+        },
+      });
+    }
+
+    document.getElementById('kw-modal').style.display = 'flex';
   };
 
   window.closeDrillDown = function() {
+    if (_modalChart) { _modalChart.destroy(); _modalChart = null; }
     document.getElementById('kw-modal').style.display = 'none';
   };
 
