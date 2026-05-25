@@ -40,11 +40,13 @@ def run_weekly_job() -> None:
                 only_own_firm=False,
             )
 
-        # Phase 3: Competitor reviews
+        # Phase 3: Competitor reviews + sentiment analysis
         from app.services.google_places import collect_competitor_reviews
         records += collect_competitor_reviews(db)
         from app.services.alert_engine import check_review_gaps
         check_review_gaps(db)
+        from app.services.review_sentiment import analyze_competitor_sentiment
+        analyze_competitor_sentiment(db)
 
         # Phase 4: PACER (only on 1st of month)
         if date.today().day == 1:

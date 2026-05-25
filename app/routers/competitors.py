@@ -15,6 +15,7 @@ from app.models.competitor import Competitor, CompetitorLocation
 from app.models.filings import FilingSnapshot
 from app.models.rankings import LocalPackRanking
 from app.models.reviews import ReviewSnapshot
+from app.models.sentiment import ReviewSentiment
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -353,6 +354,13 @@ def competitor_detail(
         .all()
     )
 
+    sentiment = (
+        db.query(ReviewSentiment)
+        .filter(ReviewSentiment.competitor_id == comp_id)
+        .order_by(ReviewSentiment.analyzed_at.desc())
+        .first()
+    )
+
     return templates.TemplateResponse("competitor_detail.html", {
         "request":            request,
         "user":               user,
@@ -372,4 +380,5 @@ def competitor_detail(
         "review_by_location": review_by_location,
         "comp_review_chart":  comp_review_chart,
         "recent_alerts":      recent_alerts,
+        "sentiment":          sentiment,
     })

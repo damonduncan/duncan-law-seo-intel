@@ -461,6 +461,77 @@
 </div>
 {% endif %}
 
+<!-- Review sentiment analysis -->
+{% if sentiment and sentiment.themes %}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-cd-sentiment')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon purple">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+    </span>
+    Client Sentiment Analysis
+    <span style="font-size:13px;color:var(--muted);font-weight:400;margin-left:8px;">{{ sentiment.review_count }} reviews · {{ sentiment.analyzed_at.strftime('%b %d, %Y') }}</span>
+    <span id="chev-sec-cd-sentiment" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-cd-sentiment" data-collapsible="1">
+
+  {% if sentiment.summary %}
+  <p style="font-size:14px;color:var(--text-2);margin:0 0 20px;font-style:italic;">&ldquo;{{ sentiment.summary }}&rdquo;</p>
+  {% endif %}
+
+  <!-- Themes -->
+  <div style="margin-bottom:20px;">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:12px;">Recurring Themes</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+    {% for t in sentiment.themes %}
+    {% if t.sentiment == 'positive' %}{% set sent_color = "#10b981" %}{% set sent_bg = "rgba(16,185,129,0.08)" %}{% set sent_label = "Positive" %}
+    {% elif t.sentiment == 'negative' %}{% set sent_color = "#ef4444" %}{% set sent_bg = "rgba(239,68,68,0.07)" %}{% set sent_label = "Negative" %}
+    {% else %}{% set sent_color = "#f59e0b" %}{% set sent_bg = "rgba(245,158,11,0.08)" %}{% set sent_label = "Mixed" %}{% endif %}
+    <div style="background:{{ sent_bg }};border-left:3px solid {{ sent_color }};border-radius:0 6px 6px 0;padding:10px 14px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:{% if t.example %}4px{% else %}0{% endif %};">
+        <span style="font-size:14px;font-weight:600;color:var(--text);">{{ t.theme }}</span>
+        <span style="font-size:11px;font-weight:700;color:{{ sent_color }};background:{{ sent_bg }};border:1px solid {{ sent_color }};border-radius:10px;padding:1px 8px;">{{ sent_label }}</span>
+        <span style="font-size:12px;color:var(--muted);margin-left:auto;">{{ t.mentions }} mention{{ 's' if t.mentions != 1 }}</span>
+      </div>
+      {% if t.example %}<div style="font-size:13px;color:var(--muted);font-style:italic;">&ldquo;{{ t.example }}&rdquo;</div>{% endif %}
+    </div>
+    {% endfor %}
+    </div>
+  </div>
+
+  <!-- Strengths & Weaknesses -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    {% if sentiment.strengths %}
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px;">Client Strengths</div>
+      <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;">
+        {% for s in sentiment.strengths %}
+        <li style="display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text-2);">
+          <span style="color:#10b981;flex-shrink:0;margin-top:1px;">✓</span>{{ s }}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+    {% if sentiment.weaknesses %}
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px;">Client Concerns</div>
+      <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;">
+        {% for w in sentiment.weaknesses %}
+        <li style="display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text-2);">
+          <span style="color:#f59e0b;flex-shrink:0;margin-top:1px;">△</span>{{ w }}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+  </div><!-- /sec-cd-sentiment -->
+</div>
+{% endif %}
+
 <!-- Recent alerts -->
 {% if recent_alerts %}
 <div class="card">

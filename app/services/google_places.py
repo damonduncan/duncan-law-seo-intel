@@ -25,8 +25,9 @@ from app.models.reviews import ReviewSnapshot
 logger = logging.getLogger(__name__)
 
 PLACES_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
-# name + rating + user_ratings_total are "Basic" fields — cheapest tier ($0.017/call)
-FIELDS = "name,rating,user_ratings_total"
+# Basic fields + reviews (Atmosphere tier, ~$0.022/call vs $0.017 without)
+# reviews returns up to 5 most recent review texts, stored in snapshot_data
+FIELDS = "name,rating,user_ratings_total,reviews"
 REQUEST_DELAY = 0.25  # seconds between API calls
 
 
