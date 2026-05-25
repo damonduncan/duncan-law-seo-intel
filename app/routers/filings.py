@@ -246,11 +246,30 @@ def filings(
                 "baseline_dev_pct": baseline_dev_pct,
             })
         rows.sort(key=lambda r: (not r["is_own"], -(r["latest"] or 0)))
+
+        # District-level baseline (market total, same methodology as per-firm)
+        dist_b_vals = [district_period_totals.get((district, p), 0) for p in baseline_periods]
+        dist_baseline_avg = round(sum(dist_b_vals) / len(dist_b_vals)) if dist_b_vals else None
+        dist_latest = period_totals[-1]
+        dist_prev = period_totals[-2] if len(period_totals) >= 2 else None
+        dist_mom_abs = dist_latest - dist_prev if dist_prev is not None else None
+        dist_mom_pct = round(dist_mom_abs / dist_prev * 100) if (dist_prev and dist_mom_abs is not None) else None
+        if dist_baseline_avg:
+            dist_dev_abs = dist_latest - dist_baseline_avg
+            dist_dev_pct = round(dist_dev_abs / dist_baseline_avg * 100)
+        else:
+            dist_dev_abs = dist_dev_pct = None
+
         return {
-            "labels":          [p.strftime("%b '%y") for p in display_periods],
-            "rows":            rows,
-            "period_totals":   period_totals,
-            "baseline_months": len(baseline_periods),
+            "labels":               [p.strftime("%b '%y") for p in display_periods],
+            "rows":                 rows,
+            "period_totals":        period_totals,
+            "baseline_months":      len(baseline_periods),
+            "dist_baseline_avg":    dist_baseline_avg,
+            "dist_baseline_dev_pct": dist_dev_pct,
+            "dist_baseline_dev_abs": dist_dev_abs,
+            "dist_mom_abs":         dist_mom_abs,
+            "dist_mom_pct":         dist_mom_pct,
         }
 
     mdnc_mom = build_mom_table("MDNC")

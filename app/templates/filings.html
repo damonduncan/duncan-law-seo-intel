@@ -716,6 +716,56 @@
           </td>
         </tr>
         {% endfor %}
+        <!-- District total baseline row -->
+        {% if mom_data.dist_baseline_avg is not none %}
+        <tr style="background:var(--surface-2);border-top:2px solid var(--border-2);">
+          <td style="padding-left:14px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="firm-badge" style="background:var(--surface-3);color:var(--muted);font-size:10px;">∑</div>
+              <span style="font-size:14px;font-weight:700;color:var(--muted);">District Total</span>
+            </div>
+          </td>
+          {% for total in mom_data.period_totals %}
+          <td style="text-align:right;color:var(--muted);{% if loop.last %}font-weight:700;font-size:15px;color:var(--text-2);{% endif %}">
+            {{ "{:,}".format(total) if total else '—' }}
+          </td>
+          {% endfor %}
+          <td style="text-align:right;">
+            {% if mom_data.dist_mom_pct is not none %}
+              {% if mom_data.dist_mom_pct > 10 %}
+                <span style="color:var(--red-dark);font-size:14px;font-weight:700;">+{{ mom_data.dist_mom_pct }}%</span>
+              {% elif mom_data.dist_mom_pct > 0 %}
+                <span style="color:var(--yellow-dark);font-size:14px;font-weight:700;">+{{ mom_data.dist_mom_pct }}%</span>
+              {% elif mom_data.dist_mom_pct < 0 %}
+                <span style="color:var(--green-dark);font-size:14px;">{{ mom_data.dist_mom_pct }}%</span>
+              {% else %}
+                <span style="color:var(--muted);font-size:14px;">—</span>
+              {% endif %}
+            {% else %}
+              <span style="color:var(--muted-2);font-size:13px;">—</span>
+            {% endif %}
+          </td>
+          <td style="text-align:right;">
+            {% if mom_data.dist_baseline_dev_pct is not none %}
+              {% set dp = mom_data.dist_baseline_dev_pct %}
+              {% if dp > 10 %}
+                <span style="color:var(--red-dark);font-size:14px;font-weight:700;">+{{ dp }}%</span>
+              {% elif dp > 0 %}
+                <span style="color:var(--yellow-dark);font-size:14px;font-weight:700;">+{{ dp }}%</span>
+              {% elif dp < -10 %}
+                <span style="color:var(--green-dark);font-size:14px;font-weight:700;">{{ dp }}%</span>
+              {% elif dp < 0 %}
+                <span style="color:var(--green-dark);font-size:14px;">{{ dp }}%</span>
+              {% else %}
+                <span style="color:var(--muted);font-size:14px;">avg</span>
+              {% endif %}
+              <div style="font-size:10px;color:var(--muted-2);">avg: {{ "{:,}".format(mom_data.dist_baseline_avg) }}</div>
+            {% else %}
+              <span style="color:var(--muted-2);font-size:13px;">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endif %}
         </tbody>
       </table>
     </div>
