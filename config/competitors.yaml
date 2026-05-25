@@ -595,7 +595,7 @@ competitors:
 
   - id: comp_020
     name: "Fitzgerald Law Firm"
-    google_place_id: ""   # No verified Google Business Profile found — not a local pack threat; PACER tracking only
+    google_place_id: "ChIJMaQxFaT0WYgRxQOb-yeH16w"   # 138 Charlotte St, Asheville NC 28801
     bbb_url: ""
     markets:
       - asheville
@@ -603,6 +603,9 @@ competitors:
       - name: "Michael Scott"
         aliases:
           - "M Scott"
+      - name: "Patrick Wood"
+        aliases:
+          - "P Wood"
 
   - id: comp_021
     name: "Lutz Law Firm, PLLC"
@@ -618,7 +621,7 @@ competitors:
 
   - id: comp_039
     name: "Farmer & Morris Law, PLLC"
-    google_place_id: ""   # 187 N Washington St, Rutherfordton NC — CID 17535123081898744898 (maps.google.com/?cid=17535123081898744898); ChIJ Place ID TODO
+    google_place_id: "ChIJZ2DX--NDV4gRQtxTtYlFWfM"   # 187 N Washington St, Rutherfordton NC 28139
     bbb_url: ""
     markets:
       - asheville   # Rutherfordton, Rutherford County — WDNC
