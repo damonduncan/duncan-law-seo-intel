@@ -200,10 +200,32 @@ def _gather_data(db: Session) -> dict:
     velocity_leaders.sort(key=lambda r: r["delta"], reverse=True)
     velocity_leaders = velocity_leaders[:3]
 
-    # Unacknowledged alerts
+    # Pack entry alerts this week — grouped for dedicated digest section
+    since_7d = datetime.now(timezone.utc) - timedelta(days=7)
+    pack_entry_alerts = (
+        db.query(Alert)
+        .filter(
+            Alert.alert_type == "competitor_pack_entry",
+            Alert.triggered_at >= since_7d,
+        )
+        .order_by(Alert.market, Alert.triggered_at.desc())
+        .all()
+    )
+    pack_entries_by_market: dict = defaultdict(list)
+    for a in pack_entry_alerts:
+        pack_entries_by_market[a.market].append({
+            "competitor": a.detail.get("competitor_name", "Unknown") if a.detail else "Unknown",
+            "keyword":    a.keyword or a.detail.get("keyword", "—") if a.detail else "—",
+            "position":   a.detail.get("position") if a.detail else None,
+        })
+
+    # Unacknowledged alerts (excluding pack entries — covered in their own section)
     open_alerts = (
         db.query(Alert)
-        .filter(Alert.acknowledged_at == None)
+        .filter(
+            Alert.acknowledged_at == None,
+            Alert.alert_type != "competitor_pack_entry",
+        )
         .order_by(Alert.triggered_at.desc())
         .limit(10)
         .all()
@@ -381,6 +403,7 @@ def _gather_data(db: Session) -> dict:
         "district_review_standings":  district_review_standings,
         "pacer_standings":            pacer_standings,
         "market_velocity":            market_velocity,
+        "pack_entries_by_market":     dict(pack_entries_by_market),
     }
 
 
@@ -521,6 +544,50 @@ def _build_html(ctx: dict, week_str: str) -> str:
           <a href="{base_url}/rankings" style="color:#3b82f6;">View full rankings →</a>
         </p>''',
     ))
+
+    # ── Pack Changes section ──────────────────────────────────────────────────
+    pack_entries = ctx.get("pack_entries_by_market", {})
+    if pack_entries:
+        total_entries = sum(len(v) for v in pack_entries.values())
+        entry_rows = ""
+        for market in MARKET_ORDER:
+            entries = pack_entries.get(market, [])
+            if not entries:
+                continue
+            market_label = MARKET_DISPLAY.get(market, market.replace("_", " ").title())
+            for e in entries:
+                pos_str = f"#{e['position']}" if e["position"] else "—"
+                entry_rows += (
+                    f'<tr>'
+                    f'<td style="padding:8px;font-size:13px;border-bottom:1px solid #f3f4f6;font-weight:600;color:#374151;">'
+                    f'{market_label}</td>'
+                    f'<td style="padding:8px;font-size:13px;border-bottom:1px solid #f3f4f6;color:#374151;">'
+                    f'{e["competitor"][:42]}</td>'
+                    f'<td style="padding:8px;font-size:13px;border-bottom:1px solid #f3f4f6;color:#6b7280;">'
+                    f'{e["keyword"]}</td>'
+                    f'<td style="padding:8px;font-size:13px;border-bottom:1px solid #f3f4f6;text-align:center;">'
+                    f'<span style="background:#fff7ed;color:#c2410c;padding:2px 8px;border-radius:4px;'
+                    f'font-size:11px;font-weight:700;">{pos_str}</span></td>'
+                    f'</tr>'
+                )
+        sections.append(_section(
+            f"3-Pack Changes This Week — {total_entries} new entr{'y' if total_entries == 1 else 'ies'} detected",
+            f'''<p style="margin:0 0 10px;font-size:13px;color:#6b7280;">
+              Competitors that newly appeared in your 3-pack since last Monday.
+            </p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+              <tr>
+                <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Market</th>
+                <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Competitor</th>
+                <th style="text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Keyword</th>
+                <th style="text-align:center;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding:6px 8px;">Position</th>
+              </tr>
+              {entry_rows}
+            </table>
+            <p style="margin-top:12px;font-size:12px;color:#6b7280;">
+              <a href="{base_url}/rankings" style="color:#3b82f6;">View full rankings →</a>
+            </p>''',
+        ))
 
     # ── Reviews section ───────────────────────────────────────────────────────
     review_rows = ""

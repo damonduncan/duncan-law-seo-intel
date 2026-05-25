@@ -153,7 +153,7 @@ def _check_competitor_entry(db: Session, today_row: LocalPackRanking, own_firm_i
             alert = Alert(
                 id=new_uuid(),
                 alert_type="competitor_pack_entry",
-                severity="immediate",
+                severity="weekly_digest",
                 competitor_id=comp_row.competitor_id,
                 keyword=today_row.keyword,
                 market=today_row.market,
@@ -168,7 +168,6 @@ def _check_competitor_entry(db: Session, today_row: LocalPackRanking, own_firm_i
             )
             db.add(alert)
             logger.warning(f"ALERT: Competitor entered pack — {comp_name} for '{today_row.keyword}' in {today_row.city}")
-            _send_immediate_alert_email(alert, db)
 
 
 def _send_immediate_alert_email(alert: Alert, db: Session) -> None:
