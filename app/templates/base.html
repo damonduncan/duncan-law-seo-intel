@@ -1239,11 +1239,11 @@
 
   <div class="nav-section">Intelligence</div>
 
-  <a href="/dashboard" class="{% if active_page == 'dashboard' %}active{% endif %}" data-label="Overview">
+  <a href="/dashboard" class="{% if active_page == 'dashboard' %}active{% endif %}" data-label="Market Pulse">
     <span class="nav-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
     </span>
-    <span class="nav-label">Overview</span>
+    <span class="nav-label">Market Pulse</span>
   </a>
 
   <a href="/rankings" class="{% if active_page == 'rankings' %}active{% endif %}" data-label="Rankings">
@@ -1524,7 +1524,7 @@
   }
 
   var PAGES = [
-    { l:'Overview',      h:'Dashboard & competitive summary',        url:'/dashboard',   i:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },
+    { l:'Market Pulse',  h:'Dashboard & competitive summary',        url:'/dashboard',   i:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },
     { l:'Rankings',      h:'Google 3-pack rank tracking by keyword', url:'/rankings',    i:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
     { l:'Reviews',       h:'Competitor Google review data',          url:'/reviews',     i:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' },
     { l:'PACER Filings', h:'Bankruptcy filing volume by firm',       url:'/filings',     i:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>' },
