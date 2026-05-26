@@ -97,15 +97,96 @@ def run_backup(db: Session) -> bool:
       <td style="padding:8px 0 4px;font-weight:700;text-align:right;">{total_rows:,}</td>
     </tr>
   </table>
-  <p style="margin:0 0 8px;"><strong>File:</strong> {filename} ({size_kb:.1f} KB)</p>
-  <p style="margin:0 0 20px;color:#6b7280;font-size:14px;">
-    To restore: download the attachment and run<br>
-    <code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;">
-      python scripts/restore_backup.py market-pulse-backup-YYYY-MM-DD.json.gz
+  <p style="margin:0 0 20px;"><strong>Attachment:</strong> {filename} ({size_kb:.1f} KB)</p>
+
+  <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 20px;">
+
+  <h3 style="margin:0 0 12px;font-size:15px;color:#111827;">How to restore this backup</h3>
+  <p style="margin:0 0 12px;color:#374151;font-size:14px;">
+    These instructions are intentionally detailed so anyone — not just the original developer —
+    can restore the database from scratch using only this email.
+  </p>
+
+  <p style="margin:0 0 6px;font-weight:600;font-size:14px;">Step 1 — Download the attachment</p>
+  <p style="margin:0 0 16px;color:#374151;font-size:14px;">
+    Save the <code style="background:#f3f4f6;padding:1px 5px;border-radius:3px;">{filename}</code>
+    file from this email to your computer. Remember where you put it (e.g. your Downloads folder).
+  </p>
+
+  <p style="margin:0 0 6px;font-weight:600;font-size:14px;">Step 2 — Get the source code</p>
+  <p style="margin:0 0 16px;color:#374151;font-size:14px;">
+    The restore script lives in the GitHub repository. Clone it if you don't already have it:<br>
+    <code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;display:inline-block;margin-top:4px;">
+      git clone https://github.com/damonduncan/duncan-law-seo-intel.git<br>
+      cd duncan-law-seo-intel
     </code>
   </p>
+
+  <p style="margin:0 0 6px;font-weight:600;font-size:14px;">Step 3 — Install Python dependencies</p>
+  <p style="margin:0 0 16px;color:#374151;font-size:14px;">
+    You need Python 3.10+ and the packages the app uses. From inside the repository folder:<br>
+    <code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;display:inline-block;margin-top:4px;">
+      pip install sqlalchemy psycopg2-binary
+    </code><br>
+    (If you're restoring to the live Railway database you only need these two packages —
+    you do <em>not</em> need to install the full requirements.txt.)
+  </p>
+
+  <p style="margin:0 0 6px;font-weight:600;font-size:14px;">Step 4 — Get the database connection string</p>
+  <p style="margin:0 0 6px;color:#374151;font-size:14px;">
+    The connection string (called <strong>DATABASE_URL</strong>) tells the script where the
+    database lives and how to authenticate. There are two ways to find it:
+  </p>
+  <ul style="margin:0 0 16px;padding-left:20px;color:#374151;font-size:14px;line-height:1.7;">
+    <li><strong>Railway dashboard (preferred):</strong> Log in at
+      <a href="https://railway.app" style="color:#2563EB;">railway.app</a>,
+      open the <em>duncan-law-seo-intel</em> project, click the PostgreSQL service,
+      then click <em>Variables</em>. Copy the value of <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;">DATABASE_URL</code>.
+    </li>
+    <li><strong>Already deployed app:</strong> In the same Railway project, open the web
+      service → Variables → copy <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;">DATABASE_URL</code> from there.
+    </li>
+  </ul>
+
+  <p style="margin:0 0 6px;font-weight:600;font-size:14px;">Step 5 — Run the restore script</p>
+  <p style="margin:0 0 6px;color:#374151;font-size:14px;">
+    Open a terminal in the repository folder and run the command below, replacing
+    <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;">YOUR_DATABASE_URL</code>
+    with the value you copied in Step 4 and
+    <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;">/path/to/{filename}</code>
+    with the full path to the file you downloaded in Step 1:
+  </p>
+  <p style="margin:0 0 16px;">
+    <code style="background:#f3f4f6;padding:6px 10px;border-radius:4px;display:block;font-size:13px;line-height:1.6;">
+      DATABASE_URL="YOUR_DATABASE_URL" python scripts/restore_backup.py /path/to/{filename}
+    </code>
+  </p>
+  <p style="margin:0 0 16px;color:#374151;font-size:14px;">
+    The script will show you how many rows are in each table and ask you to type
+    <strong>YES</strong> before it touches anything. If you type anything else it exits
+    without making any changes.
+  </p>
+
+  <p style="margin:0 0 6px;font-weight:600;font-size:14px;">Step 6 — Verify the restore</p>
+  <p style="margin:0 0 20px;color:#374151;font-size:14px;">
+    After the script finishes, open the Market Pulse web app. You should see all your
+    competitor data, PACER filings, rankings, and reviews exactly as they were at the time
+    this backup was taken ({date_str}).
+    If anything looks wrong, the backup file itself is untouched and you can run the restore
+    script again.
+  </p>
+
+  <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:12px 16px;margin-bottom:20px;">
+    <p style="margin:0;font-size:13px;color:#92400e;">
+      <strong>Important:</strong> The restore script <em>overwrites</em> all existing data.
+      If the live database has newer data you want to keep, export it first (trigger a manual
+      backup from the admin panel) before running a restore from an older file.
+    </p>
+  </div>
+
   <p style="margin:0;font-size:12px;color:#9ca3af;">
     This backup is sent automatically on the 1st of each month by Market Pulse.
+    Questions? Contact the developer or reply to this email.
   </p>
 </div>
 """
@@ -116,7 +197,7 @@ def run_backup(db: Session) -> bool:
         resend_sdk.Emails.send({
             "from":    settings.resend_from_address,
             "to":      ["damonduncan@duncanlawonline.com"],
-            "subject": f"Market Pulse Database Backup — {exported_at.strftime('%B %Y')}",
+            "subject": f"Backup for Market Pulse — No action needed ({exported_at.strftime('%B %Y')})",
             "html":    html,
             "attachments": [{
                 "filename": filename,
