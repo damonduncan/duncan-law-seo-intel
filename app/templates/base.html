@@ -1092,6 +1092,27 @@
       gap: 8px;
     }
 
+    .cmd-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-2);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .cmd-pill strong { font-weight: 700; color: var(--text); }
+    .cmd-pill-blue { background: rgba(37,99,235,.07); border-color: rgba(37,99,235,.18); }
+    .cmd-pill-blue strong { color: var(--blue); }
+    .cmd-pill-green { background: rgba(5,150,105,.07); border-color: rgba(5,150,105,.2); }
+    .cmd-pill-green strong { color: var(--green-dark); }
+    .cmd-pill-red { background: rgba(220,38,38,.07); border-color: rgba(220,38,38,.2); }
+    .cmd-pill-red strong { color: var(--red-dark); }
+
     /* ─── Dark mode ─────────────────────────────────────────── */
 
     html.dark {

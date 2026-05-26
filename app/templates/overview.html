@@ -19,24 +19,7 @@
 </div>
 {% endif %}
 
-<!-- War room status strip -->
-<div class="war-strip">
-  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-    <span class="pulse-dot" style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;flex-shrink:0;"></span>
-    <span style="font-size:13px;font-weight:600;color:var(--text-2);">Systems Active</span>
-    {% if last_job and last_job.started_at %}
-    <span style="font-size:13px;color:var(--muted);">· Last scan <span id="war-ago" style="font-weight:600;color:var(--text-2);"></span></span>
-    {% endif %}
-  </div>
-  <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
-    <span style="font-size:13px;font-weight:600;color:{% if unacked_alerts == 0 %}var(--green-dark){% else %}var(--red-dark){% endif %};">
-      {% if unacked_alerts == 0 %}✓ All clear{% else %}⚠ {{ unacked_alerts }} alert{{ 's' if unacked_alerts != 1 else '' }}{% endif %}
-    </span>
-    <span id="war-clock" style="font-size:13px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;min-width:88px;text-align:right;letter-spacing:.01em;"></span>
-  </div>
-</div>
-
-<!-- Hero insight card -->
+<!-- Command bar -->
 {% set ns = namespace(total_in=0, total_kw=0) %}
 {% if scorecard %}
 {% for m in scorecard if m.status != 'no_data' %}
@@ -44,116 +27,26 @@
   {% set ns.total_kw = ns.total_kw + m.total %}
 {% endfor %}
 {% endif %}
-<div class="hero-card">
-  <div class="hero-two-col">
-
-    <!-- Left: headline + stats -->
-    <div style="flex:1;min-width:0;">
-      <div class="hero-label">Competitive Intelligence Active</div>
-      <h2>Duncan Law SEO Command Center</h2>
-      <p>Monitoring Google 3-pack rankings, competitor reviews, and PACER filing volume across Greensboro, Winston-Salem, High Point, Charlotte, Salisbury, and Asheville.</p>
-      <a href="/rankings" class="hero-btn">
-        View Rankings
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-      </a>
-      <div class="hero-stats" style="margin-top:20px;">
-        {% if scorecard and ns.total_kw > 0 %}
-        <div class="hero-stat">
-          <span class="hero-stat-val">{{ ns.total_in }}/{{ ns.total_kw }}</span>
-          <span class="hero-stat-lbl">Keywords in 3-pack</span>
-          <div style="margin-top:5px;width:72px;height:3px;background:rgba(255,255,255,.2);border-radius:2px;">
-            <div style="height:100%;width:{{ (ns.total_in / ns.total_kw * 100)|int }}%;background:rgba(255,255,255,.75);border-radius:2px;"></div>
-          </div>
-        </div>
-        {% endif %}
-        <div class="hero-stat">
-          <span class="hero-stat-val">{{ competitors | length }}</span>
-          <span class="hero-stat-lbl">Competitors tracked</span>
-        </div>
-        <div class="hero-stat">
-          <span class="hero-stat-val">6</span>
-          <span class="hero-stat-lbl">Markets monitored</span>
-        </div>
-        <div class="hero-stat">
-          <span class="hero-stat-val" style="color:{% if unacked_alerts > 0 %}#FCA5A5{% else %}#6EE7B7{% endif %};">{{ unacked_alerts }}</span>
-          <span class="hero-stat-lbl">Active alerts</span>
-        </div>
-      </div>
-    </div>
-
+<div class="war-strip" style="margin-bottom:24px;">
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+    <span class="pulse-dot" style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;flex-shrink:0;"></span>
+    <span style="font-size:13px;font-weight:600;color:var(--text-2);">Systems Active</span>
+    {% if last_job and last_job.started_at %}
+    <span style="font-size:13px;color:var(--muted);">· Last scan <span id="war-ago" style="font-weight:600;color:var(--text-2);"></span></span>
+    {% endif %}
   </div>
-
-  <!-- Intelligence ticker — full width -->
-  <div style="border-top:1px solid rgba(255,255,255,.12);margin-top:20px;padding-top:12px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 48px,#000 calc(100% - 48px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 48px,#000 calc(100% - 48px),transparent 100%);">
-    <div style="display:flex;white-space:nowrap;animation:ticker 38s linear infinite;" onmouseenter="this.style.animationPlayState='paused'" onmouseleave="this.style.animationPlayState='running'">
-      {% for _ in range(2) %}
-      <span style="display:inline-flex;align-items:center;flex-shrink:0;">
-        <span class="t-item">{{ competitors | length }} competitors monitored</span>
-        <span class="t-sep">|</span>
-        <span class="t-item">6 markets tracked</span>
-        {% if ns.total_kw > 0 %}
-        <span class="t-sep">|</span>
-        <span class="t-item">{{ ns.total_in }}/{{ ns.total_kw }} keywords in 3-pack</span>
-        {% endif %}
-        <span class="t-sep">|</span>
-        {% if unacked_alerts == 0 %}
-        <span class="t-item">All systems clear</span>
-        {% else %}
-        <span class="t-item">{{ unacked_alerts }} alert{{ 's' if unacked_alerts != 1 else '' }} need attention</span>
-        {% endif %}
-        <span class="t-sep">|</span>
-        <span class="t-item">Greensboro · Winston-Salem · High Point · Charlotte · Salisbury · Asheville</span>
-        {% if last_job and last_job.started_at %}
-        <span class="t-sep">|</span>
-        <span class="t-item">Last collection {{ last_job.started_at.strftime('%b %d, %Y') }}</span>
-        {% endif %}
-        <span style="display:inline-block;width:56px;flex-shrink:0;"></span>
-      </span>
-      {% endfor %}
-    </div>
+  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+    {% if scorecard and ns.total_kw > 0 %}
+    <span class="cmd-pill cmd-pill-blue"><strong>{{ ns.total_in }}/{{ ns.total_kw }}</strong>&thinsp;kw in 3-pack</span>
+    {% endif %}
+    <span class="cmd-pill"><strong>{{ competitors | length }}</strong>&thinsp;competitors</span>
+    <span class="cmd-pill"><strong>6</strong>&thinsp;markets</span>
+    <span class="cmd-pill {% if unacked_alerts == 0 %}cmd-pill-green{% else %}cmd-pill-red{% endif %}">
+      {% if unacked_alerts == 0 %}<strong>✓</strong>&thinsp;All clear{% else %}<strong>⚠</strong>&thinsp;{{ unacked_alerts }} alert{{ 's' if unacked_alerts != 1 else '' }}{% endif %}
+    </span>
   </div>
-</div>
-
-<!-- KPI summary row -->
-<div class="card-grid">
-  <div class="stat-card stat-purple">
-    <div class="stat-top-bar"></div>
-    <div class="stat-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-    </div>
-    <div class="label">Competitors Tracked</div>
-    <div class="value">{{ competitors | length }}</div>
-    <div class="sub">across MDNC + WDNC</div>
-  </div>
-
-  <div class="stat-card stat-teal">
-    <div class="stat-top-bar"></div>
-    <div class="stat-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-    </div>
-    <div class="label">Markets</div>
-    <div class="value">6</div>
-    <div class="sub">GSO · W-S · HP · CLT · SAL · AVL</div>
-  </div>
-
-  <div class="stat-card stat-blue">
-    <div class="stat-top-bar"></div>
-    <div class="stat-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-    </div>
-    <div class="label">Keywords Tracked</div>
-    <div class="value">{{ scorecard | sum(attribute='total') }}</div>
-    <div class="sub">4 keywords × {{ scorecard | selectattr('total', 'gt', 0) | list | length }} markets</div>
-  </div>
-
-  <div class="stat-card {% if unacked_alerts > 0 %}stat-red{% else %}stat-green{% endif %}">
-    <div class="stat-top-bar"></div>
-    <div class="stat-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-    </div>
-    <div class="label">Open Alerts</div>
-    <div class="value">{{ unacked_alerts }}</div>
-    <div class="sub">{% if unacked_alerts == 0 %}All clear — no issues{% else %}Action needed{% endif %}</div>
+  <div style="display:flex;align-items:center;flex-shrink:0;">
+    <span id="war-clock" style="font-size:13px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;min-width:88px;text-align:right;letter-spacing:.01em;"></span>
   </div>
 </div>
 
