@@ -108,6 +108,10 @@ def _is_person_name(s: str) -> bool:
         return False
     if '&' in s:                    # partnership / firm name
         return False
+    if ':' in s:                    # field label ("Type of Debtor: Individual")
+        return False
+    if re.search(r'\band\b', s, re.IGNORECASE):  # "Wootton and Wootton" style firms
+        return False
     return True
 
 
