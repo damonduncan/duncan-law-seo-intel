@@ -817,6 +817,7 @@
 </div>
 
 <!-- ── MDNC ─────────────────────────────────────────────────────────────── -->
+{% set mdnc_total = mdnc_rows | sum(attribute='total') %}
 <div style="border-radius:var(--r);background:rgba(37,99,235,.07);border-top:4px solid var(--accent);padding:18px 24px;margin:8px 0 20px;">
   <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
     <div style="font-size:32px;font-weight:900;color:var(--accent);letter-spacing:-.03em;line-height:1;">MDNC</div>
@@ -825,13 +826,22 @@
       <div style="font-size:16px;font-weight:700;color:var(--text);">Middle District of North Carolina</div>
       <div style="font-size:13px;color:var(--muted);margin-top:2px;">Greensboro · Winston-Salem · High Point · Salisbury</div>
     </div>
-    <span class="chip chip-blue" style="margin-left:auto;font-size:12px;">Duncan Law active</span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      {% if mdnc_total %}
+      <div style="text-align:right;">
+        <div style="font-size:24px;font-weight:800;color:var(--accent);line-height:1;letter-spacing:-.02em;">{{ mdnc_total }}</div>
+        <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">total cases · {{ cur_label }}</div>
+      </div>
+      {% endif %}
+      <span class="chip chip-blue" style="font-size:12px;">Duncan Law active</span>
+    </div>
   </div>
 </div>
 {{ district_table(mdnc_rows, "MDNC — Middle District of NC") }}
 {{ discovery_section(mdnc_discovery, "MDNC", "MDNC", mdnc_tracked) }}
 
 <!-- ── WDNC ─────────────────────────────────────────────────────────────── -->
+{% set wdnc_total = wdnc_rows | sum(attribute='total') %}
 <div style="border-radius:var(--r);background:rgba(124,58,237,.07);border-top:4px solid #7c3aed;padding:18px 24px;margin:32px 0 20px;">
   <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
     <div style="font-size:32px;font-weight:900;color:#7c3aed;letter-spacing:-.03em;line-height:1;">WDNC</div>
@@ -840,13 +850,22 @@
       <div style="font-size:16px;font-weight:700;color:var(--text);">Western District of North Carolina</div>
       <div style="font-size:13px;color:var(--muted);margin-top:2px;">Charlotte · Asheville · Statesville · Morganton</div>
     </div>
-    <span class="chip chip-purple" style="margin-left:auto;font-size:12px;">Duncan Law active</span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      {% if wdnc_total %}
+      <div style="text-align:right;">
+        <div style="font-size:24px;font-weight:800;color:#7c3aed;line-height:1;letter-spacing:-.02em;">{{ wdnc_total }}</div>
+        <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">total cases · {{ cur_label }}</div>
+      </div>
+      {% endif %}
+      <span class="chip chip-purple" style="font-size:12px;">Duncan Law active</span>
+    </div>
   </div>
 </div>
 {{ district_table(wdnc_rows, "WDNC — Western District of NC") }}
 {{ discovery_section(wdnc_discovery, "WDNC", "WDNC", wdnc_tracked) }}
 
 <!-- ── EDNC ─────────────────────────────────────────────────────────────── -->
+{% set ednc_total = ednc_rows | sum(attribute='total') %}
 <div style="border-radius:var(--r);background:rgba(234,88,12,.07);border-top:4px solid var(--orange);padding:18px 24px;margin:32px 0 20px;">
   <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
     <div style="font-size:32px;font-weight:900;color:var(--orange);letter-spacing:-.03em;line-height:1;">EDNC</div>
@@ -855,7 +874,15 @@
       <div style="font-size:16px;font-weight:700;color:var(--text);">Eastern District of North Carolina</div>
       <div style="font-size:13px;color:var(--muted);margin-top:2px;">Raleigh · Fayetteville · Wilmington · Wilson</div>
     </div>
-    <span class="chip chip-orange" style="margin-left:auto;font-size:12px;">Competitor tracking only</span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      {% if ednc_total %}
+      <div style="text-align:right;">
+        <div style="font-size:24px;font-weight:800;color:var(--orange);line-height:1;letter-spacing:-.02em;">{{ ednc_total }}</div>
+        <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">total cases · {{ cur_label }}</div>
+      </div>
+      {% endif %}
+      <span class="chip chip-orange" style="font-size:12px;">Competitor tracking only</span>
+    </div>
   </div>
 </div>
 {{ district_table(ednc_rows, "EDNC — Eastern District of NC") }}
