@@ -705,7 +705,8 @@ competitors:
     google_place_id: "ChIJN4MuDEfhrIkRCWRh9eL0zrE"
     bbb_url: ""
     markets:
-      - ednc   # files in EDNC; Durham + Henderson NC offices
+      - ednc    # Durham + Henderson NC offices
+      - durham  # Durham is MDNC; Wootton files in both districts
     attorneys:
       - name: "Brent Wootton"
         aliases:
