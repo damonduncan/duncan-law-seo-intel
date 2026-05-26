@@ -343,7 +343,7 @@ def run_district_discovery(db: Session, district: str, year: int, month: int) ->
         result["error"] = str(e)
         logger.error(f"{district} discovery error: {e}", exc_info=True)
 
-    return _store_and_return(db, result, district)
+    return _store_and_return(db, result, district, period_start=period_start)
 
 
 # Backward-compatible alias
@@ -362,7 +362,7 @@ def get_cached_results(db: Session, district: str = "EDNC") -> dict | None:
     return row.value if row else None
 
 
-def _store_and_return(db: Session, result: dict, district: str) -> dict:
+def _store_and_return(db: Session, result: dict, district: str, period_start=None) -> dict:
     from app.models.discovery import DiscoveryCache
     key = _cache_key(district)
     row = db.query(DiscoveryCache).filter(DiscoveryCache.key == key).first()
@@ -376,6 +376,23 @@ def _store_and_return(db: Session, result: dict, district: str) -> dict:
             value=result,
             updated_at=datetime.now(timezone.utc),
         ))
+
+    # Store period-specific district total so market share can use true denominator
+    if period_start is not None and result.get("total_found") is not None:
+        pkey = f"{district.lower()}_district_total_{period_start.strftime('%Y_%m')}"
+        prow = db.query(DiscoveryCache).filter(DiscoveryCache.key == pkey).first()
+        pval = {"total": result["total_found"], "period": result.get("period", "")}
+        if prow:
+            prow.value      = pval
+            prow.updated_at = datetime.now(timezone.utc)
+        else:
+            db.add(DiscoveryCache(
+                id=new_uuid(),
+                key=pkey,
+                value=pval,
+                updated_at=datetime.now(timezone.utc),
+            ))
+
     db.commit()
     logger.info(f"{district} discovery stored: {len(result.get('top_filers', []))} filers")
     return result

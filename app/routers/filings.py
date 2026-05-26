@@ -160,14 +160,42 @@ def filings(
             })
 
         groups.sort(key=lambda g: (not g["is_own_firm"], -g["total"]))
-        district_total = sum(g["total"] for g in groups)
-        for g in groups:
-            g["market_share"] = round(g["total"] / district_total * 100) if district_total else 0
         return groups
 
-    mdnc_rows = compute_window("MDNC", incl_periods, cmp_periods)
-    wdnc_rows = compute_window("WDNC", incl_periods, cmp_periods)
-    ednc_rows = compute_window("EDNC", incl_periods, cmp_periods)
+    def _district_total(district: str, periods: list) -> int | None:
+        """Sum monthly district-wide case totals from discovery cache."""
+        from app.models.discovery import DiscoveryCache
+        total, found = 0, False
+        for p in periods:
+            key = f"{district.lower()}_district_total_{p.strftime('%Y_%m')}"
+            row = db.query(DiscoveryCache).filter(DiscoveryCache.key == key).first()
+            if row and row.value and row.value.get("total"):
+                total += row.value["total"]
+                found = True
+        return total if found else None
+
+    def _apply_market_share(groups: list, district_wide_total: int | None) -> list:
+        denom = district_wide_total or sum(g["total"] for g in groups)
+        for g in groups:
+            g["market_share"] = round(g["total"] / denom * 100) if denom else 0
+        return groups
+
+    mdnc_rows = _apply_market_share(
+        compute_window("MDNC", incl_periods, cmp_periods),
+        _district_total("MDNC", incl_periods),
+    )
+    wdnc_rows = _apply_market_share(
+        compute_window("WDNC", incl_periods, cmp_periods),
+        _district_total("WDNC", incl_periods),
+    )
+    ednc_rows = _apply_market_share(
+        compute_window("EDNC", incl_periods, cmp_periods),
+        _district_total("EDNC", incl_periods),
+    )
+
+    mdnc_district_total = _district_total("MDNC", incl_periods)
+    wdnc_district_total = _district_total("WDNC", incl_periods)
+    ednc_district_total = _district_total("EDNC", incl_periods)
 
     # Aggregate totals per (competitor, district, period) for trend charts — uses all periods
     firm_period_totals: dict = defaultdict(int)
@@ -370,9 +398,12 @@ def filings(
         "win":            win,
         "cur_label":      cur_label,
         "prior_label":    prior_label,
-        "mdnc_rows":      mdnc_rows,
-        "wdnc_rows":      wdnc_rows,
-        "ednc_rows":      ednc_rows,
+        "mdnc_rows":            mdnc_rows,
+        "wdnc_rows":            wdnc_rows,
+        "ednc_rows":            ednc_rows,
+        "mdnc_district_total":  mdnc_district_total,
+        "wdnc_district_total":  wdnc_district_total,
+        "ednc_district_total":  ednc_district_total,
         "mdnc_discovery": mdnc_discovery,
         "wdnc_discovery": wdnc_discovery,
         "ednc_discovery": ednc_discovery,
