@@ -61,9 +61,13 @@ _FIRM_PREFIX_RE = re.compile(
     r'^(Law Office|Law Offices|Office of|The Law|Chapter \d|Case No)',
     re.IGNORECASE,
 )
-_DIGITS_RE   = re.compile(r'\d{3,}')            # phone numbers, zip codes, street numbers
-_STATE_ZIP   = re.compile(r',\s*[A-Z]{2}\s+\d') # "Greensboro, NC 2"
-_SKIP_PREFIX = re.compile(
+_DIGITS_RE    = re.compile(r'\d{3,}')            # phone numbers, zip codes, street numbers
+_STATE_ZIP    = re.compile(r',\s*[A-Z]{2}\s+\d') # "Greensboro, NC 2"
+_ADDRESS_UNIT = re.compile(                       # suite/unit address lines, not person names
+    r'^(Suite|Ste\.?|Apt\.?|Unit|Floor|Fl\.?|Bldg\.?|#\s*\d)',
+    re.IGNORECASE,
+)
+_SKIP_PREFIX  = re.compile(
     r'^(Role:|Filed:|Entered:|Office:|Chapter:|Lead BK:|PACER|U\.S\.|Case No\.|Debtor:|Case:)',
     re.IGNORECASE,
 )
@@ -97,6 +101,8 @@ def _is_person_name(s: str) -> bool:
     if _FIRM_ENDING_RE.search(s):   # name ends in Law, Firm, Office, etc.
         return False
     if _STATE_ZIP.search(s):        # "City, NC 27401"
+        return False
+    if _ADDRESS_UNIT.match(s):      # "Suite D", "Ste 13", "Apt B", etc.
         return False
     if _SKIP_PREFIX.match(s):       # "Role:", "Filed:", etc.
         return False
