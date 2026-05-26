@@ -320,15 +320,22 @@
   <div style="margin-bottom:20px;">
     <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px;">{{ district }}</div>
     {% set max_cases = namespace(val=1) %}
-    {% for per, cnt in periods %}{% if cnt > max_cases.val %}{% set max_cases.val = cnt %}{% endif %}{% endfor %}
+    {% for per, cnt, delta in periods %}{% if cnt > max_cases.val %}{% set max_cases.val = cnt %}{% endif %}{% endfor %}
     <div style="display:flex;flex-direction:column;gap:5px;">
-      {% for per, cnt in periods | reverse %}
-      <div style="display:grid;grid-template-columns:80px 1fr 44px;gap:10px;align-items:center;">
+      {% for per, cnt, delta in periods | reverse %}
+      <div style="display:grid;grid-template-columns:80px 1fr 44px 52px;gap:10px;align-items:center;">
         <div style="font-size:13px;color:var(--muted);">{{ per.strftime('%b %Y') }}</div>
         <div style="height:7px;background:var(--surface-3);border-radius:4px;overflow:hidden;">
           <div style="height:100%;width:{{ (cnt / max_cases.val * 100)|int }}%;background:var(--purple);border-radius:4px;"></div>
         </div>
         <div style="font-size:14px;font-weight:700;color:var(--text);text-align:right;">{{ cnt }}</div>
+        <div style="font-size:12px;font-weight:700;text-align:right;">
+          {% if delta is not none %}
+            {% if delta > 0 %}<span style="color:var(--orange);">+{{ delta }}</span>
+            {% elif delta < 0 %}<span style="color:var(--green-dark);">{{ delta }}</span>
+            {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+          {% endif %}
+        </div>
       </div>
       {% endfor %}
     </div>

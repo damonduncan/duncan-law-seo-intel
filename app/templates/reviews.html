@@ -484,16 +484,16 @@
   {% set mdnc_ns = namespace(max_count=1) %}
   {% for s in own_mdnc_snaps %}{% if s.review_count and s.review_count > mdnc_ns.max_count %}{% set mdnc_ns.max_count = s.review_count %}{% endif %}{% endfor %}
   {% for r in mdnc_comps %}{% if r.google_count and r.google_count > mdnc_ns.max_count %}{% set mdnc_ns.max_count = r.google_count %}{% endif %}{% endfor %}
-  <table>
+  <table id="tbl-mdnc">
     <thead><tr>
       <th>Firm</th>
-      <th>Rating</th>
-      <th>Reviews</th>
-      <th>Δ Week</th>
+      <th onclick="sortRevTbl('tbl-mdnc','rating')" style="cursor:pointer;user-select:none;">Rating <span id="arr-mdnc-rating" style="font-size:11px;color:var(--muted-2);"></span></th>
+      <th onclick="sortRevTbl('tbl-mdnc','count')" style="cursor:pointer;user-select:none;">Reviews <span id="arr-mdnc-count" style="font-size:11px;color:var(--muted-2);"></span></th>
+      <th onclick="sortRevTbl('tbl-mdnc','delta')" style="cursor:pointer;user-select:none;">Δ Week <span id="arr-mdnc-delta" style="font-size:11px;color:var(--muted-2);"></span></th>
     </tr></thead>
     <tbody>
     {% for s in own_mdnc_snaps %}
-    <tr style="background:rgba(37,99,235,.04);">
+    <tr style="background:rgba(37,99,235,.04);" data-pinned="1">
       <td>
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="firm-badge" style="background:rgba(37,99,235,.15);color:var(--accent);">DL</div>
@@ -527,7 +527,7 @@
     </tr>
     {% endfor %}
     {% for r in mdnc_comps %}
-    <tr>
+    <tr data-rating="{{ r.google_rating if r.google_rating is not none else '' }}" data-count="{{ r.google_count if r.google_count is not none else '' }}" data-delta="{{ r.count_delta if r.count_delta is not none else '' }}">
       <td>
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="firm-badge" style="background:var(--surface-3);color:var(--muted);">{{ r.name[:2] | upper }}</div>
@@ -597,16 +597,16 @@
   {% set wdnc_ns = namespace(max_count=1) %}
   {% for s in own_wdnc_snaps %}{% if s.review_count and s.review_count > wdnc_ns.max_count %}{% set wdnc_ns.max_count = s.review_count %}{% endif %}{% endfor %}
   {% for r in wdnc_comps %}{% if r.google_count and r.google_count > wdnc_ns.max_count %}{% set wdnc_ns.max_count = r.google_count %}{% endif %}{% endfor %}
-  <table>
+  <table id="tbl-wdnc">
     <thead><tr>
       <th>Firm</th>
-      <th>Rating</th>
-      <th>Reviews</th>
-      <th>Δ Week</th>
+      <th onclick="sortRevTbl('tbl-wdnc','rating')" style="cursor:pointer;user-select:none;">Rating <span id="arr-wdnc-rating" style="font-size:11px;color:var(--muted-2);"></span></th>
+      <th onclick="sortRevTbl('tbl-wdnc','count')" style="cursor:pointer;user-select:none;">Reviews <span id="arr-wdnc-count" style="font-size:11px;color:var(--muted-2);"></span></th>
+      <th onclick="sortRevTbl('tbl-wdnc','delta')" style="cursor:pointer;user-select:none;">Δ Week <span id="arr-wdnc-delta" style="font-size:11px;color:var(--muted-2);"></span></th>
     </tr></thead>
     <tbody>
     {% for s in own_wdnc_snaps %}
-    <tr style="background:rgba(37,99,235,.04);">
+    <tr style="background:rgba(37,99,235,.04);" data-pinned="1">
       <td>
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="firm-badge" style="background:rgba(37,99,235,.15);color:var(--accent);">DL</div>
@@ -640,7 +640,7 @@
     </tr>
     {% endfor %}
     {% for r in wdnc_comps %}
-    <tr>
+    <tr data-rating="{{ r.google_rating if r.google_rating is not none else '' }}" data-count="{{ r.google_count if r.google_count is not none else '' }}" data-delta="{{ r.count_delta if r.count_delta is not none else '' }}">
       <td>
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="firm-badge" style="background:var(--surface-3);color:var(--muted);">{{ r.name[:2] | upper }}</div>
@@ -712,16 +712,16 @@
   {% if ednc_has_data.val %}
   {% set ednc_ns = namespace(max_count=1) %}
   {% for r in ednc_comps %}{% if r.google_count and r.google_count > ednc_ns.max_count %}{% set ednc_ns.max_count = r.google_count %}{% endif %}{% endfor %}
-  <table>
+  <table id="tbl-ednc">
     <thead><tr>
       <th>Firm</th>
-      <th>Rating</th>
-      <th>Reviews</th>
-      <th>Δ Week</th>
+      <th onclick="sortRevTbl('tbl-ednc','rating')" style="cursor:pointer;user-select:none;">Rating <span id="arr-ednc-rating" style="font-size:11px;color:var(--muted-2);"></span></th>
+      <th onclick="sortRevTbl('tbl-ednc','count')" style="cursor:pointer;user-select:none;">Reviews <span id="arr-ednc-count" style="font-size:11px;color:var(--muted-2);"></span></th>
+      <th onclick="sortRevTbl('tbl-ednc','delta')" style="cursor:pointer;user-select:none;">Δ Week <span id="arr-ednc-delta" style="font-size:11px;color:var(--muted-2);"></span></th>
     </tr></thead>
     <tbody>
     {% for r in ednc_comps %}
-    <tr>
+    <tr data-rating="{{ r.google_rating if r.google_rating is not none else '' }}" data-count="{{ r.google_count if r.google_count is not none else '' }}" data-delta="{{ r.count_delta if r.count_delta is not none else '' }}">
       <td>
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="firm-badge" style="background:rgba(234,88,12,.1);color:var(--orange);">{{ r.name[:2] | upper }}</div>
@@ -841,4 +841,33 @@
 </div>
 
 {% endif %}
+<script>
+var _sortRevState = {};
+function sortRevTbl(tableId, col) {
+  var prev = _sortRevState[tableId] || {};
+  var dir = (prev.col === col && prev.dir === 'desc') ? 'asc' : 'desc';
+  _sortRevState[tableId] = { col: col, dir: dir };
+  var table = document.getElementById(tableId);
+  if (!table) return;
+  var tbody = table.querySelector('tbody');
+  var rows = Array.from(tbody.querySelectorAll('tr'));
+  var pinned = rows.filter(function(r) { return r.dataset.pinned === '1'; });
+  var sortable = rows.filter(function(r) { return r.dataset.pinned !== '1'; });
+  sortable.sort(function(a, b) {
+    var av = parseFloat(a.dataset[col]);
+    var bv = parseFloat(b.dataset[col]);
+    if (isNaN(av) && isNaN(bv)) return 0;
+    if (isNaN(av)) return 1;
+    if (isNaN(bv)) return -1;
+    return dir === 'asc' ? av - bv : bv - av;
+  });
+  var tname = tableId.replace('tbl-', '');
+  ['rating', 'count', 'delta'].forEach(function(c) {
+    var el = document.getElementById('arr-' + tname + '-' + c);
+    if (el) el.textContent = (c === col) ? (dir === 'desc' ? ' ▼' : ' ▲') : '';
+  });
+  pinned.forEach(function(r) { tbody.appendChild(r); });
+  sortable.forEach(function(r) { tbody.appendChild(r); });
+}
+</script>
 {% endblock %}

@@ -259,11 +259,16 @@ def competitor_detail(
     for (_, dist, _, per), count in filing_deduped.items():
         pacer_raw[dist][per] += count
 
-    # Sort periods ascending per district
-    pacer_data: dict = {
-        dist: sorted(periods.items())
-        for dist, periods in pacer_raw.items()
-    }
+    # Sort periods ascending per district; compute MoM delta per period
+    pacer_data: dict = {}
+    for dist, periods in pacer_raw.items():
+        sorted_periods = sorted(periods.items())
+        with_deltas = []
+        for i, (per, cnt) in enumerate(sorted_periods):
+            prev_cnt = sorted_periods[i - 1][1] if i > 0 else None
+            delta = cnt - prev_cnt if prev_cnt is not None else None
+            with_deltas.append((per, cnt, delta))
+        pacer_data[dist] = with_deltas
 
     # ── Google reviews ───────────────────────────────────────────────────────
     since = datetime.now(timezone.utc) - timedelta(days=60)

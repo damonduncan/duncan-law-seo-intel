@@ -61,6 +61,26 @@ def dashboard(
     activity_feed = _all_activity
     activity_total = len(_all_activity)
 
+    # Freshness timestamps for scorecard badges
+    _rl = (
+        db.query(cast(LocalPackRanking.scraped_at, Date))
+        .filter(LocalPackRanking.is_own_firm == True, LocalPackRanking.in_pack == True)
+        .order_by(LocalPackRanking.scraped_at.desc())
+        .first()
+    )
+    rankings_as_of = _rl[0] if _rl else None
+    reviews_as_of = None
+    if own_firm:
+        _rv = (
+            db.query(ReviewSnapshot.snapped_at)
+            .filter(ReviewSnapshot.competitor_id == own_firm.id, ReviewSnapshot.source == "google")
+            .order_by(ReviewSnapshot.snapped_at.desc())
+            .first()
+        )
+        if _rv:
+            val = _rv[0]
+            reviews_as_of = val.date() if hasattr(val, "date") else val
+
     return templates.TemplateResponse("overview.html", {
         "request": request,
         "user": user,
@@ -76,6 +96,8 @@ def dashboard(
         "opportunity_matrix": opportunity_matrix,
         "activity_feed": activity_feed,
         "activity_total": activity_total,
+        "rankings_as_of": rankings_as_of,
+        "reviews_as_of": reviews_as_of,
         "active_page": "dashboard",
     })
 

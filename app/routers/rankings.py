@@ -436,4 +436,6 @@ def rankings(
         "position_grid":      position_grid,
         "kw_order":           kw_order,
         "top_opportunities":  top_opportunities,
+        "own_pack_date":      own_pack_date,
+        "ednc_pack_date":     ednc_pack_date,
     })
