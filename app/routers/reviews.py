@@ -1,4 +1,3 @@
-import json
 from collections import defaultdict, Counter
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Request, Depends
@@ -12,6 +11,7 @@ from app.models.reviews import ReviewSnapshot
 from app.models.competitor import Competitor, CompetitorLocation
 from app.models.alerts import JobRun
 from app.constants import MARKET_TO_DISTRICT
+from app.utils import dedup_review_snaps
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -100,21 +100,12 @@ def reviews(
     )
 
     comp_rows = []
-    def _dedup(snaps):
-        seen, out = set(), []
-        for s in snaps:
-            fp = json.dumps(s.snapshot_data, sort_keys=True) if s.snapshot_data else id(s)
-            if fp not in seen:
-                seen.add(fp)
-                out.append(s)
-        return out
-
     for c in competitors:
         raw_snaps = snap_index.get(c.id, {}).get("google", [])
         raw_prev = prev_index.get(c.id, {}).get("google", [])
 
-        google_snaps = _dedup(raw_snaps)
-        prev_google = _dedup(raw_prev)
+        google_snaps = dedup_review_snaps(raw_snaps)
+        prev_google = dedup_review_snaps(raw_prev)
 
         # Sum counts and average ratings across all locations for this competitor
         counts = [s.review_count for s in google_snaps if s.review_count is not None]

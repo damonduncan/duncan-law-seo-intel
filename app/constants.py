@@ -1,3 +1,17 @@
+CITY_SUFFIXES: list[str] = [
+    " Greensboro", " Winston-Salem", " Winston Salem",
+    " High Point", " Charlotte", " Salisbury", " Asheville",
+    " Raleigh", " Fayetteville", " Wilmington", " Wilson",
+]
+
+
+def strip_city_suffix(kw: str) -> str:
+    for suffix in CITY_SUFFIXES:
+        if kw.endswith(suffix):
+            return kw[:-len(suffix)]
+    return kw
+
+
 MARKET_TO_DISTRICT: dict[str, str] = {
     # MDNC — Middle District of North Carolina
     "greensboro":    "MDNC",

@@ -14,6 +14,7 @@ from app.models.alerts import Alert, JobRun
 from app.models.filings import FilingSnapshot
 from app.models.rankings import LocalPackRanking
 from app.models.reviews import ReviewSnapshot
+from app.constants import strip_city_suffix
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -481,14 +482,6 @@ def _build_rank_changes(db: Session, own_firm) -> list:
     if not prior_by_key:
         return []
 
-    def _strip(kw: str, market: str) -> str:
-        for city in ["Greensboro", "Winston-Salem", "High Point", "Charlotte",
-                     "Salisbury", "Asheville", "Raleigh", "Fayetteville",
-                     "Wilmington", "Wilson"]:
-            if kw.endswith(" " + city):
-                return kw[: -(len(city) + 1)]
-        return kw
-
     drops, gains = [], []
     for r in cur_rows:
         key = (r.keyword, r.market)
@@ -500,7 +493,7 @@ def _build_rank_changes(db: Session, own_firm) -> list:
         if cur_rank == prev_rank:
             continue
 
-        kw = _strip(r.keyword or "", r.market)
+        kw = strip_city_suffix(r.keyword or "")
         city = (r.city or r.market or "").replace("_", " ").title()
 
         if cur_rank is not None and prev_rank is not None:

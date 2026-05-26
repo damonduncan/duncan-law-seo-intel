@@ -16,6 +16,8 @@ from app.models.filings import FilingSnapshot
 from app.models.rankings import LocalPackRanking
 from app.models.reviews import ReviewSnapshot
 from app.models.sentiment import ReviewSentiment
+from app.constants import strip_city_suffix
+from app.utils import dedup_review_snaps
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -156,14 +158,7 @@ def competitor_detail(
             .all()
         )
         for r in rank_rows:
-            # Strip trailing city name from keyword for compact display
-            kw = r.keyword or ""
-            for suffix in [" Greensboro", " Winston-Salem", " High Point", " Charlotte",
-                           " Salisbury", " Asheville", " Raleigh", " Fayetteville",
-                           " Wilmington", " Wilson"]:
-                if kw.endswith(suffix):
-                    kw = kw[: -len(suffix)]
-                    break
+            kw = strip_city_suffix(r.keyword or "")
             pack_presence.setdefault(r.market, {})[kw] = r.rank_position
 
     # ── Own-firm rankings for head-to-head comparison ────────────────────────
@@ -187,13 +182,7 @@ def competitor_detail(
                 .all()
             )
             for r in own_rows:
-                kw = r.keyword or ""
-                for suffix in [" Greensboro", " Winston-Salem", " High Point", " Charlotte",
-                               " Salisbury", " Asheville", " Raleigh", " Fayetteville",
-                               " Wilmington", " Wilson"]:
-                    if kw.endswith(suffix):
-                        kw = kw[: -len(suffix)]
-                        break
+                kw = strip_city_suffix(r.keyword or "")
                 own_positions.setdefault(r.market, {})[kw] = (
                     r.rank_position if r.in_pack else None
                 )
@@ -211,19 +200,9 @@ def competitor_detail(
         .all()
     )
 
-    _suffixes = [" Greensboro", " Winston-Salem", " High Point", " Charlotte",
-                 " Salisbury", " Asheville", " Raleigh", " Fayetteville",
-                 " Wilmington", " Wilson"]
-
-    def _strip(kw: str) -> str:
-        for s in _suffixes:
-            if kw.endswith(s):
-                return kw[:-len(s)]
-        return kw
-
     _trend_raw: dict = defaultdict(lambda: defaultdict(dict))  # market → kw_short → date_str → rank
     for r in trend_rows:
-        _trend_raw[r.market][_strip(r.keyword or "")][r.scraped_at.strftime("%Y-%m-%d")] = r.rank_position
+        _trend_raw[r.market][strip_city_suffix(r.keyword or "")][r.scraped_at.strftime("%Y-%m-%d")] = r.rank_position
 
     _kw_colors = ["#F97316", "#2563EB", "#10B981", "#8B5CF6", "#EF4444", "#14B8A6"]
     comp_rank_chart: dict = {}
@@ -288,21 +267,11 @@ def competitor_detail(
     for s in all_review_snaps:
         by_market[s.market].append(s)
 
-    def _dedup(snaps):
-        """Deduplicate by snapshot_data fingerprint — same Google listing across market rows."""
-        seen, out = set(), []
-        for s in snaps:
-            fp = json.dumps(s.snapshot_data, sort_keys=True) if s.snapshot_data else str(id(s))
-            if fp not in seen:
-                seen.add(fp)
-                out.append(s)
-        return out
-
     current_by_market = {m: snaps[0] for m, snaps in by_market.items() if snaps}
     prev_by_market = {m: snaps[1] for m, snaps in by_market.items() if len(snaps) > 1}
 
-    current_unique = _dedup(list(current_by_market.values()))
-    prev_unique = _dedup(list(prev_by_market.values()))
+    current_unique = dedup_review_snaps(list(current_by_market.values()))
+    prev_unique = dedup_review_snaps(list(prev_by_market.values()))
 
     total_count = sum(s.review_count for s in current_unique if s.review_count) or None
     total_prev = sum(s.review_count for s in prev_unique if s.review_count) or None
@@ -328,10 +297,10 @@ def competitor_detail(
             _snap90[_m] = _older90[0]
 
     _total_30d = (
-        sum(s.review_count for s in _dedup(list(_snap30.values())) if s.review_count) or None
+        sum(s.review_count for s in dedup_review_snaps(list(_snap30.values())) if s.review_count) or None
     ) if _snap30 else None
     _total_90d = (
-        sum(s.review_count for s in _dedup(list(_snap90.values())) if s.review_count) or None
+        sum(s.review_count for s in dedup_review_snaps(list(_snap90.values())) if s.review_count) or None
     ) if _snap90 else None
 
     review_delta_90d = (
