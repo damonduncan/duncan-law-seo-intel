@@ -179,6 +179,27 @@ def reviews(
         "high_point": "High Point", "charlotte": "Charlotte",
         "salisbury": "Salisbury", "asheville": "Asheville",
     }
+
+    # Recent client review snippets from Google Places snapshot_data
+    own_review_snippets: list = []
+    for s in own_google_snaps:
+        sd = s.snapshot_data or {}
+        raw_reviews = sd.get("reviews", [])
+        if not raw_reviews:
+            continue
+        mkt_display = _MARKET_DISPLAY.get(s.market, (s.market or "").replace("_", " ").title())
+        for rv in raw_reviews[:3]:
+            text = (rv.get("text") or "").strip()
+            if not text:
+                continue
+            own_review_snippets.append({
+                "market":        s.market,
+                "display":       mkt_display,
+                "rating":        rv.get("rating"),
+                "text":          text[:300],
+                "author":        rv.get("author_name", ""),
+                "relative_time": rv.get("relative_time_description", ""),
+            })
     own_trend_raw: dict = defaultdict(dict)  # market → {date_str: count}
     for (cid, source, market), snaps in snap_history.items():
         if own_firm and cid == own_firm.id and source == "google" and market:
@@ -229,6 +250,7 @@ def reviews(
         "velocity_leaders": velocity_leaders,
         "velocity_projections": velocity_projections,
         "review_chart_data": review_chart_data,
+        "own_review_snippets": own_review_snippets,
         # District-grouped data
         "mdnc_comps": mdnc_comps,
         "wdnc_comps": wdnc_comps,
