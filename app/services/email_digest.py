@@ -63,8 +63,9 @@ def build_and_send_digest(db: Session) -> None:
     subject  = f"Duncan Law SEO Intelligence — Week of {week_str}"
 
     ctx  = _gather_data(db)
-    from app.services.ai_recommendations import generate_recommendations
+    from app.services.ai_recommendations import generate_recommendations, generate_narrative
     ctx["ai_recommendations"] = generate_recommendations(ctx)
+    ctx["ai_narrative"]        = generate_narrative(ctx)
     html = _build_html(ctx, week_str)
 
     log = DigestLog(
@@ -564,6 +565,28 @@ def _generate_priority(rankings: dict, reviews: dict) -> dict:
 def _build_html(ctx: dict, week_str: str) -> str:
     base_url = ctx["base_url"].rstrip("/")
     sections = []
+
+    # ── AI Narrative Briefing ─────────────────────────────────────────────────
+    narrative = ctx.get("ai_narrative", "")
+    if narrative:
+        # Split on double newlines → paragraphs; fall back to single newlines
+        raw_paras = [p.strip() for p in narrative.split("\n\n") if p.strip()]
+        if len(raw_paras) < 2:
+            raw_paras = [p.strip() for p in narrative.split("\n") if p.strip()]
+        para_html = "".join(
+            f'<p style="margin:0 0 14px;font-size:14px;color:#1f2937;line-height:1.75;">{p}</p>'
+            for p in raw_paras
+        )
+        sections.append(
+            f'<tr><td style="padding:24px;border-bottom:1px solid #e5e7eb;'
+            f'background:linear-gradient(135deg,#f0f7ff 0%,#fafbff 100%);">'
+            f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;'
+            f'letter-spacing:.1em;color:#2563eb;margin-bottom:14px;">'
+            f'Market Intelligence Briefing &nbsp;·&nbsp; Week of {week_str}'
+            f'</div>'
+            f'{para_html}'
+            f'</td></tr>'
+        )
 
     # ── Priority card ─────────────────────────────────────────────────────────
     pa = ctx.get("priority_action", {})
