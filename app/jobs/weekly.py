@@ -85,6 +85,10 @@ def run_weekly_job() -> None:
                 f"PACER discovery threads started for {disc_year}-{disc_month:02d}: MDNC, WDNC, EDNC"
             )
 
+            # Monthly database backup — email gzipped JSON to admin
+            from app.services.backup import run_backup
+            run_backup(db)
+
         # Phase 5: Send weekly digest
         from app.services.email_digest import build_and_send_digest
         build_and_send_digest(db)
