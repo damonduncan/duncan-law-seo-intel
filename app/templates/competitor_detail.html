@@ -386,6 +386,28 @@
       <div style="font-size:13px;color:var(--muted);margin-top:3px;">vs. prior week</div>
     </div>
     {% endif %}
+    {% if review_delta_90d is not none %}
+    <div style="border-left:1px solid var(--border);padding-left:28px;">
+      <div style="font-size:26px;font-weight:800;color:var(--text);line-height:1;">
+        {% if review_delta_90d > 0 %}+{{ review_delta_90d }}{% elif review_delta_90d == 0 %}±0{% else %}{{ review_delta_90d }}{% endif %}
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-top:3px;">over 90 days</div>
+      {% if review_accel %}
+      <div style="margin-top:6px;display:flex;flex-direction:column;gap:2px;">
+        {% if review_accel == 'accelerating' %}
+        <span style="font-size:12px;font-weight:700;color:var(--orange);">↑ Accelerating</span>
+        {% elif review_accel == 'decelerating' %}
+        <span style="font-size:12px;font-weight:700;color:var(--green-dark);">↓ Decelerating</span>
+        {% else %}
+        <span style="font-size:12px;color:var(--muted);">→ Stable rate</span>
+        {% endif %}
+        {% if rate_30d is not none and rate_90d is not none %}
+        <span style="font-size:11px;color:var(--muted-2);">{{ rate_30d }}/wk now · {{ rate_90d }}/wk avg</span>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
   </div>
 
   <!-- Per-location breakdown (multi-office firms) -->

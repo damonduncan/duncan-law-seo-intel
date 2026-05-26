@@ -271,7 +271,7 @@ def competitor_detail(
         pacer_data[dist] = with_deltas
 
     # ── Google reviews ───────────────────────────────────────────────────────
-    since = datetime.now(timezone.utc) - timedelta(days=60)
+    since = datetime.now(timezone.utc) - timedelta(days=100)
     all_review_snaps = (
         db.query(ReviewSnapshot)
         .filter(
@@ -311,6 +311,51 @@ def competitor_detail(
     ratings = [float(s.rating) for s in current_unique if s.rating]
     avg_rating = round(sum(ratings) / len(ratings), 1) if ratings else None
     last_collected = max((s.snapped_at for s in current_unique), default=None)
+
+    # ── 90-day review acceleration ────────────────────────────────────────────
+    _now = datetime.now(timezone.utc)
+    _t30 = _now - timedelta(days=22)   # snap ≥22 days old → ~30d baseline
+    _t90 = _now - timedelta(days=80)   # snap ≥80 days old → ~90d baseline
+
+    _snap30: dict = {}
+    _snap90: dict = {}
+    for _m, _snaps in by_market.items():
+        _older30 = [s for s in _snaps if s.snapped_at <= _t30]
+        _older90 = [s for s in _snaps if s.snapped_at <= _t90]
+        if _older30:
+            _snap30[_m] = _older30[0]
+        if _older90:
+            _snap90[_m] = _older90[0]
+
+    _total_30d = (
+        sum(s.review_count for s in _dedup(list(_snap30.values())) if s.review_count) or None
+    ) if _snap30 else None
+    _total_90d = (
+        sum(s.review_count for s in _dedup(list(_snap90.values())) if s.review_count) or None
+    ) if _snap90 else None
+
+    review_delta_90d = (
+        (total_count - _total_90d) if (total_count is not None and _total_90d is not None) else None
+    )
+
+    _rate30 = None
+    _rate90 = None
+    if total_count is not None and _total_30d is not None and _snap30:
+        _el30 = max(1, (_now - min(_snap30.values(), key=lambda s: s.snapped_at).snapped_at).days)
+        _rate30 = round((total_count - _total_30d) / _el30 * 7, 1)
+    if review_delta_90d is not None and _snap90:
+        _el90 = max(1, (_now - min(_snap90.values(), key=lambda s: s.snapped_at).snapped_at).days)
+        _rate90 = round(review_delta_90d / _el90 * 7, 1)
+
+    review_accel = None
+    if _rate30 is not None and _rate90 is not None:
+        if _rate90 > 0:
+            _ratio = _rate30 / _rate90
+            review_accel = "accelerating" if _ratio >= 1.3 else ("decelerating" if _ratio <= 0.7 else "stable")
+        elif _rate30 > 0:
+            review_accel = "accelerating"
+        elif _rate30 <= 0:
+            review_accel = "decelerating"
 
     # Per-market breakdown for multi-location competitors
     review_by_location = []
@@ -387,6 +432,10 @@ def competitor_detail(
         "total_prev":         total_prev,
         "avg_rating":         avg_rating,
         "review_delta":       review_delta,
+        "review_delta_90d":   review_delta_90d,
+        "review_accel":       review_accel,
+        "rate_30d":           _rate30,
+        "rate_90d":           _rate90,
         "last_collected":     last_collected,
         "review_by_location": review_by_location,
         "comp_review_chart":  comp_review_chart,
