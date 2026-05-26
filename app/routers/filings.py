@@ -1,3 +1,4 @@
+import re
 from collections import defaultdict
 from fastapi import APIRouter, Request, Depends, Query
 from fastapi.responses import HTMLResponse
@@ -9,6 +10,16 @@ from app.database import get_db
 from app.models.competitor import Competitor, CompetitorAttorney
 from app.models.filings import FilingSnapshot
 from app.services.pacer_discovery import get_cached_results
+
+_SUFFIX_RE = re.compile(
+    r',?\s*(Jr\.?|Sr\.?|II|III|IV|V|Esq\.?|P\.A\.?|PA)$', re.IGNORECASE
+)
+
+def _last_name(full_name: str) -> str:
+    """Extract normalised last name, stripping professional suffixes first."""
+    name = _SUFFIX_RE.sub("", full_name).strip().rstrip(",")
+    parts = name.split()
+    return parts[-1].lower().rstrip(",.") if parts else ""
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -327,9 +338,9 @@ def filings(
             d = MARKET_TO_DISTRICT.get(loc.market)
             if d in tracked_last_names:
                 for atty in comp.attorneys:
-                    parts = atty.attorney_name.strip().split()
-                    if parts:
-                        tracked_last_names[d].add(parts[-1].lower())
+                    ln = _last_name(atty.attorney_name)
+                    if ln:
+                        tracked_last_names[d].add(ln)
 
     # Surface high-volume untracked attorneys from discovery data
     _SURFACE_THRESHOLD = 5  # cases/month minimum to flag
@@ -342,7 +353,7 @@ def filings(
             name = (f.get("attorney") or "").strip()
             if not name:
                 continue
-            last = name.split()[-1].lower()
+            last = _last_name(name)
             if last not in tracked_set and f.get("cases", 0) >= _SURFACE_THRESHOLD:
                 out.append({"attorney": name, "cases": f["cases"]})
         return out  # already sorted by cases desc
