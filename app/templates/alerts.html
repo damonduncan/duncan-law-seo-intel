@@ -100,6 +100,7 @@
     </tr></thead>
     <tbody>
     {% for alert in alerts %}
+    {% set rec = alert.detail.get('recommendation', '') if alert.detail else '' %}
     <tr data-acked="{{ '1' if alert.acknowledged_at else '0' }}"
         data-type="{{ alert.alert_type }}"
         style="{% if alert.acknowledged_at %}opacity:.4;{% endif %}">
@@ -160,6 +161,16 @@
           {% if rival %}
             <div style="font-size:13px;color:var(--muted);margin-top:2px;">{{ rival }}</div>
           {% endif %}
+          {% if rec %}
+            <button type="button"
+              onclick="toggleRec('{{ alert.id }}', this)"
+              style="margin-top:6px;display:inline-flex;align-items:center;gap:4px;padding:2px 8px;
+                     border-radius:4px;border:1px solid var(--accent);background:transparent;
+                     color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;transition:all .12s;">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              What to do
+            </button>
+          {% endif %}
           {% if not msg and not rival %}
             <span style="color:var(--muted);">—</span>
           {% endif %}
@@ -188,6 +199,23 @@
         {% endif %}
       </td>
     </tr>
+    {% if rec %}
+    <tr id="rec-{{ alert.id }}"
+        data-acked="{{ '1' if alert.acknowledged_at else '0' }}"
+        data-type="{{ alert.alert_type }}"
+        style="display:none;{% if alert.acknowledged_at %}opacity:.4;{% endif %}">
+      <td colspan="7" style="padding:0 16px 14px 16px;border-bottom:1px solid var(--border);">
+        <div style="background:var(--blue-light,#eff6ff);border-left:3px solid var(--accent);
+                    border-radius:0 6px 6px 0;padding:12px 14px;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                      color:var(--accent);margin-bottom:7px;">
+            What to do
+          </div>
+          <div style="font-size:13px;color:var(--text);line-height:1.7;">{{ rec }}</div>
+        </div>
+      </td>
+    </tr>
+    {% endif %}
     {% endfor %}
     </tbody>
   </table>
@@ -204,12 +232,17 @@
     var rows = document.querySelectorAll('tbody tr');
     var shown = 0;
     rows.forEach(function(r) {
+      // rec-rows are controlled by toggleRec, not by the filter
+      if (r.id && r.id.startsWith('rec-')) return;
       var acked  = r.dataset.acked === '1';
       var rtype  = r.dataset.type;
       var viewOk = view === 'all' || !acked;
       var typeOk = type === 'all' || rtype === type;
       var show   = viewOk && typeOk;
       r.style.display = show ? '' : 'none';
+      // also hide open rec row when parent is hidden
+      var recRow = document.getElementById('rec-' + (r.dataset.alertId || ''));
+      if (!show && recRow) recRow.style.display = 'none';
       if (show) { r.style.opacity = acked ? '0.4' : ''; shown++; }
     });
     document.getElementById('no-results').style.display = shown === 0 ? '' : 'none';
@@ -228,6 +261,18 @@
       b.style.borderColor = active ? 'var(--border-2)' : 'var(--border)';
     });
   }
+
+  window.toggleRec = function(alertId, btn) {
+    var rec = document.getElementById('rec-' + alertId);
+    if (!rec) return;
+    var open = rec.style.display !== 'none';
+    rec.style.display = open ? 'none' : '';
+    btn.style.background    = open ? 'transparent' : 'var(--accent)';
+    btn.style.color         = open ? 'var(--accent)' : '#fff';
+    btn.innerHTML = open
+      ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> What to do'
+      : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Hide';
+  };
 
   window.dismissAlert = function(alertId, btn) {
     btn.disabled = true;

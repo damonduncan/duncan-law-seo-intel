@@ -65,6 +65,7 @@ def _check_pack_drop(db: Session, today_row: LocalPackRanking, own_firm_id: str,
             .first()
         )
         if not existing:
+            market_display = (today_row.market or today_row.city or "this market").replace("_", " ").title()
             alert = Alert(
                 id=new_uuid(),
                 alert_type="pack_drop",
@@ -78,6 +79,14 @@ def _check_pack_drop(db: Session, today_row: LocalPackRanking, own_firm_id: str,
                     "previous_position": yesterday_row.rank_position,
                     "current_position": None,
                     "message": f"Duncan Law dropped out of the 3-pack for '{today_row.keyword}'",
+                    "recommendation": (
+                        f"1) Search '{today_row.keyword}' in an incognito browser right now and note which 3 firms "
+                        f"are holding the pack — compare their review counts to yours in {market_display}. "
+                        f"2) Send review requests to every {market_display} client from the past 30 days today — "
+                        f"review count is the most common cause of a pack drop. "
+                        f"3) Post a fresh Google Business Profile update for your {market_display} location "
+                        f"(a tip, office photo, or recent case result) to signal activity to Google."
+                    ),
                 },
                 triggered_at=datetime.now(timezone.utc),
             )
@@ -150,6 +159,8 @@ def _check_competitor_entry(db: Session, today_row: LocalPackRanking, own_firm_i
             .first()
         )
         if not existing:
+            market_display = (today_row.market or today_row.city or "this market").replace("_", " ").title()
+            pos_str = f"#{comp_row.rank_position}" if comp_row.rank_position else "an unknown position"
             alert = Alert(
                 id=new_uuid(),
                 alert_type="competitor_pack_entry",
@@ -163,6 +174,12 @@ def _check_competitor_entry(db: Session, today_row: LocalPackRanking, own_firm_i
                     "competitor_name": comp_name,
                     "position": comp_row.rank_position,
                     "message": f"{comp_name} newly entered the 3-pack for '{today_row.keyword}'",
+                    "recommendation": (
+                        f"{comp_name} entered the pack at {pos_str} for '{today_row.keyword}' in {market_display}. "
+                        f"Look up their Google Business Profile and compare their review count to yours — "
+                        f"if they recently surpassed you in reviews, that's likely what moved them in. "
+                        f"Prioritize review requests from {market_display} clients this week to protect your position."
+                    ),
                 },
                 triggered_at=datetime.now(timezone.utc),
             )
@@ -181,6 +198,16 @@ def _send_immediate_alert_email(alert: Alert, db: Session) -> None:
         import resend
         resend.api_key = settings.resend_api_key
 
+        rec = alert.detail.get("recommendation", "")
+        rec_block = (
+            f"<div style='margin-top:16px;background:#eff6ff;border-left:3px solid #2563eb;"
+            f"padding:12px 14px;border-radius:0 6px 6px 0;'>"
+            f"<div style='font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;"
+            f"color:#2563eb;margin-bottom:6px;'>What to do</div>"
+            f"<div style='font-size:13px;color:#1e3a8a;line-height:1.6;'>{rec}</div>"
+            f"</div>"
+        ) if rec else ""
+
         if alert.alert_type == "pack_drop":
             subject = f"ALERT: Duncan Law dropped from 3-pack — {alert.detail.get('keyword')}"
             body = (
@@ -189,7 +216,8 @@ def _send_immediate_alert_email(alert: Alert, db: Session) -> None:
                 f"<strong>Market:</strong> {alert.market}<br>"
                 f"<strong>Previous position:</strong> #{alert.detail.get('previous_position')}<br>"
                 f"<strong>Current position:</strong> Not in pack</p>"
-                f"<p><a href='{settings.app_base_url}/alerts'>View all alerts</a></p>"
+                f"{rec_block}"
+                f"<p style='margin-top:16px;'><a href='{settings.app_base_url}/alerts'>View all alerts</a></p>"
             )
         else:
             subject = f"ALERT: Competitor entered 3-pack — {alert.detail.get('competitor_name')}"
@@ -198,7 +226,8 @@ def _send_immediate_alert_email(alert: Alert, db: Session) -> None:
                 f"<p><strong>Keyword:</strong> {alert.detail.get('keyword')}<br>"
                 f"<strong>Market:</strong> {alert.market}<br>"
                 f"<strong>Position:</strong> #{alert.detail.get('position')}</p>"
-                f"<p><a href='{settings.app_base_url}/alerts'>View all alerts</a></p>"
+                f"{rec_block}"
+                f"<p style='margin-top:16px;'><a href='{settings.app_base_url}/alerts'>View all alerts</a></p>"
             )
 
         resend.Emails.send({
@@ -333,6 +362,12 @@ def check_convergence_alerts(db: Session, own_firm_id: str) -> None:
                         f"for '{keyword}' in {market_display} over 30 days "
                         f"(Duncan Law at #{own_rank})."
                     ),
+                    "recommendation": (
+                        f"{comp_name} has climbed {improvement} positions in 30 days and is now at #{last_rank}, "
+                        f"just {last_rank - own_rank} spot{'s' if last_rank - own_rank != 1 else ''} behind you for '{keyword}' in {market_display}. "
+                        f"Don't wait for them to push you out — send review requests to {market_display} clients this week "
+                        f"and post a fresh update to your Google Business Profile to reinforce your position before they overtake it."
+                    ),
                 },
                 triggered_at=datetime.now(timezone.utc),
             )
@@ -434,6 +469,9 @@ def check_review_gaps(db: Session) -> None:
             if existing:
                 continue
 
+            ratio = round(comp_count / own_count, 1)
+            market_display = market.replace("_", " ").title()
+            gap = comp_count - own_count
             alert = Alert(
                 id=new_uuid(),
                 alert_type="review_gap",
@@ -445,11 +483,18 @@ def check_review_gaps(db: Session) -> None:
                     "competitor_name": comp.name,
                     "competitor_reviews": comp_count,
                     "duncan_law_reviews": own_count,
-                    "ratio": round(comp_count / own_count, 1),
+                    "ratio": ratio,
                     "message": (
-                        f"{comp.name} has {comp_count} reviews in {market.replace('_', ' ').title()} "
-                        f"vs. Duncan Law's {own_count} ({round(comp_count / own_count, 1)}×). "
+                        f"{comp.name} has {comp_count} reviews in {market_display} "
+                        f"vs. Duncan Law's {own_count} ({ratio}×). "
                         f"Prioritize review building for this market."
+                    ),
+                    "recommendation": (
+                        f"You need {gap} more reviews to match {comp.name} in {market_display}. "
+                        f"A gap this size directly threatens your 3-pack stability here. "
+                        f"Set a goal of 3–5 new Google reviews from {market_display} clients per week — "
+                        f"reviews collected now will improve your ranking visibility in 3–4 weeks. "
+                        f"Add a review-request step to your post-filing client workflow for this office."
                     ),
                 },
                 triggered_at=datetime.now(timezone.utc),
@@ -521,6 +566,11 @@ def check_pacer_trends(db: Session) -> None:
             if existing:
                 continue
 
+            district_markets = {
+                "MDNC": "Greensboro, Winston-Salem, High Point, and Salisbury",
+                "WDNC": "Charlotte and Asheville",
+            }
+            affected_markets = district_markets.get(district, district)
             alert = Alert(
                 id=new_uuid(),
                 alert_type="pacer_volume_spike",
@@ -537,6 +587,14 @@ def check_pacer_trends(db: Session) -> None:
                         f"{comp.name} filed {recent} cases in {district} over the last 90 days "
                         f"vs. {prior} in the prior 90 days (+{round(pct_change)}%). "
                         f"They may be growing market share in this district."
+                    ),
+                    "recommendation": (
+                        f"{comp.name} is filing {round(pct_change)}% more cases than 90 days ago — "
+                        f"this typically signals aggressive client acquisition in {district}. "
+                        f"Protect your share in {affected_markets} by ensuring your Google Business Profile listings "
+                        f"in those markets are up to date, have recent reviews, and are posting regularly. "
+                        f"A competitor filing more cases won't automatically hurt your SEO, but it does mean "
+                        f"they're acquiring clients who might otherwise have found you first."
                     ),
                 },
                 triggered_at=datetime.now(timezone.utc),
