@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     briefing_token: str = ""   # set BRIEFING_TOKEN env var to share /briefing without OAuth
 
     # App
-    app_base_url: str = "http://localhost:8000"
+    app_base_url: str = "https://duncan-law-seo-intel-production.up.railway.app"
     environment: str = "development"
     log_level: str = "INFO"
 
