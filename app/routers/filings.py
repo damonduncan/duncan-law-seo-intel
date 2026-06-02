@@ -202,6 +202,11 @@ def filings(
     for (cid, _aid, dist, _ch, per), count in counts.items():
         firm_period_totals[(cid, dist, per)] += count
 
+    # Chapter-split totals for own-firm trend chart
+    firm_chapter_period_totals: dict = defaultdict(int)
+    for (cid, _aid, dist, ch, per), count in counts.items():
+        firm_chapter_period_totals[(cid, dist, ch, per)] += count
+
     # District-level totals — total market volume per district per period
     district_period_totals: dict = defaultdict(int)
     for (cid, dist, per), val in firm_period_totals.items():
@@ -315,6 +320,26 @@ def filings(
     wdnc_mom = build_mom_table("WDNC")
     ednc_mom = build_mom_table("EDNC")
 
+    def build_chapter_trend(district: str) -> dict:
+        """Ch7 vs Ch13 monthly split for own firm in a district."""
+        own_cid = next((c.id for c in comp_map.values() if c.is_own_firm), None)
+        if not own_cid:
+            return {}
+        periods = sorted({
+            per for (cid, dist, ch, per) in firm_chapter_period_totals
+            if cid == own_cid and dist == district
+        })
+        if len(periods) < 2:
+            return {}
+        return {
+            "labels": [p.strftime("%b '%y") for p in periods],
+            "ch7":    [firm_chapter_period_totals.get((own_cid, district, 7, p), 0) for p in periods],
+            "ch13":   [firm_chapter_period_totals.get((own_cid, district, 13, p), 0) for p in periods],
+        }
+
+    mdnc_chapter = build_chapter_trend("MDNC")
+    wdnc_chapter = build_chapter_trend("WDNC")
+
     def build_district_volume(district: str) -> dict:
         periods = sorted(
             {per for (dist, per) in district_period_totals if dist == district},
@@ -420,6 +445,8 @@ def filings(
         "mdnc_trend":     mdnc_trend,
         "wdnc_trend":     wdnc_trend,
         "ednc_trend":     ednc_trend,
+        "mdnc_chapter":   mdnc_chapter,
+        "wdnc_chapter":   wdnc_chapter,
         "mdnc_mom":       mdnc_mom,
         "wdnc_mom":       wdnc_mom,
         "ednc_mom":       ednc_mom,

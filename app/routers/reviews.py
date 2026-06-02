@@ -50,8 +50,8 @@ def reviews(
             "competitor_count": competitor_count,
         })
 
-    # Most recent snapshots — last 60 days, newest first
-    since = datetime.now(timezone.utc) - timedelta(days=60)
+    # Most recent snapshots — last 100 days, newest first (supports 90-day recency windows)
+    since = datetime.now(timezone.utc) - timedelta(days=100)
     all_snaps = (
         db.query(ReviewSnapshot)
         .filter(ReviewSnapshot.snapped_at >= since)
@@ -63,6 +63,23 @@ def reviews(
     snap_history: dict = defaultdict(list)
     for s in all_snaps:
         snap_history[(s.competitor_id, s.source, s.market)].append(s)
+
+    def _gained_in_window(cid: str, days: int) -> int | None:
+        """Reviews gained by competitor cid in the last N days across all markets."""
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        total_now, total_then, found = 0, 0, False
+        for (c, source, market), snaps in snap_history.items():
+            if c != cid or source != "google":
+                continue
+            # Current count — newest snap
+            if snaps and snaps[0].review_count is not None:
+                total_now += snaps[0].review_count
+            # Count at cutoff — first snap at or before cutoff
+            older = [s for s in snaps if s.snapped_at <= cutoff]
+            if older and older[0].review_count is not None:
+                total_then += older[0].review_count
+                found = True
+        return (total_now - total_then) if found else None
 
     # Build current and previous lookups: competitor_id → {source: [snaps]}
     snap_index: dict = {}
@@ -90,6 +107,10 @@ def reviews(
         if s.market:
             history = snap_history[(own_firm.id, "google", s.market)]
             own_snap_deltas[s.market] = _rolling_weekly_rate(history)
+
+    own_gained_30d = _gained_in_window(own_firm.id, 30) if own_firm else None
+    own_gained_60d = _gained_in_window(own_firm.id, 60) if own_firm else None
+    own_gained_90d = _gained_in_window(own_firm.id, 90) if own_firm else None
 
     # Competitor rows
     competitors = (
@@ -129,6 +150,9 @@ def reviews(
             "google_count": total_count,
             "count_delta": delta,
             "weekly_rate": weekly_rate,
+            "gained_30d": _gained_in_window(c.id, 30),
+            "gained_60d": _gained_in_window(c.id, 60),
+            "gained_90d": _gained_in_window(c.id, 90),
             "last_updated": google_snaps[0].snapped_at if google_snaps else None,
         })
 
@@ -235,6 +259,9 @@ def reviews(
         "own_avg_rating": own_avg_rating,
         "own_total_reviews": own_total_reviews,
         "own_snap_deltas": own_snap_deltas,
+        "own_gained_30d": own_gained_30d,
+        "own_gained_60d": own_gained_60d,
+        "own_gained_90d": own_gained_90d,
         "comp_rows": comp_rows,
         "competitor_count": len(comp_rows),
         "recommendations": recommendations,

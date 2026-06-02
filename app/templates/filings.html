@@ -839,6 +839,45 @@
     </div>
   </div>
 </div>
+{% if mdnc_chapter and mdnc_chapter.labels %}
+<div class="card collapsible" id="cc-mdnc-chapter" style="margin-bottom:20px;">
+  <div class="card-header" onclick="toggleSection('sec-mdnc-chapter')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:14px;font-weight:600;color:var(--text);">Duncan Law — Ch. 7 vs Ch. 13 Split (MDNC)</span>
+    </div>
+    <svg id="chev-sec-mdnc-chapter" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div id="sec-mdnc-chapter" data-collapsible="1" style="padding:0 20px 20px;">
+    <div style="height:200px;position:relative;">
+      <canvas id="chapterChartMDNC"></canvas>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var d = {{ mdnc_chapter | tojson }};
+  if(!d.labels) return;
+  new Chart(document.getElementById('chapterChartMDNC'), {
+    type: 'bar',
+    data: {
+      labels: d.labels,
+      datasets: [
+        { label: 'Chapter 7', data: d.ch7, backgroundColor: 'rgba(37,99,235,0.75)', borderRadius: 3, stack: 'a' },
+        { label: 'Chapter 13', data: d.ch13, backgroundColor: 'rgba(124,58,237,0.75)', borderRadius: 3, stack: 'a' },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 }, color: '#6b7280' } },
+        y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,.05)' }, ticks: { font: { size: 11 }, color: '#6b7280' } }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
 {{ district_table(mdnc_rows, "MDNC — Middle District of NC") }}
 {{ discovery_section(mdnc_discovery, "MDNC", "MDNC", mdnc_tracked) }}
 
@@ -865,6 +904,45 @@
     </div>
   </div>
 </div>
+{% if wdnc_chapter and wdnc_chapter.labels %}
+<div class="card collapsible" id="cc-wdnc-chapter" style="margin-bottom:20px;">
+  <div class="card-header" onclick="toggleSection('sec-wdnc-chapter')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:14px;font-weight:600;color:var(--text);">Duncan Law — Ch. 7 vs Ch. 13 Split (WDNC)</span>
+    </div>
+    <svg id="chev-sec-wdnc-chapter" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div id="sec-wdnc-chapter" data-collapsible="1" style="padding:0 20px 20px;">
+    <div style="height:200px;position:relative;">
+      <canvas id="chapterChartWDNC"></canvas>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var d = {{ wdnc_chapter | tojson }};
+  if(!d.labels) return;
+  new Chart(document.getElementById('chapterChartWDNC'), {
+    type: 'bar',
+    data: {
+      labels: d.labels,
+      datasets: [
+        { label: 'Chapter 7', data: d.ch7, backgroundColor: 'rgba(37,99,235,0.75)', borderRadius: 3, stack: 'a' },
+        { label: 'Chapter 13', data: d.ch13, backgroundColor: 'rgba(124,58,237,0.75)', borderRadius: 3, stack: 'a' },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 }, color: '#6b7280' } },
+        y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,.05)' }, ticks: { font: { size: 11 }, color: '#6b7280' } }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
 {{ district_table(wdnc_rows, "WDNC — Western District of NC") }}
 {{ discovery_section(wdnc_discovery, "WDNC", "WDNC", wdnc_tracked) }}
 

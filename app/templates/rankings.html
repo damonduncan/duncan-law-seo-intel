@@ -238,6 +238,15 @@
                           <span style="font-size:10px;color:var(--muted);">—<span style="opacity:.55;">60d</span></span>
                         {% endif %}
                       {% endif %}
+                      {% if p.traj['90d_delta'] is not none %}
+                        {% if p.traj['90d_delta'] < 0 %}
+                          <span style="font-size:10px;color:var(--green-dark);">↑{{ p.traj['90d_delta']|abs }}<span style="opacity:.55;">90d</span></span>
+                        {% elif p.traj['90d_delta'] > 0 %}
+                          <span style="font-size:10px;color:var(--red-dark);">↓{{ p.traj['90d_delta'] }}<span style="opacity:.55;">90d</span></span>
+                        {% else %}
+                          <span style="font-size:10px;color:var(--muted);">—<span style="opacity:.55;">90d</span></span>
+                        {% endif %}
+                      {% endif %}
                     </div>
                   {% endif %}
                 </div>
@@ -279,6 +288,8 @@
       <th>7d Δ</th>
       <th>30d Δ</th>
       <th>60d Δ</th>
+      <th>90d Δ</th>
+      <th>Stability</th>
       <th>Trend</th>
       <th>Last Checked</th>
     </tr></thead>
@@ -286,7 +297,7 @@
     {% set ns = namespace(prev_kw='__none__') %}
     {% for p in positions %}
     {% if p.keyword_short != ns.prev_kw and ns.prev_kw != '__none__' %}
-    <tr><td colspan="8" style="padding:0;height:1px;background:var(--border);"></td></tr>
+    <tr><td colspan="10" style="padding:0;height:1px;background:var(--border);"></td></tr>
     {% endif %}
     {% set ns.prev_kw = p.keyword_short %}
     <tr>
@@ -342,6 +353,40 @@
             <span style="font-size:13px;font-weight:700;color:var(--green-dark);">↑ {{ d60|abs }}</span>
           {% elif d60 > 0 %}
             <span style="font-size:13px;font-weight:700;color:var(--red-dark);">↓ {{ d60 }}</span>
+          {% else %}
+            <span style="font-size:13px;color:var(--muted);">—</span>
+          {% endif %}
+        {% else %}
+          <span style="font-size:13px;color:var(--muted);">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if p.traj and p.traj['90d_delta'] is not none %}
+          {% set d90 = p.traj['90d_delta'] %}
+          {% if d90 < 0 %}
+            <span style="font-size:13px;font-weight:700;color:var(--green-dark);">↑ {{ d90|abs }}</span>
+          {% elif d90 > 0 %}
+            <span style="font-size:13px;font-weight:700;color:var(--red-dark);">↓ {{ d90 }}</span>
+          {% else %}
+            <span style="font-size:13px;color:var(--muted);">—</span>
+          {% endif %}
+        {% else %}
+          <span style="font-size:13px;color:var(--muted);">—</span>
+        {% endif %}
+      </td>
+      <td style="white-space:nowrap;">
+        {% if p.volatility and p.volatility.label is defined and p.volatility.label != '—' %}
+          {% set vcls = p.volatility.cls %}
+          {% if vcls == 'green' %}
+            <span class="chip chip-green" style="font-size:11px;">{{ p.volatility.label }}</span>
+          {% elif vcls == 'red' %}
+            <span class="chip chip-red" style="font-size:11px;">{{ p.volatility.label }}</span>
+          {% elif vcls == 'orange' %}
+            <span class="chip chip-orange" style="font-size:11px;">{{ p.volatility.label }}</span>
+          {% elif vcls == 'blue' %}
+            <span class="chip chip-blue" style="font-size:11px;">{{ p.volatility.label }}</span>
+          {% elif vcls == 'yellow' %}
+            <span class="chip chip-yellow" style="font-size:11px;">{{ p.volatility.label }}</span>
           {% else %}
             <span style="font-size:13px;color:var(--muted);">—</span>
           {% endif %}

@@ -65,8 +65,8 @@ def rankings(
     own_firm = db.query(Competitor).filter(Competitor.is_own_firm == True).first()
     own_firm_id = own_firm.id if own_firm else None
 
-    # 90 days of own-firm rankings (own-firm markets only), ascending for trend building
-    since = date.today() - timedelta(days=90)
+    # 180 days of own-firm rankings (own-firm markets only), ascending for trend building
+    since = date.today() - timedelta(days=180)
     own_rankings = (
         db.query(LocalPackRanking)
         .filter(
@@ -115,6 +115,7 @@ def rankings(
     week_ago_str   = (date.today() - timedelta(days=7)).strftime("%Y-%m-%d")
     thirty_ago_str = (date.today() - timedelta(days=30)).strftime("%Y-%m-%d")
     sixty_ago_str  = (date.today() - timedelta(days=60)).strftime("%Y-%m-%d")
+    ninety_ago_str = (date.today() - timedelta(days=90)).strftime("%Y-%m-%d")
 
     def _rank_delta(cur, past):
         return (cur - past) if cur is not None and past is not None else None
@@ -144,14 +145,56 @@ def rankings(
             current_rank = day_ranks[date_keys[-1]]
             thirty_days  = [d for d in date_keys if d <= thirty_ago_str]
             sixty_days   = [d for d in date_keys if d <= sixty_ago_str]
+            ninety_days  = [d for d in date_keys if d <= ninety_ago_str]
             pos_30 = day_ranks[thirty_days[-1]] if thirty_days else None
             pos_60 = day_ranks[sixty_days[-1]]  if sixty_days  else None
+            pos_90 = day_ranks[ninety_days[-1]] if ninety_days else None
             trajectory[market][kw] = {
                 "current":   current_rank,
                 "30d_pos":   pos_30,
                 "30d_delta": _rank_delta(current_rank, pos_30),
                 "60d_pos":   pos_60,
                 "60d_delta": _rank_delta(current_rank, pos_60),
+                "90d_pos":   pos_90,
+                "90d_delta": _rank_delta(current_rank, pos_90),
+            }
+
+    # Volatility classification — distinguishes gradual erosion from sudden drops
+    volatility: dict = {}
+    for market, kw_dict in trend_raw.items():
+        volatility[market] = {}
+        for kw, day_ranks in kw_dict.items():
+            date_keys_v = sorted(day_ranks.keys())
+            # Only in-pack positions (None = out of pack, treated as rank 4 for volatility)
+            pos_list = [day_ranks[d] if day_ranks[d] is not None else 4 for d in date_keys_v]
+            if len(pos_list) < 4:
+                volatility[market][kw] = {"label": "—", "cls": "muted"}
+                continue
+            # Standard deviation
+            avg = sum(pos_list) / len(pos_list)
+            std_dev = (sum((p - avg) ** 2 for p in pos_list) / len(pos_list)) ** 0.5
+            # Max single-step change
+            max_jump = max(abs(pos_list[i] - pos_list[i-1]) for i in range(1, len(pos_list)))
+            # Recent vs earlier trend (second half vs first half avg)
+            mid = len(pos_list) // 2
+            early_avg = sum(pos_list[:mid]) / mid
+            recent_avg = sum(pos_list[mid:]) / len(pos_list[mid:])
+            trend_change = recent_avg - early_avg  # positive = worsening (rank# increasing)
+            if std_dev < 0.4:
+                label, cls = "Stable", "green"
+            elif max_jump >= 2 and trend_change > 0.5:
+                label, cls = "Sudden drop", "red"
+            elif max_jump >= 2 and trend_change < -0.5:
+                label, cls = "Recovering", "blue"
+            elif trend_change > 0.4:
+                label, cls = "Gradual decline", "orange"
+            elif trend_change < -0.4:
+                label, cls = "Improving", "green"
+            else:
+                label, cls = "Volatile", "yellow"
+            volatility[market][kw] = {
+                "label": label, "cls": cls,
+                "std_dev": round(std_dev, 2), "max_jump": max_jump,
             }
 
     # positions list — drives Current Positions table with pre-computed delta
@@ -175,6 +218,7 @@ def rankings(
             "scraped_at":    r.scraped_at,
             "delta":         delta_info,
             "traj":          traj_info,
+            "volatility":    volatility.get(r.market, {}).get(kw_short, {}),
         })
     positions.sort(key=lambda x: (x["keyword"] or "", x["city"] or ""))
 
@@ -438,4 +482,5 @@ def rankings(
         "top_opportunities":  top_opportunities,
         "own_pack_date":      own_pack_date,
         "ednc_pack_date":     ednc_pack_date,
+        "volatility":         volatility,
     })
