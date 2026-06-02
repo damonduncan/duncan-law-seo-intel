@@ -1608,5 +1608,197 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<!-- ── Ask AI widget ────────────────────────────────────────────────────── -->
+<div id="ask-ai-panel" style="
+  display:none;position:fixed;bottom:80px;right:24px;z-index:9999;
+  width:min(420px,calc(100vw - 32px));
+  background:var(--surface);border:1px solid var(--border-2);
+  border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);
+  overflow:hidden;flex-direction:column;">
+
+  <!-- Header -->
+  <div style="background:var(--accent);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span style="color:#fff;font-size:14px;font-weight:700;letter-spacing:.01em;">Ask Market Pulse AI</span>
+    </div>
+    <button onclick="closeAskAI()" style="background:rgba(255,255,255,.15);border:none;border-radius:6px;padding:3px 7px;cursor:pointer;color:#fff;font-size:16px;line-height:1;">×</button>
+  </div>
+
+  <!-- Conversation area -->
+  <div id="ask-ai-output" style="
+    padding:16px;min-height:60px;max-height:360px;overflow-y:auto;
+    font-size:14px;line-height:1.7;color:var(--text);white-space:pre-wrap;
+    display:none;border-bottom:1px solid var(--border);">
+  </div>
+
+  <!-- Suggested prompts (shown before first question) -->
+  <div id="ask-ai-suggestions" style="padding:12px 16px 8px;">
+    <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">Try asking…</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      {% for prompt in [
+        "Why am I losing ground in Greensboro?",
+        "Which competitor should I worry about most?",
+        "Where should I focus review building?",
+        "How does my WDNC market share look?",
+        "What's my biggest risk right now?"
+      ] %}
+      <button onclick="useSuggestion(this.textContent)" style="
+        padding:5px 10px;border-radius:20px;border:1px solid var(--border-2);
+        background:var(--surface-2);color:var(--text-2);font-size:12px;
+        cursor:pointer;transition:all .12s;text-align:left;line-height:1.3;">{{ prompt }}</button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Input area -->
+  <div style="padding:12px 16px 14px;display:flex;gap:8px;align-items:flex-end;">
+    <textarea id="ask-ai-input" rows="2"
+      placeholder="Ask anything about your rankings, reviews, PACER data, or competitors…"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitAskAI();}"
+      style="flex:1;resize:none;border:1px solid var(--border-2);border-radius:8px;
+             padding:9px 12px;font-size:13px;line-height:1.5;font-family:inherit;
+             background:var(--surface-2);color:var(--text);outline:none;
+             transition:border-color .12s;"
+      onfocus="this.style.borderColor='var(--accent)'"
+      onblur="this.style.borderColor='var(--border-2)'"></textarea>
+    <button id="ask-ai-submit" onclick="submitAskAI()" style="
+      background:var(--accent);color:#fff;border:none;border-radius:8px;
+      padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;
+      transition:background .12s;white-space:nowrap;align-self:flex-end;">
+      Ask
+    </button>
+  </div>
+</div>
+
+<!-- Floating trigger button -->
+<button id="ask-ai-btn" onclick="toggleAskAI()" title="Ask AI" style="
+  position:fixed;bottom:24px;right:24px;z-index:9999;
+  background:var(--accent);color:#fff;border:none;border-radius:50px;
+  padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;
+  box-shadow:0 4px 20px rgba(37,99,235,.4);
+  display:flex;align-items:center;gap:7px;transition:all .15s;letter-spacing:.01em;">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+  Ask AI
+</button>
+
+<script>
+(function() {
+  var panel    = document.getElementById('ask-ai-panel');
+  var input    = document.getElementById('ask-ai-input');
+  var output   = document.getElementById('ask-ai-output');
+  var sugg     = document.getElementById('ask-ai-suggestions');
+  var submitBtn= document.getElementById('ask-ai-submit');
+  var isOpen   = false;
+  var loading  = false;
+
+  window.toggleAskAI = function() {
+    isOpen = !isOpen;
+    panel.style.display = isOpen ? 'flex' : 'none';
+    if (isOpen) { setTimeout(function(){ input.focus(); }, 80); }
+  };
+
+  window.closeAskAI = function() {
+    isOpen = false;
+    panel.style.display = 'none';
+  };
+
+  window.useSuggestion = function(text) {
+    input.value = text;
+    input.focus();
+    submitAskAI();
+  };
+
+  window.submitAskAI = function() {
+    if (loading) return;
+    var q = input.value.trim();
+    if (!q) return;
+
+    loading = true;
+    submitBtn.disabled = true;
+    submitBtn.textContent = '…';
+    sugg.style.display = 'none';
+
+    // Show output area with question header + loading state
+    output.style.display = 'block';
+    output.innerHTML =
+      '<span style="font-size:11px;font-weight:700;text-transform:uppercase;' +
+      'letter-spacing:.07em;color:var(--accent);">Your question</span>\n' +
+      escHtml(q) + '\n\n' +
+      '<span style="font-size:11px;font-weight:700;text-transform:uppercase;' +
+      'letter-spacing:.07em;color:var(--muted);">Answer</span>\n' +
+      '<span id="ask-ai-stream" style="color:var(--text);"></span>' +
+      '<span id="ask-ai-cursor" style="display:inline-block;width:2px;height:14px;' +
+      'background:var(--accent);margin-left:2px;vertical-align:text-bottom;' +
+      'animation:blink .7s step-end infinite;"></span>';
+
+    var streamEl = document.getElementById('ask-ai-stream');
+
+    fetch('/ai/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: q }),
+    }).then(function(resp) {
+      if (!resp.ok) {
+        return resp.json().then(function(e) {
+          throw new Error(e.error || ('HTTP ' + resp.status));
+        });
+      }
+      var reader  = resp.body.getReader();
+      var decoder = new TextDecoder();
+
+      function read() {
+        return reader.read().then(function(chunk) {
+          if (chunk.done) {
+            done();
+            return;
+          }
+          streamEl.textContent += decoder.decode(chunk.value, { stream: true });
+          output.scrollTop = output.scrollHeight;
+          return read();
+        });
+      }
+      return read();
+    }).catch(function(err) {
+      if (streamEl) streamEl.textContent = 'Error: ' + err.message;
+      done();
+    });
+
+    function done() {
+      var cursor = document.getElementById('ask-ai-cursor');
+      if (cursor) cursor.remove();
+      loading = false;
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Ask';
+      input.value = '';
+
+      // Add "New question" link below answer
+      var newQ = document.createElement('div');
+      newQ.style.cssText = 'margin-top:14px;padding-top:12px;border-top:1px solid var(--border);';
+      newQ.innerHTML = '<button onclick="resetAskAI()" style="background:none;border:1px solid var(--border-2);' +
+        'border-radius:6px;padding:5px 12px;font-size:12px;color:var(--muted);cursor:pointer;">New question</button>';
+      output.appendChild(newQ);
+    }
+  };
+
+  window.resetAskAI = function() {
+    output.style.display = 'none';
+    output.innerHTML = '';
+    sugg.style.display = 'block';
+    input.value = '';
+    input.focus();
+  };
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Blink animation for cursor
+  var style = document.createElement('style');
+  style.textContent = '@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }';
+  document.head.appendChild(style);
+})();
+</script>
+
 </body>
 </html>
