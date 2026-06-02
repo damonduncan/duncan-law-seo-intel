@@ -76,6 +76,7 @@ from app.routers.alerts import router as alerts_router
 from app.routers.admin import router as admin_router
 from app.routers.briefing import router as briefing_router
 from app.routers.ai_chat import router as ai_chat_router
+from app.routers.ppc import router as ppc_router
 
 app.include_router(overview_router)
 app.include_router(rankings_router)
@@ -86,6 +87,7 @@ app.include_router(alerts_router)
 app.include_router(admin_router)
 app.include_router(briefing_router)
 app.include_router(ai_chat_router)
+app.include_router(ppc_router)
 
 templates = Jinja2Templates(directory="app/templates")
 

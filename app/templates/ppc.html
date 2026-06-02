@@ -1,0 +1,535 @@
+{% extends "base.html" %}
+{% block title %}Lead Intelligence{% endblock %}
+{% block content %}
+
+<h1>Lead Intelligence</h1>
+<p class="page-sub">Google Ads performance · organic rank correlation · demand seasonality</p>
+
+{% if request.query_params.get('msg') == 'added' %}
+<div class="status-bar green" style="margin-bottom:24px;">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>
+  <strong>Month added successfully.</strong>
+</div>
+{% endif %}
+
+{% if not has_data %}
+<div class="card">
+  <div class="section-title">
+    <span class="section-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </span>
+    No PPC Data Loaded Yet
+  </div>
+  <p style="color:var(--muted);font-size:15px;line-height:1.8;margin-bottom:16px;">
+    No Google Ads performance data has been seeded yet. Run the seed script to populate historical data:
+  </p>
+  <pre style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 18px;font-size:14px;color:var(--text-2);overflow-x:auto;margin-bottom:0;">DATABASE_URL='...' python scripts/seed_ppc_data.py</pre>
+</div>
+
+{% else %}
+
+{# ─── Section 1: Summary Stat Cards ─────────────────────────────────────── #}
+<div class="card-grid" style="margin-bottom:24px;">
+
+  <div class="stat-card stat-blue">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </div>
+    <div class="label">Total Leads</div>
+    <div class="value">{{ summary.total_leads }}</div>
+    <div class="sub">across all months</div>
+  </div>
+
+  <div class="stat-card stat-purple">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    </div>
+    <div class="label">Avg Cost / Lead</div>
+    <div class="value" style="font-size:26px;">${{ summary.avg_cpl }}</div>
+    <div class="sub">all-time average</div>
+  </div>
+
+  <div class="stat-card stat-teal">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+    </div>
+    <div class="label">Best Month</div>
+    <div class="value" style="font-size:20px;margin-top:4px;">{{ summary.best_month.label }}</div>
+    <div class="sub">{{ summary.best_month.leads }} leads @ ${{ summary.best_month.cpl }}</div>
+  </div>
+
+  <div class="stat-card stat-green">
+    <div class="stat-top-bar"></div>
+    <div class="stat-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+    </div>
+    <div class="label">CPL Improvement</div>
+    <div class="value" style="color:var(--green-dark);">{{ summary.cpl_improvement_pct }}%</div>
+    <div class="sub">since Dec 2021 · ${{ summary.first_cpl }} → ${{ summary.latest_cpl }}</div>
+  </div>
+
+</div>
+
+{# ─── Section 2: Monthly Leads & CPL Trend ───────────────────────────────── #}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-ppc-trend')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </span>
+    Monthly Performance — All Markets
+    <span id="chev-sec-ppc-trend" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-ppc-trend" data-collapsible="1">
+    <div class="chart-wrap">
+      <canvas id="ppcTrendChart"></canvas>
+    </div>
+  </div>
+</div>
+<script>
+(function() {
+  var d = {{ chart_trend | tojson }};
+  if (!d || !d.labels || !d.labels.length) return;
+  new Chart(document.getElementById('ppcTrendChart'), {
+    data: {
+      labels: d.labels,
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Total Leads',
+          data: d.leads,
+          backgroundColor: 'rgba(37,99,235,0.75)',
+          borderRadius: 3,
+          yAxisID: 'y',
+          order: 2,
+        },
+        {
+          type: 'line',
+          label: 'CPL ($)',
+          data: d.cpl,
+          borderColor: 'rgba(249,115,22,1)',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [6, 3],
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          tension: 0.3,
+          yAxisID: 'y2',
+          order: 1,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              if (ctx.dataset.label === 'CPL ($)') {
+                return 'CPL: $' + (ctx.parsed.y || 0).toFixed(2);
+              }
+              return 'Leads: ' + ctx.parsed.y;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#6b7280' } },
+        y: {
+          beginAtZero: true,
+          position: 'left',
+          ticks: { precision: 0, font: { size: 11 }, color: '#6b7280' },
+          grid: { color: 'rgba(0,0,0,.05)' },
+          title: { display: true, text: 'Leads', font: { size: 11 }, color: '#6b7280' }
+        },
+        y2: {
+          beginAtZero: false,
+          position: 'right',
+          ticks: {
+            font: { size: 11 }, color: '#f97316',
+            callback: function(v) { return '$' + v.toFixed(0); }
+          },
+          grid: { display: false },
+          title: { display: true, text: 'CPL ($)', font: { size: 11 }, color: '#f97316' }
+        }
+      }
+    }
+  });
+})();
+</script>
+
+{# ─── Section 3: Market Breakdown ────────────────────────────────────────── #}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-ppc-markets')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon purple">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg>
+    </span>
+    Performance by Market
+    <span id="chev-sec-ppc-markets" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-ppc-markets" data-collapsible="1">
+    <table>
+      <thead><tr>
+        <th>Market</th>
+        <th style="text-align:right;">Total Leads</th>
+        <th style="text-align:right;">Avg CPL</th>
+        <th style="text-align:right;">Total Spend</th>
+        <th>Best Month</th>
+      </tr></thead>
+      <tbody>
+      {% for m in market_summary %}
+      {% if m.avg_cpl < 60 %}
+        {% set cpl_color = "var(--green-dark)" %}
+        {% set cpl_bg = "var(--green-light)" %}
+      {% elif m.avg_cpl < 90 %}
+        {% set cpl_color = "var(--yellow-dark)" %}
+        {% set cpl_bg = "var(--yellow-light)" %}
+      {% else %}
+        {% set cpl_color = "var(--red-dark)" %}
+        {% set cpl_bg = "var(--red-light)" %}
+      {% endif %}
+      <tr>
+        <td style="font-weight:700;font-size:15px;">{{ m.market }}</td>
+        <td style="text-align:right;font-weight:700;">{{ m.total_leads }}</td>
+        <td style="text-align:right;">
+          <span style="display:inline-block;background:{{ cpl_bg }};color:{{ cpl_color }};font-weight:700;font-size:14px;padding:3px 10px;border-radius:20px;">
+            ${{ m.avg_cpl | round(2) }}
+          </span>
+        </td>
+        <td style="text-align:right;font-size:15px;color:var(--muted);">${{ "{:,.0f}".format(m.total_spend) }}</td>
+        <td style="font-size:14px;color:var(--muted);">{{ m.best_month }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p style="font-size:14px;color:var(--muted);margin-top:16px;line-height:1.7;border-top:1px solid var(--border);padding-top:12px;">
+      Charlotte generates the most leads. Greensboro is historically most efficient. Salisbury has the highest CPL variability.
+    </p>
+  </div>
+</div>
+
+{# ─── Section 4: Seasonal Demand ─────────────────────────────────────────── #}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-ppc-seasonal')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon teal">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    </span>
+    When Do People Search? — Seasonal Demand Pattern
+    <span id="chev-sec-ppc-seasonal" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-ppc-seasonal" data-collapsible="1">
+    <div class="chart-wrap">
+      <canvas id="ppcSeasonalChart"></canvas>
+    </div>
+    <p style="font-size:14px;color:var(--muted);margin-top:16px;line-height:1.7;border-top:1px solid var(--border);padding-top:12px;">
+      <strong style="color:var(--text);">Peak demand is August–October.</strong>
+      Start review campaigns in June–July to build rankings before peak season.
+    </p>
+  </div>
+</div>
+<script>
+(function() {
+  var d = {{ seasonal | tojson }};
+  if (!d || !d.labels || !d.labels.length) return;
+  // July=index 6, Aug=7, Sep=8 (0-indexed)
+  var peakMonths = [6, 7, 8];
+  var colors = d.labels.map(function(_, i) {
+    return peakMonths.indexOf(i) >= 0
+      ? 'rgba(37,99,235,0.85)'
+      : 'rgba(37,99,235,0.38)';
+  });
+  new Chart(document.getElementById('ppcSeasonalChart'), {
+    type: 'bar',
+    data: {
+      labels: d.labels,
+      datasets: [{
+        label: 'Avg Leads',
+        data: d.avg_leads,
+        backgroundColor: colors,
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) { return 'Avg leads: ' + ctx.parsed.y.toFixed(1); }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 12 }, color: '#6b7280' } },
+        y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 }, color: '#6b7280' }, grid: { color: 'rgba(0,0,0,.05)' } }
+      }
+    }
+  });
+})();
+</script>
+
+{# ─── Section 5: Organic vs PPC Cross-Analysis ───────────────────────────── #}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-ppc-organic')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon green">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </span>
+    Where Organic Rankings = Money Saved
+    <span id="chev-sec-ppc-organic" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-ppc-organic" data-collapsible="1">
+    <p style="font-size:14px;color:var(--muted);margin-bottom:18px;line-height:1.7;">
+      Markets where you're ranked #1 organically don't need as much PPC spend. Markets with weak organic rank
+      <strong style="color:var(--text);">AND</strong> high CPL are your highest ROI SEO opportunities.
+    </p>
+    <table>
+      <thead><tr>
+        <th>Market</th>
+        <th>District</th>
+        <th style="text-align:center;">Organic Rank</th>
+        <th style="text-align:right;">Monthly Spend</th>
+        <th style="text-align:right;">Monthly Leads</th>
+        <th style="text-align:right;">CPL</th>
+        <th>Opportunity</th>
+      </tr></thead>
+      <tbody>
+      {% for row in organic_vs_ppc %}
+        {# Determine row background tint based on organic rank #}
+        {% if row.avg_rank is not none and row.avg_rank <= 1.5 %}
+          {% set row_bg = "background:rgba(16,185,129,0.06);" %}
+        {% elif row.avg_rank is not none and row.avg_rank <= 2.5 %}
+          {% set row_bg = "background:rgba(245,158,11,0.06);" %}
+        {% elif row.avg_rank is not none and row.avg_rank <= 3.5 %}
+          {% set row_bg = "background:rgba(249,115,22,0.05);" %}
+        {% else %}
+          {% set row_bg = "" %}
+        {% endif %}
+
+        {# Rank chip #}
+        {% if row.avg_rank is not none and row.avg_rank <= 1.5 %}
+          {% set rank_chip %}<span class="chip chip-green" style="font-size:12px;">&#10003; #1 Organic</span>{% endset %}
+        {% elif row.avg_rank is not none and row.avg_rank <= 2.5 %}
+          {% set rank_chip %}<span class="chip chip-yellow" style="font-size:12px;">#2 Organic</span>{% endset %}
+        {% elif row.avg_rank is not none and row.avg_rank <= 3.5 %}
+          {% set rank_chip %}<span class="chip chip-orange" style="font-size:12px;">#3 Organic</span>{% endset %}
+        {% else %}
+          {% set rank_chip %}<span class="chip chip-red" style="font-size:12px;">Not ranked</span>{% endset %}
+        {% endif %}
+
+        {# Opportunity text #}
+        {% if row.avg_rank is not none and row.avg_rank <= 1.5 %}
+          {% set opp_text %}Leading — organic saves ~${{ row.monthly_spend | int }}/mo in this market{% endset %}
+          {% set opp_color = "var(--green-dark)" %}
+        {% elif row.avg_rank is not none and row.avg_rank <= 2.5 %}
+          {% set opp_text %}One spot from #1 — review building could reduce PPC here{% endset %}
+          {% set opp_color = "var(--yellow-dark)" %}
+        {% elif row.avg_rank is not none and row.avg_rank <= 3.5 %}
+          {% set opp_text %}Weak organic — improving rank = up to ${{ row.monthly_spend | int }}/mo saved{% endset %}
+          {% set opp_color = "var(--orange)" %}
+        {% else %}
+          {% set opp_text %}No organic data — PPC is primary channel here{% endset %}
+          {% set opp_color = "var(--muted)" %}
+        {% endif %}
+
+      <tr style="{{ row_bg }}">
+        <td style="font-weight:700;font-size:15px;">{{ row.market }}</td>
+        <td style="font-size:14px;">
+          <span style="background:var(--surface-2);color:var(--muted);font-size:12px;font-weight:600;padding:2px 9px;border-radius:10px;">{{ row.district }}</span>
+        </td>
+        <td style="text-align:center;">{{ rank_chip }}</td>
+        <td style="text-align:right;font-weight:600;">${{ "{:,.0f}".format(row.monthly_spend) }}</td>
+        <td style="text-align:right;font-weight:600;">{{ row.monthly_leads }}</td>
+        <td style="text-align:right;">
+          {% if row.cpl < 60 %}
+            <span style="color:var(--green-dark);font-weight:700;">${{ row.cpl | round(2) }}</span>
+          {% elif row.cpl < 90 %}
+            <span style="color:var(--yellow-dark);font-weight:700;">${{ row.cpl | round(2) }}</span>
+          {% else %}
+            <span style="color:var(--red-dark);font-weight:700;">${{ row.cpl | round(2) }}</span>
+          {% endif %}
+        </td>
+        <td style="font-size:14px;color:{{ opp_color }};font-weight:500;max-width:260px;">{{ opp_text }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+      <span style="font-size:14px;color:var(--muted);">Total monthly PPC spend:</span>
+      <span style="font-size:16px;font-weight:800;color:var(--text);">${{ organic_vs_ppc | sum(attribute='monthly_spend') | round | int }}</span>
+    </div>
+  </div>
+</div>
+
+{# ─── Section 6: Recent Months Detail ────────────────────────────────────── #}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-ppc-recent')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon orange">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    </span>
+    Last 6 Months — Market Breakdown
+    <span id="chev-sec-ppc-recent" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-ppc-recent" style="display:none;" data-collapsible="1">
+    {% if recent_months %}
+    {% set markets_list = recent_months[0].markets.keys() | list if recent_months[0].markets is defined else [] %}
+    <div style="overflow-x:auto;">
+    <table>
+      <thead><tr>
+        <th>Month</th>
+        {% for mkt in markets_list %}
+        <th style="text-align:right;">{{ mkt }}</th>
+        {% endfor %}
+      </tr></thead>
+      <tbody>
+      {% for mo in recent_months %}
+      <tr>
+        <td style="font-weight:700;font-size:15px;white-space:nowrap;">{{ mo.label }}</td>
+        {% for mkt in markets_list %}
+        {% set mdata = mo.markets.get(mkt) if mo.markets is defined else none %}
+        <td style="text-align:right;font-size:14px;color:var(--muted);white-space:nowrap;">
+          {% if mdata %}
+            <span style="font-weight:600;color:var(--text);">{{ mdata.leads }} leads</span>
+            <span style="color:var(--muted-2);font-size:13px;"> / ${{ "%.2f"|format(mdata.cpl) }}</span>
+          {% else %}
+            <span style="color:var(--muted-2);">—</span>
+          {% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p style="color:var(--muted);font-size:15px;">No recent month data available.</p>
+    {% endif %}
+  </div>
+</div>
+
+{# ─── Section 7: Add Monthly Data ─────────────────────────────────────────── #}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-ppc-add')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </span>
+    Add Monthly PPC Report
+    <span id="chev-sec-ppc-add" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-ppc-add" style="display:none;" data-collapsible="1">
+    <form method="post" action="/ppc/add-month" style="max-width:860px;">
+
+      {# Year + Month row #}
+      <div style="display:grid;grid-template-columns:160px 220px;gap:16px;margin-bottom:28px;">
+        <div>
+          <label style="display:block;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Year</label>
+          <input type="number" name="year" value="{{ 2026 }}" min="2019" max="2035"
+                 style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:16px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;transition:border-color .15s;">
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Month</label>
+          <select name="month"
+                  style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:16px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;cursor:pointer;">
+            <option value="1">January</option>
+            <option value="2">February</option>
+            <option value="3">March</option>
+            <option value="4">April</option>
+            <option value="5">May</option>
+            <option value="6">June</option>
+            <option value="7">July</option>
+            <option value="8">August</option>
+            <option value="9">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12">December</option>
+          </select>
+        </div>
+      </div>
+
+      {# Per-market input sections #}
+      {% for market_key, market_label in [('charlotte','Charlotte'),('greensboro','Greensboro'),('winston','Winston-Salem'),('salisbury','Salisbury')] %}
+      <div style="margin-bottom:24px;padding:18px 20px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);">
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--accent-mid);color:var(--accent-dark);font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;">
+            {{ market_label[:2] | upper }}
+          </span>
+          {{ market_label }}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Impressions</label>
+            <input type="number" name="{{ market_key }}_impressions" placeholder="e.g. 12400" min="0"
+                   style="width:100%;padding:7px 11px;border:1px solid var(--border);border-radius:var(--r-xs);font-size:15px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;">
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Clicks</label>
+            <input type="number" name="{{ market_key }}_clicks" placeholder="e.g. 420" min="0"
+                   style="width:100%;padding:7px 11px;border:1px solid var(--border);border-radius:var(--r-xs);font-size:15px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;">
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">CTR (%)</label>
+            <input type="number" name="{{ market_key }}_ctr" placeholder="e.g. 3.4" step="0.01" min="0" max="100"
+                   style="width:100%;padding:7px 11px;border:1px solid var(--border);border-radius:var(--r-xs);font-size:15px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;">
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Spend ($)</label>
+            <input type="number" name="{{ market_key }}_spend" placeholder="e.g. 3850.00" step="0.01" min="0"
+                   style="width:100%;padding:7px 11px;border:1px solid var(--border);border-radius:var(--r-xs);font-size:15px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;">
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Leads</label>
+            <input type="number" name="{{ market_key }}_leads" placeholder="e.g. 47" min="0"
+                   style="width:100%;padding:7px 11px;border:1px solid var(--border);border-radius:var(--r-xs);font-size:15px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;">
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">CPL ($/lead)</label>
+            <input type="number" name="{{ market_key }}_cpl" placeholder="e.g. 81.91" step="0.01" min="0"
+                   style="width:100%;padding:7px 11px;border:1px solid var(--border);border-radius:var(--r-xs);font-size:15px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;">
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+
+      <div style="padding-top:4px;">
+        <button type="submit" class="btn btn-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          Save Month
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{% endif %}
+
+<script>
+(function() {
+  // Sections that start collapsed — rotate their chevrons to show closed state
+  var closedSecs = ['sec-ppc-recent', 'sec-ppc-add'];
+  closedSecs.forEach(function(id) {
+    var chev = document.getElementById('chev-' + id);
+    if (chev) chev.style.transform = 'rotate(-90deg)';
+  });
+})();
+</script>
+
+{% endblock %}
