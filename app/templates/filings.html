@@ -999,5 +999,185 @@ function toggleDiscovery(slug) {
 }
 </script>
 
+{# ── Duncan Law Filing History ─────────────────────────────────────────── #}
+{% if filing_history and filing_history.annual %}
+{% set ann = filing_history.annual %}
+
+<div style="margin-top:40px;">
+  <h2 style="margin:0 0 4px;font-size:18px;font-weight:700;color:var(--text);">Duncan Law Filing History</h2>
+  <p class="page-sub" style="margin:0 0 20px;">Annual case filings since the firm opened in 2009 — all NC bankruptcy districts combined</p>
+
+  <div class="card" style="padding:24px 24px 20px;">
+
+    {# ── Annual bar chart ── #}
+    <div style="height:240px;position:relative;">
+      <canvas id="histChart"></canvas>
+    </div>
+
+    {# ── Year-over-year stats table ── #}
+    <div style="margin-top:28px;overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:6px 10px 8px 0;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid var(--border);">Year</th>
+            <th style="text-align:right;padding:6px 10px 8px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid var(--border);">Filings</th>
+            <th style="text-align:right;padding:6px 10px 8px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid var(--border);">vs. Prior Year</th>
+            <th style="text-align:left;padding:6px 0 8px 10px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid var(--border);">MDNC / WDNC</th>
+            <th style="text-align:left;padding:6px 0 8px 10px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid var(--border);">Note</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% set ns = namespace(prev_total=none) %}
+        {% for row in ann | reverse %}
+          {% set is_peak = row.total == (ann | map(attribute='total') | max) %}
+          <tr style="{% if row.ytd or row.partial %}background:var(--surface-2);{% endif %}">
+            <td style="padding:7px 10px 7px 0;font-weight:{% if row.ytd or row.partial %}600{% else %}400{% endif %};color:var(--text);border-bottom:1px solid var(--border);">
+              {{ row.year }}
+              {% if row.ytd %}<span style="font-size:10px;font-weight:700;color:var(--accent);margin-left:4px;background:var(--blue-light,#dbeafe);padding:1px 5px;border-radius:3px;">YTD</span>{% endif %}
+              {% if row.partial %}<span style="font-size:10px;color:var(--muted);margin-left:4px;">(partial)</span>{% endif %}
+            </td>
+            <td style="padding:7px 10px;text-align:right;font-weight:700;font-size:14px;border-bottom:1px solid var(--border);
+              {% if is_peak %}color:var(--accent);{% else %}color:var(--text);{% endif %}">
+              {{ row.total }}
+              {% if is_peak %}<span style="font-size:10px;font-weight:700;color:var(--accent);margin-left:3px;">↑ peak</span>{% endif %}
+            </td>
+            <td style="padding:7px 10px;text-align:right;border-bottom:1px solid var(--border);">
+              {% if ns.prev_total is not none and not row.partial %}
+                {% set delta = row.total - ns.prev_total %}
+                {% set pct = ((delta / ns.prev_total) * 100) | round | int %}
+                {% if delta > 0 %}
+                  <span style="color:var(--green-dark,#065f46);font-weight:600;">+{{ delta }}</span>
+                  <span style="color:var(--muted);font-size:12px;margin-left:3px;">(+{{ pct }}%)</span>
+                {% elif delta < 0 %}
+                  <span style="color:var(--red-dark,#991b1b);font-weight:600;">{{ delta }}</span>
+                  <span style="color:var(--muted);font-size:12px;margin-left:3px;">({{ pct }}%)</span>
+                {% else %}
+                  <span style="color:var(--muted);">—</span>
+                {% endif %}
+              {% else %}
+                <span style="color:var(--muted);">—</span>
+              {% endif %}
+            </td>
+            <td style="padding:7px 0 7px 10px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border);">
+              {% if row.mdnc is defined %}
+                <span style="color:#1e40af;font-weight:600;">{{ row.mdnc }}</span>
+                <span style="margin:0 3px;color:var(--border-2);">/</span>
+                <span style="color:#6d28d9;font-weight:600;">{{ row.wdnc }}</span>
+              {% else %}—{% endif %}
+            </td>
+            <td style="padding:7px 0 7px 10px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border);">
+              {{ row.note if row.note is defined else '' }}
+            </td>
+          </tr>
+          {% set ns.prev_total = row.total %}
+        {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td style="padding:10px 10px 4px 0;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">All-time total</td>
+            <td style="padding:10px 10px 4px;text-align:right;font-weight:700;font-size:14px;color:var(--text);">
+              {{ ann | map(attribute='total') | sum }}
+            </td>
+            <td colspan="3" style="padding:10px 0 4px 10px;font-size:12px;color:var(--muted);">
+              Avg {{ (ann | selectattr('ytd', 'undefined') | selectattr('partial', 'undefined') | map(attribute='total') | list | sum / [ann | selectattr('ytd', 'undefined') | selectattr('partial', 'undefined') | list | length, 1] | max) | round | int }} cases/year (complete years only)
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <p style="margin:12px 0 0;font-size:12px;color:var(--muted);">
+      Source: Duncan Law internal filing records. MDNC/WDNC district split available from 2024 onward.
+    </p>
+  </div>
+</div>
+
+<script>
+(function() {
+  var ann = {{ ann | tojson }};
+  var labels   = ann.map(function(r) { return String(r.year); });
+  var totals   = ann.map(function(r) { return r.total; });
+  var isYtd    = ann.map(function(r) { return !!(r.ytd || r.partial); });
+
+  // Complete-year average (exclude ytd/partial)
+  var complete = ann.filter(function(r) { return !r.ytd && !r.partial; });
+  var avg = complete.reduce(function(s, r) { return s + r.total; }, 0) / Math.max(complete.length, 1);
+
+  var barColors = totals.map(function(_, i) {
+    return isYtd[i] ? 'rgba(96,165,250,0.55)' : 'rgba(37,99,235,0.85)';
+  });
+  var borderColors = totals.map(function(_, i) {
+    return isYtd[i] ? 'rgba(96,165,250,1)' : 'rgba(29,78,216,1)';
+  });
+
+  var ctx = document.getElementById('histChart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Annual Filings',
+          data: totals,
+          backgroundColor: barColors,
+          borderColor: borderColors,
+          borderWidth: 1,
+          borderRadius: 3,
+          order: 2,
+        },
+        {
+          type: 'line',
+          label: 'Historical Avg (' + Math.round(avg) + '/yr)',
+          data: labels.map(function() { return Math.round(avg); }),
+          borderColor: 'rgba(156,163,175,0.7)',
+          borderDash: [5, 4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: { boxWidth: 12, font: { size: 11 } },
+        },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              var d = ann[ctx.dataIndex];
+              var s = ' ' + ctx.parsed.y + ' cases';
+              if (d.ytd) s += ' (YTD)';
+              if (d.partial) s += ' (partial year)';
+              if (d.mdnc !== undefined) s += ' — MDNC: ' + d.mdnc + ', WDNC: ' + d.wdnc;
+              return s;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { size: 11 }, color: '#6b7280' },
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(0,0,0,.06)' },
+          ticks: { font: { size: 11 }, color: '#6b7280' },
+        },
+      },
+    },
+  });
+})();
+</script>
+
+{% endif %}
+
 {% endif %}
 {% endblock %}

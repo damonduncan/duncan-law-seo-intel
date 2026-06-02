@@ -355,6 +355,13 @@ def filings(
     wdnc_vol = build_district_volume("WDNC")
     ednc_vol = build_district_volume("EDNC")
 
+    # Historical Duncan Law filing data (seeded from Excel)
+    from app.models.discovery import DiscoveryCache
+    _hist_row = db.query(DiscoveryCache).filter(
+        DiscoveryCache.key == "duncan_law_filing_history"
+    ).first()
+    filing_history = _hist_row.value if _hist_row else None
+
     mdnc_discovery = get_cached_results(db, "MDNC")
     wdnc_discovery = get_cached_results(db, "WDNC")
     ednc_discovery = get_cached_results(db, "EDNC")
@@ -419,7 +426,8 @@ def filings(
         "mdnc_vol":       mdnc_vol,
         "wdnc_vol":       wdnc_vol,
         "ednc_vol":       ednc_vol,
-        "surfaced_mdnc":  surfaced_mdnc,
-        "surfaced_wdnc":  surfaced_wdnc,
-        "surfaced_ednc":  surfaced_ednc,
+        "surfaced_mdnc":   surfaced_mdnc,
+        "surfaced_wdnc":   surfaced_wdnc,
+        "surfaced_ednc":   surfaced_ednc,
+        "filing_history":  filing_history,
     })
