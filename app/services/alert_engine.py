@@ -363,10 +363,11 @@ def check_convergence_alerts(db: Session, own_firm_id: str) -> None:
                         f"(Duncan Law at #{own_rank})."
                     ),
                     "recommendation": (
-                        f"{comp_name} has climbed {improvement} positions in 30 days and is now at #{last_rank}, "
-                        f"just {last_rank - own_rank} spot{'s' if last_rank - own_rank != 1 else ''} behind you for '{keyword}' in {market_display}. "
-                        f"Don't wait for them to push you out — send review requests to {market_display} clients this week "
-                        f"and post a fresh update to your Google Business Profile to reinforce your position before they overtake it."
+                        f"{comp_name} has climbed {improvement} positions in 30 days and is now at #{last_rank}"
+                        + (f", just {last_rank - own_rank} spot{'s' if last_rank - own_rank != 1 else ''} behind you" if last_rank > own_rank else ", already ahead of you")
+                        + f" for '{keyword}' in {market_display}. "
+                        f"Don't wait for them to push you further down — send review requests to {market_display} clients this week "
+                        f"and post a fresh update to your Google Business Profile to reinforce your position."
                     ),
                 },
                 triggered_at=datetime.now(timezone.utc),

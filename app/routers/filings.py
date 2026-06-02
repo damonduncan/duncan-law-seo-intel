@@ -387,6 +387,24 @@ def filings(
     ).first()
     filing_history = _hist_row.value if _hist_row else None
 
+    # Pre-compute year-over-year deltas and complete-year average in Python
+    # (Jinja2 selectattr/rejectattr can't filter by truthy dict values reliably)
+    historical_yoy_deltas: dict = {}
+    historical_avg: int | None = None
+    if filing_history and filing_history.get("annual"):
+        _ann = filing_history["annual"]
+        _prev_total: int | None = None
+        _complete_totals: list = []
+        for _row in _ann:  # already oldest→newest in seed data
+            _is_complete = not _row.get("ytd") and not _row.get("partial")
+            if _is_complete:
+                if _prev_total is not None:
+                    historical_yoy_deltas[_row["year"]] = _row["total"] - _prev_total
+                _prev_total = _row["total"]
+                _complete_totals.append(_row["total"])
+        if _complete_totals:
+            historical_avg = round(sum(_complete_totals) / len(_complete_totals))
+
     mdnc_discovery = get_cached_results(db, "MDNC")
     wdnc_discovery = get_cached_results(db, "WDNC")
     ednc_discovery = get_cached_results(db, "EDNC")
@@ -456,5 +474,7 @@ def filings(
         "surfaced_mdnc":   surfaced_mdnc,
         "surfaced_wdnc":   surfaced_wdnc,
         "surfaced_ednc":   surfaced_ednc,
-        "filing_history":  filing_history,
+        "filing_history":           filing_history,
+        "historical_yoy_deltas":    historical_yoy_deltas,
+        "historical_avg":           historical_avg,
     })

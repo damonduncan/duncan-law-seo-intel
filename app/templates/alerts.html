@@ -103,6 +103,7 @@
     {% set rec = alert.detail.get('recommendation', '') if alert.detail else '' %}
     <tr data-acked="{{ '1' if alert.acknowledged_at else '0' }}"
         data-type="{{ alert.alert_type }}"
+        data-alert-id="{{ alert.id }}"
         style="{% if alert.acknowledged_at %}opacity:.4;{% endif %}">
       <td>
         {% if alert.severity == 'immediate' %}

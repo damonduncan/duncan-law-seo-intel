@@ -541,9 +541,9 @@
       <th onclick="sortRevTbl('tbl-mdnc','rating')" style="cursor:pointer;user-select:none;">Rating <span id="arr-mdnc-rating" style="font-size:11px;color:var(--muted-2);"></span></th>
       <th onclick="sortRevTbl('tbl-mdnc','count')" style="cursor:pointer;user-select:none;">Reviews <span id="arr-mdnc-count" style="font-size:11px;color:var(--muted-2);"></span></th>
       <th onclick="sortRevTbl('tbl-mdnc','delta')" style="cursor:pointer;user-select:none;">Δ Week <span id="arr-mdnc-delta" style="font-size:11px;color:var(--muted-2);"></span></th>
-      <th style="font-size:12px;white-space:nowrap;">30d</th>
-      <th style="font-size:12px;white-space:nowrap;">60d</th>
-      <th style="font-size:12px;white-space:nowrap;">90d</th>
+      <th style="font-size:12px;white-space:nowrap;" title="Reviews gained in this window (firm-wide total for Duncan Law rows)">30d</th>
+      <th style="font-size:12px;white-space:nowrap;" title="Reviews gained in this window (firm-wide total for Duncan Law rows)">60d</th>
+      <th style="font-size:12px;white-space:nowrap;" title="Reviews gained in this window (firm-wide total for Duncan Law rows)">90d</th>
     </tr></thead>
     <tbody>
     {% for s in own_mdnc_snaps %}
@@ -579,13 +579,13 @@
         {% else %}<span style="color:var(--muted-2);font-size:13px;">—</span>{% endif %}
       </td>
       <td style="font-size:14px;padding:8px 12px;border-bottom:1px solid var(--border);">
-        {% if own_gained_30d is not none and own_gained_30d > 0 %}<span style="font-weight:700;color:var(--green-dark);">+{{ own_gained_30d }}</span>{% else %}<span style="color:var(--muted-2);">—</span>{% endif %}
+        {% if loop.first %}{% if own_gained_30d is not none and own_gained_30d > 0 %}<span style="font-weight:700;color:var(--green-dark);" title="Firm-wide total across all offices">+{{ own_gained_30d }}</span>{% else %}<span style="color:var(--muted-2);">—</span>{% endif %}{% else %}<span style="color:var(--muted-2);" title="See first Duncan Law row">—</span>{% endif %}
       </td>
       <td style="font-size:14px;padding:8px 12px;border-bottom:1px solid var(--border);">
-        {% if own_gained_60d is not none and own_gained_60d > 0 %}<span style="font-weight:700;color:var(--green-dark);">+{{ own_gained_60d }}</span>{% else %}<span style="color:var(--muted-2);">—</span>{% endif %}
+        {% if loop.first %}{% if own_gained_60d is not none and own_gained_60d > 0 %}<span style="font-weight:700;color:var(--green-dark);" title="Firm-wide total across all offices">+{{ own_gained_60d }}</span>{% else %}<span style="color:var(--muted-2);">—</span>{% endif %}{% else %}<span style="color:var(--muted-2);" title="See first Duncan Law row">—</span>{% endif %}
       </td>
       <td style="font-size:14px;padding:8px 12px;border-bottom:1px solid var(--border);">
-        {% if own_gained_90d is not none and own_gained_90d > 0 %}<span style="font-weight:700;color:var(--green-dark);">+{{ own_gained_90d }}</span>{% else %}<span style="color:var(--muted-2);">—</span>{% endif %}
+        {% if loop.first %}{% if own_gained_90d is not none and own_gained_90d > 0 %}<span style="font-weight:700;color:var(--green-dark);" title="Firm-wide total across all offices">+{{ own_gained_90d }}</span>{% else %}<span style="color:var(--muted-2);">—</span>{% endif %}{% else %}<span style="color:var(--muted-2);" title="See first Duncan Law row">—</span>{% endif %}
       </td>
     </tr>
     {% endfor %}
@@ -713,13 +713,13 @@
         {% else %}<span style="color:var(--muted-2);font-size:13px;">—</span>{% endif %}
       </td>
       <td style="font-size:14px;padding:8px 12px;border-bottom:1px solid var(--border);">
-        {% if own_gained_30d is not none and own_gained_30d > 0 %}<span style="font-weight:700;color:var(--green-dark);">+{{ own_gained_30d }}</span>{% else %}<span style="color:var(--muted-2);">—</span>{% endif %}
+        {% if loop.first %}{% if own_gained_30d is not none and own_gained_30d > 0 %}<span style="font-weight:700;color:var(--green-dark);" title="Firm-wide total across all offices">+{{ own_gained_30d }}</span>{% else %}<span style="color:var(--muted-2);">—</span>{% endif %}{% else %}<span style="color:var(--muted-2);" title="See first Duncan Law row">—</span>{% endif %}
       </td>
       <td style="font-size:14px;padding:8px 12px;border-bottom:1px solid var(--border);">
-        {% if own_gained_60d is not none and own_gained_60d > 0 %}<span style="font-weight:700;color:var(--green-dark);">+{{ own_gained_60d }}</span>{% else %}<span style="color:var(--muted-2);">—</span>{% endif %}
+        {% if loop.first %}{% if own_gained_60d is not none and own_gained_60d > 0 %}<span style="font-weight:700;color:var(--green-dark);" title="Firm-wide total across all offices">+{{ own_gained_60d }}</span>{% else %}<span style="color:var(--muted-2);">—</span>{% endif %}{% else %}<span style="color:var(--muted-2);" title="See first Duncan Law row">—</span>{% endif %}
       </td>
       <td style="font-size:14px;padding:8px 12px;border-bottom:1px solid var(--border);">
-        {% if own_gained_90d is not none and own_gained_90d > 0 %}<span style="font-weight:700;color:var(--green-dark);">+{{ own_gained_90d }}</span>{% else %}<span style="color:var(--muted-2);">—</span>{% endif %}
+        {% if loop.first %}{% if own_gained_90d is not none and own_gained_90d > 0 %}<span style="font-weight:700;color:var(--green-dark);" title="Firm-wide total across all offices">+{{ own_gained_90d }}</span>{% else %}<span style="color:var(--muted-2);">—</span>{% endif %}{% else %}<span style="color:var(--muted-2);" title="See first Duncan Law row">—</span>{% endif %}
       </td>
     </tr>
     {% endfor %}

@@ -92,16 +92,16 @@ async def ask_ai(request: Request, db: Session = Depends(get_db)):
 
     prompt = _build_ask_prompt(question, ctx)
 
-    def stream_response():
+    async def stream_response():
         try:
             import anthropic
-            client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-            with client.messages.stream(
+            client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+            async with client.messages.stream(
                 model="claude-sonnet-4-6",
                 max_tokens=1200,
                 messages=[{"role": "user", "content": prompt}],
             ) as stream:
-                for text in stream.text_stream:
+                async for text in stream.text_stream:
                     yield text
         except Exception as e:
             logger.error(f"Ask AI: Claude stream failed: {e}", exc_info=True)

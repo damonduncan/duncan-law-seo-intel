@@ -65,20 +65,26 @@ def reviews(
         snap_history[(s.competitor_id, s.source, s.market)].append(s)
 
     def _gained_in_window(cid: str, days: int) -> int | None:
-        """Reviews gained by competitor cid in the last N days across all markets."""
+        """Reviews gained by competitor cid in the last N days across all markets.
+
+        Only counts markets that have BOTH a current snapshot AND a baseline snapshot
+        older than `days` — avoids inflating gains for newly-tracked locations.
+        """
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         total_now, total_then, found = 0, 0, False
         for (c, source, market), snaps in snap_history.items():
             if c != cid or source != "google":
                 continue
-            # Current count — newest snap
-            if snaps and snaps[0].review_count is not None:
-                total_now += snaps[0].review_count
-            # Count at cutoff — first snap at or before cutoff
+            # Require a baseline snapshot before the cutoff for this market
             older = [s for s in snaps if s.snapped_at <= cutoff]
-            if older and older[0].review_count is not None:
-                total_then += older[0].review_count
-                found = True
+            if not older or older[0].review_count is None:
+                continue  # no baseline — skip this market entirely
+            current = snaps[0].review_count if snaps and snaps[0].review_count is not None else None
+            if current is None:
+                continue
+            total_now += current
+            total_then += older[0].review_count
+            found = True
         return (total_now - total_then) if found else None
 
     # Build current and previous lookups: competitor_id → {source: [snaps]}
