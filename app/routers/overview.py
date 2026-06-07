@@ -82,6 +82,33 @@ def dashboard(
             val = _rv[0]
             reviews_as_of = val.date() if hasattr(val, "date") else val
 
+    # GA4 traffic summary for dashboard widget
+    ga_widget = None
+    try:
+        from app.services.ga_service import get_ga_monthly_data
+        _ga_months = get_ga_monthly_data(db)
+        if _ga_months:
+            _latest = _ga_months[-1]
+            _prev   = _ga_months[-2] if len(_ga_months) >= 2 else None
+            _ts     = _latest.get("total_sessions", 0)
+            _to     = _latest.get("total_organic", 0)
+            _tc     = _latest.get("total_conversions", 0)
+            _labels = [f"{m['month']}/{str(m['year'])[2:]}" for m in _ga_months[-6:]]
+            _spark  = [m.get("total_organic", 0) for m in _ga_months[-6:]]
+            ga_widget = {
+                "label":          f"{['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][_latest['month']]} {_latest['year']}",
+                "total_sessions": _ts,
+                "total_organic":  _to,
+                "total_paid":     _latest.get("total_paid", 0),
+                "total_conversions": _tc,
+                "organic_pct":    round(_to / _ts * 100) if _ts else 0,
+                "organic_mom":    (_to - _prev.get("total_organic", 0)) if _prev else None,
+                "spark_labels":   _labels,
+                "spark_data":     _spark,
+            }
+    except Exception:
+        pass
+
     return templates.TemplateResponse("overview.html", {
         "request": request,
         "user": user,
@@ -99,6 +126,7 @@ def dashboard(
         "activity_total": activity_total,
         "rankings_as_of": rankings_as_of,
         "reviews_as_of": reviews_as_of,
+        "ga_widget": ga_widget,
         "active_page": "dashboard",
     })
 

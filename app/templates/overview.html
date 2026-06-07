@@ -50,6 +50,101 @@
   </div>
 </div>
 
+<!-- GA4 Traffic Widget -->
+{% if ga_widget %}
+<div class="card" style="margin-bottom:24px;padding:18px 22px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+
+    {# Left: label + stats row #}
+    <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          <span style="font-size:12px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:.06em;">Website Traffic</span>
+          <span style="font-size:11px;font-weight:600;color:#4f46e5;background:rgba(79,70,229,.1);padding:1px 7px;border-radius:8px;">GA4 · {{ ga_widget.label }}</span>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+        <div style="text-align:center;">
+          <div style="font-size:22px;font-weight:800;color:var(--text);line-height:1;">{{ "{:,}".format(ga_widget.total_organic) }}</div>
+          <div style="font-size:11px;font-weight:600;color:var(--green-dark);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;">Organic</div>
+          {% if ga_widget.organic_mom is not none %}
+            <div style="font-size:11px;color:{{ 'var(--green-dark)' if ga_widget.organic_mom >= 0 else 'var(--red-dark)' }};font-weight:600;">
+              {{ '+' if ga_widget.organic_mom >= 0 else '' }}{{ "{:,}".format(ga_widget.organic_mom) }} vs prior
+            </div>
+          {% endif %}
+        </div>
+
+        <div style="width:1px;height:36px;background:var(--border);"></div>
+
+        <div style="text-align:center;">
+          <div style="font-size:22px;font-weight:800;color:var(--text);line-height:1;">{{ "{:,}".format(ga_widget.total_sessions) }}</div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;">Total Sessions</div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600;">{{ ga_widget.organic_pct }}% organic</div>
+        </div>
+
+        <div style="width:1px;height:36px;background:var(--border);"></div>
+
+        <div style="text-align:center;">
+          <div style="font-size:22px;font-weight:800;color:var(--text);line-height:1;">{{ ga_widget.total_conversions }}</div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;">Key Events</div>
+          {% if ga_widget.total_sessions > 0 %}
+            <div style="font-size:11px;color:var(--muted);font-weight:600;">{{ "%.1f"|format(ga_widget.total_conversions / ga_widget.total_sessions * 100) }}% rate</div>
+          {% endif %}
+        </div>
+
+        <div style="width:1px;height:36px;background:var(--border);"></div>
+
+        <div style="text-align:center;">
+          <div style="font-size:22px;font-weight:800;color:var(--text);line-height:1;">{{ "{:,}".format(ga_widget.total_paid) }}</div>
+          <div style="font-size:11px;font-weight:600;color:var(--orange);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;">Paid Search</div>
+        </div>
+      </div>
+    </div>
+
+    {# Right: sparkline + link #}
+    <div style="display:flex;align-items:center;gap:16px;">
+      <canvas id="gaSparkline" width="160" height="48" style="display:block;"></canvas>
+      <a href="/ppc" style="font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;white-space:nowrap;">Full report →</a>
+    </div>
+  </div>
+</div>
+<script>
+(function() {
+  var spark = {{ ga_widget.spark_data | tojson }};
+  var labels = {{ ga_widget.spark_labels | tojson }};
+  if (!spark || !spark.length) return;
+  new Chart(document.getElementById('gaSparkline'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: spark,
+        borderColor: 'rgba(16,185,129,0.9)',
+        backgroundColor: 'rgba(16,185,129,0.12)',
+        borderWidth: 2,
+        pointRadius: 2,
+        pointHoverRadius: 4,
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: false,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: function(ctx) { return ctx.parsed.y.toLocaleString() + ' organic'; } }
+      }},
+      scales: {
+        x: { display: false },
+        y: { display: false, beginAtZero: false }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
+
 <!-- Market Leadership Matrix -->
 {% if scorecard %}
 <div class="card" style="margin-bottom:24px;">

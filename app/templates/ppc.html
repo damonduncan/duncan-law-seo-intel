@@ -458,15 +458,19 @@
             <span style="color:var(--muted-2);">—</span>
           {% endif %}
         </td>
-        <td style="text-align:right;font-weight:600;">${{ "{:,.0f}".format(row.monthly_spend) }}</td>
-        <td style="text-align:right;font-weight:600;">{{ row.monthly_leads }}</td>
+        <td style="text-align:right;font-weight:600;">{% if row.monthly_spend is not none %}${{ "{:,.0f}".format(row.monthly_spend) }}{% else %}—{% endif %}</td>
+        <td style="text-align:right;font-weight:600;">{{ row.monthly_leads or '—' }}</td>
         <td style="text-align:right;">
-          {% if row.cpl < 60 %}
-            <span style="color:var(--green-dark);font-weight:700;">${{ row.cpl | round(2) }}</span>
-          {% elif row.cpl < 90 %}
-            <span style="color:var(--yellow-dark);font-weight:700;">${{ row.cpl | round(2) }}</span>
+          {% if row.cpl is not none %}
+            {% if row.cpl < 60 %}
+              <span style="color:var(--green-dark);font-weight:700;">${{ row.cpl | round(2) }}</span>
+            {% elif row.cpl < 90 %}
+              <span style="color:var(--yellow-dark);font-weight:700;">${{ row.cpl | round(2) }}</span>
+            {% else %}
+              <span style="color:var(--red-dark);font-weight:700;">${{ row.cpl | round(2) }}</span>
+            {% endif %}
           {% else %}
-            <span style="color:var(--red-dark);font-weight:700;">${{ row.cpl | round(2) }}</span>
+            <span style="color:var(--muted-2);">—</span>
           {% endif %}
         </td>
         <td style="font-size:14px;color:{{ opp_color }};font-weight:500;max-width:260px;">{{ opp_text }}</td>
