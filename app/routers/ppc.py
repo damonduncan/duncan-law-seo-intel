@@ -59,7 +59,9 @@ def ppc(
     cache_row = db.query(DiscoveryCache).filter(
         DiscoveryCache.key == "ppc_monthly_data"
     ).first()
-    ppc_cache: list = (cache_row.value or []) if cache_row else []
+    _raw = (cache_row.value or []) if cache_row else []
+    # Seed script stores {"months": [...], "source": ...} — unwrap if needed
+    ppc_cache: list = _raw.get("months", []) if isinstance(_raw, dict) else _raw
 
     if not ppc_cache:
         return templates.TemplateResponse("ppc.html", {
@@ -77,6 +79,9 @@ def ppc(
             "organic_vs_ppc": [],
             "markets":       MARKETS,
             "market_display": MARKET_DISPLAY,
+            "ga_summary":    None,
+            "ga_trend_chart": {"labels": [], "organic": [], "paid": [], "direct": []},
+            "total_monthly_spend": "0",
         })
 
     # ── Sort months oldest → newest, add label ────────────────────────────────
@@ -285,6 +290,10 @@ def ppc(
             row["ga_organic_sessions"]    = None
             row["ga_organic_conversions"] = None
 
+    total_monthly_spend = "{:,.0f}".format(
+        sum(row["monthly_spend"] or 0 for row in organic_vs_ppc)
+    )
+
     return templates.TemplateResponse("ppc.html", {
         "request":            request,
         "user":               user,
@@ -302,6 +311,7 @@ def ppc(
         "market_display":     MARKET_DISPLAY,
         "ga_summary":         ga_summary,
         "ga_trend_chart":     ga_trend_chart,
+        "total_monthly_spend": total_monthly_spend,
     })
 
 
@@ -405,7 +415,8 @@ def ppc_add_month(
     cache_row = db.query(DiscoveryCache).filter(
         DiscoveryCache.key == "ppc_monthly_data"
     ).first()
-    existing: list = (cache_row.value or []) if cache_row else []
+    _raw_ex = (cache_row.value or []) if cache_row else []
+    existing: list = _raw_ex.get("months", []) if isinstance(_raw_ex, dict) else _raw_ex
 
     # Remove existing entry for same year/month if present (upsert behaviour)
     existing = [m for m in existing if not (m["year"] == year and m["month"] == month)]

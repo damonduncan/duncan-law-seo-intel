@@ -480,7 +480,7 @@
     </table>
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;">
       <span style="font-size:14px;color:var(--muted);">Total monthly PPC spend:</span>
-      <span style="font-size:16px;font-weight:800;color:var(--text);">${{ organic_vs_ppc | sum(attribute='monthly_spend') | round | int }}</span>
+      <span style="font-size:16px;font-weight:800;color:var(--text);">${{ total_monthly_spend }}</span>
     </div>
   </div>
 </div>
