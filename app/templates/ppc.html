@@ -3,7 +3,7 @@
 {% block content %}
 
 <h1>Lead Intelligence</h1>
-<p class="page-sub">Google Ads performance · organic rank correlation · demand seasonality</p>
+<p class="page-sub">Google Ads · organic traffic · rank correlation · demand seasonality</p>
 
 {% if request.query_params.get('msg') == 'added' %}
 <div class="status-bar green" style="margin-bottom:24px;">
@@ -18,7 +18,7 @@
     <span class="section-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     </span>
-    No PPC Data Loaded Yet
+    No Ads Data Loaded Yet
   </div>
   <p style="color:var(--muted);font-size:15px;line-height:1.8;margin-bottom:16px;">
     No Google Ads performance data has been seeded yet. Run the seed script to populate historical data:
@@ -432,13 +432,13 @@
           {% set opp_text %}Leading — organic saves ~${{ row.monthly_spend | int }}/mo in this market{% endset %}
           {% set opp_color = "var(--green-dark)" %}
         {% elif row.avg_rank is not none and row.avg_rank <= 2.5 %}
-          {% set opp_text %}One spot from #1 — review building could reduce PPC here{% endset %}
+          {% set opp_text %}One spot from #1 — review building could reduce ad spend here{% endset %}
           {% set opp_color = "var(--yellow-dark)" %}
         {% elif row.avg_rank is not none and row.avg_rank <= 3.5 %}
           {% set opp_text %}Weak organic — improving rank = up to ${{ row.monthly_spend | int }}/mo saved{% endset %}
           {% set opp_color = "var(--orange)" %}
         {% else %}
-          {% set opp_text %}No organic data — PPC is primary channel here{% endset %}
+          {% set opp_text %}No organic data — paid search is primary channel here{% endset %}
           {% set opp_color = "var(--muted)" %}
         {% endif %}
 
@@ -479,7 +479,7 @@
       </tbody>
     </table>
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;">
-      <span style="font-size:14px;color:var(--muted);">Total monthly PPC spend:</span>
+      <span style="font-size:14px;color:var(--muted);">Total monthly ad spend:</span>
       <span style="font-size:16px;font-weight:800;color:var(--text);">${{ total_monthly_spend }}</span>
     </div>
   </div>
@@ -542,7 +542,7 @@
     <span class="section-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </span>
-    Add Monthly PPC Report
+    Add Monthly Ads Data
     <span id="chev-sec-ppc-add" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </span>
