@@ -237,6 +237,54 @@ def ppc(
             "rank_label":     rank_label,
         })
 
+    # ── Google Analytics 4 traffic data ──────────────────────────────────────
+    ga_summary     = None
+    ga_trend_chart = {"labels": [], "organic": [], "paid": [], "direct": []}
+    try:
+        from app.services.ga_service import get_ga_monthly_data
+        ga_months = get_ga_monthly_data(db)
+        if ga_months:
+            latest_ga = ga_months[-1]
+            prev_ga   = ga_months[-2] if len(ga_months) >= 2 else None
+            total_s   = latest_ga.get("total_sessions", 0)
+            total_o   = latest_ga.get("total_organic", 0)
+            total_p   = latest_ga.get("total_paid", 0)
+            total_d   = latest_ga.get("total_direct", 0)
+            total_c   = latest_ga.get("total_conversions", 0)
+            ga_summary = {
+                "label":             _month_label(latest_ga["year"], latest_ga["month"]),
+                "total_sessions":    total_s,
+                "total_organic":     total_o,
+                "total_paid":        total_p,
+                "total_direct":      total_d,
+                "total_conversions": total_c,
+                "organic_pct":       round(total_o / total_s * 100) if total_s else 0,
+                "sessions_mom":      (total_s - prev_ga.get("total_sessions", 0)) if prev_ga else None,
+                "organic_mom":       (total_o - prev_ga.get("total_organic", 0)) if prev_ga else None,
+            }
+            ga_last_6 = ga_months[-6:]
+            ga_trend_chart = {
+                "labels":  [_month_label(m["year"], m["month"], fmt="chart") for m in ga_last_6],
+                "organic": [m.get("total_organic", 0) for m in ga_last_6],
+                "paid":    [m.get("total_paid", 0)    for m in ga_last_6],
+                "direct":  [m.get("total_direct", 0)  for m in ga_last_6],
+            }
+            # Annotate each organic_vs_ppc row with GA market data
+            for row in organic_vs_ppc:
+                mkt_ga = latest_ga.get("markets", {}).get(row["market"], {})
+                row["ga_organic_sessions"]    = mkt_ga.get("organic_sessions") or None
+                row["ga_organic_conversions"] = mkt_ga.get("conversions") or None
+        else:
+            for row in organic_vs_ppc:
+                row["ga_organic_sessions"]    = None
+                row["ga_organic_conversions"] = None
+    except Exception as _ga_err:
+        import logging as _log
+        _log.getLogger(__name__).warning(f"GA data unavailable: {_ga_err}")
+        for row in organic_vs_ppc:
+            row["ga_organic_sessions"]    = None
+            row["ga_organic_conversions"] = None
+
     return templates.TemplateResponse("ppc.html", {
         "request":            request,
         "user":               user,
@@ -252,6 +300,8 @@ def ppc(
         "organic_vs_ppc":     organic_vs_ppc,
         "markets":            MARKETS,
         "market_display":     MARKET_DISPLAY,
+        "ga_summary":         ga_summary,
+        "ga_trend_chart":     ga_trend_chart,
     })
 
 

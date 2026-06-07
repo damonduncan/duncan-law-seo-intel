@@ -89,6 +89,14 @@ def run_weekly_job() -> None:
             from app.services.backup import run_backup
             run_backup(db)
 
+            # Monthly GA4 traffic pull
+            try:
+                from app.services.ga_service import run_ga_pull
+                ga_fetched = run_ga_pull(db)
+                logger.info(f"GA4 pull complete: {ga_fetched} months fetched")
+            except Exception as _ga_e:
+                logger.error(f"GA4 pull failed: {_ga_e}", exc_info=True)
+
         # Phase 5: Send weekly digest
         from app.services.email_digest import build_and_send_digest
         build_and_send_digest(db)

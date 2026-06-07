@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     resend_from_address: str = "alerts@duncanlawonline.com"
     digest_recipient: str = "damonduncan@duncanlawonline.com"
 
+    # Google Analytics 4
+    ga_property_id: str = "359981496"
+    ga_credentials_json: str = ""   # full service account JSON string (GA_CREDENTIALS_JSON env var)
+
     # Briefing
     briefing_token: str = ""   # set BRIEFING_TOKEN env var to share /briefing without OAuth
 

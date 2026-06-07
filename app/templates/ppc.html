@@ -73,6 +73,100 @@
 
 </div>
 
+{# ─── Section 1b: Website Traffic (GA4) ──────────────────────────────────── #}
+{% if ga_summary %}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title" onclick="toggleSection('sec-ga-traffic')" style="cursor:pointer;user-select:none;">
+    <span class="section-icon" style="background:rgba(79,70,229,.12);color:#4f46e5;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+    </span>
+    Website Traffic — {{ ga_summary.label }}
+    <span style="margin-left:8px;font-size:12px;font-weight:600;color:#4f46e5;background:rgba(79,70,229,.1);padding:2px 10px;border-radius:10px;">GA4</span>
+    <span id="chev-sec-ga-traffic" style="margin-left:auto;display:inline-flex;transition:transform .2s;color:var(--muted-2);flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </div>
+  <div id="sec-ga-traffic" data-collapsible="1">
+
+    {# 4 stat chips #}
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;">
+
+      <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;text-align:center;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;">Total Sessions</div>
+        <div style="font-size:24px;font-weight:800;color:var(--text);">{{ "{:,}".format(ga_summary.total_sessions) }}</div>
+        {% if ga_summary.sessions_mom is not none %}
+          <div style="font-size:12px;font-weight:600;margin-top:4px;color:{{ 'var(--green-dark)' if ga_summary.sessions_mom >= 0 else 'var(--red-dark)' }};">
+            {{ '+' if ga_summary.sessions_mom >= 0 else '' }}{{ "{:,}".format(ga_summary.sessions_mom) }} vs prior mo
+          </div>
+        {% endif %}
+      </div>
+
+      <div style="background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.25);border-radius:var(--r-sm);padding:14px 16px;text-align:center;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--green-dark);margin-bottom:6px;">Organic Search</div>
+        <div style="font-size:24px;font-weight:800;color:var(--text);">{{ "{:,}".format(ga_summary.total_organic) }}</div>
+        <div style="font-size:12px;font-weight:600;margin-top:4px;color:var(--green-dark);">{{ ga_summary.organic_pct }}% of total</div>
+      </div>
+
+      <div style="background:rgba(249,115,22,.07);border:1px solid rgba(249,115,22,.25);border-radius:var(--r-sm);padding:14px 16px;text-align:center;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--orange);margin-bottom:6px;">Paid Search</div>
+        <div style="font-size:24px;font-weight:800;color:var(--text);">{{ "{:,}".format(ga_summary.total_paid) }}</div>
+        <div style="font-size:12px;font-weight:600;margin-top:4px;color:var(--muted);">direct: {{ "{:,}".format(ga_summary.total_direct) }}</div>
+      </div>
+
+      <div style="background:rgba(79,70,229,.07);border:1px solid rgba(79,70,229,.2);border-radius:var(--r-sm);padding:14px 16px;text-align:center;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4f46e5;margin-bottom:6px;">Key Events</div>
+        <div style="font-size:24px;font-weight:800;color:var(--text);">{{ ga_summary.total_conversions }}</div>
+        {% if ga_summary.total_sessions > 0 %}
+          <div style="font-size:12px;font-weight:600;margin-top:4px;color:var(--muted);">{{ "%.1f"|format(ga_summary.total_conversions / ga_summary.total_sessions * 100) }}% rate</div>
+        {% endif %}
+      </div>
+
+    </div>
+
+    {# Stacked bar: organic / paid / direct by month #}
+    {% if ga_trend_chart.labels %}
+    <div class="chart-wrap">
+      <canvas id="gaTrafficChart"></canvas>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-top:12px;line-height:1.6;">
+      Organic sessions reflect actual search traffic to your website — distinct from 3-pack impressions. A healthy organic share means your website earns visits even without ad spend.
+    </p>
+    {% endif %}
+
+  </div>
+</div>
+<script>
+(function() {
+  var d = {{ ga_trend_chart | tojson }};
+  if (!d || !d.labels || !d.labels.length) return;
+  new Chart(document.getElementById('gaTrafficChart'), {
+    type: 'bar',
+    data: {
+      labels: d.labels,
+      datasets: [
+        { label: 'Organic Search', data: d.organic, backgroundColor: 'rgba(16,185,129,0.78)', borderRadius: 3, stack: 'traffic', order: 1 },
+        { label: 'Paid Search',    data: d.paid,    backgroundColor: 'rgba(249,115,22,0.68)', borderRadius: 3, stack: 'traffic', order: 2 },
+        { label: 'Direct',         data: d.direct,  backgroundColor: 'rgba(107,114,128,0.42)', borderRadius: 3, stack: 'traffic', order: 3 },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } },
+        tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString(); } } }
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 }, color: '#6b7280' } },
+        y: { stacked: true, beginAtZero: true, ticks: { precision: 0, font: { size: 11 }, color: '#6b7280' }, grid: { color: 'rgba(0,0,0,.05)' } }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
+
 {# ─── Section 2: Monthly Leads & CPL Trend ───────────────────────────────── #}
 <div class="card" style="margin-bottom:24px;">
   <div class="section-title" onclick="toggleSection('sec-ppc-trend')" style="cursor:pointer;user-select:none;">
@@ -241,21 +335,22 @@
 <script>
 (function() {
   var d = {{ seasonal | tojson }};
-  if (!d || !d.labels || !d.labels.length) return;
-  // July=index 6, Aug=7, Sep=8 (0-indexed)
-  var peakMonths = [6, 7, 8];
-  var colors = d.labels.map(function(_, i) {
-    return peakMonths.indexOf(i) >= 0
+  if (!d || !d.length) return;
+  var peakNums = [7, 8, 9];   // July, August, September
+  var labels   = d.map(function(m) { return m.month_name.slice(0, 3); });
+  var avgLeads = d.map(function(m) { return m.avg_leads; });
+  var colors   = d.map(function(m) {
+    return peakNums.indexOf(m.month_num) >= 0
       ? 'rgba(37,99,235,0.85)'
       : 'rgba(37,99,235,0.38)';
   });
   new Chart(document.getElementById('ppcSeasonalChart'), {
     type: 'bar',
     data: {
-      labels: d.labels,
+      labels: labels,
       datasets: [{
         label: 'Avg Leads',
-        data: d.avg_leads,
+        data: avgLeads,
         backgroundColor: colors,
         borderRadius: 4,
         borderSkipped: false,
@@ -301,7 +396,8 @@
       <thead><tr>
         <th>Market</th>
         <th>District</th>
-        <th style="text-align:center;">Organic Rank</th>
+        <th style="text-align:center;">3-Pack Rank</th>
+        <th style="text-align:right;">Organic Sessions</th>
         <th style="text-align:right;">Monthly Spend</th>
         <th style="text-align:right;">Monthly Leads</th>
         <th style="text-align:right;">CPL</th>
@@ -352,6 +448,16 @@
           <span style="background:var(--surface-2);color:var(--muted);font-size:12px;font-weight:600;padding:2px 9px;border-radius:10px;">{{ row.district }}</span>
         </td>
         <td style="text-align:center;">{{ rank_chip }}</td>
+        <td style="text-align:right;">
+          {% if row.ga_organic_sessions is not none %}
+            <span style="font-weight:700;font-size:15px;">{{ "{:,}".format(row.ga_organic_sessions) }}</span>
+            {% if row.ga_organic_conversions %}
+              <span style="font-size:12px;color:var(--muted);display:block;">{{ row.ga_organic_conversions }} events</span>
+            {% endif %}
+          {% else %}
+            <span style="color:var(--muted-2);">—</span>
+          {% endif %}
+        </td>
         <td style="text-align:right;font-weight:600;">${{ "{:,.0f}".format(row.monthly_spend) }}</td>
         <td style="text-align:right;font-weight:600;">{{ row.monthly_leads }}</td>
         <td style="text-align:right;">
@@ -388,30 +494,33 @@
   </div>
   <div id="sec-ppc-recent" style="display:none;" data-collapsible="1">
     {% if recent_months %}
-    {% set markets_list = recent_months[0].markets.keys() | list if recent_months[0].markets is defined else [] %}
     <div style="overflow-x:auto;">
     <table>
       <thead><tr>
         <th>Month</th>
-        {% for mkt in markets_list %}
-        <th style="text-align:right;">{{ mkt }}</th>
+        {% for mkt in markets %}
+        <th style="text-align:right;">{{ market_display[mkt] }}</th>
         {% endfor %}
+        <th style="text-align:right;">Total</th>
       </tr></thead>
       <tbody>
       {% for mo in recent_months %}
       <tr>
         <td style="font-weight:700;font-size:15px;white-space:nowrap;">{{ mo.label }}</td>
-        {% for mkt in markets_list %}
-        {% set mdata = mo.markets.get(mkt) if mo.markets is defined else none %}
-        <td style="text-align:right;font-size:14px;color:var(--muted);white-space:nowrap;">
-          {% if mdata %}
-            <span style="font-weight:600;color:var(--text);">{{ mdata.leads }} leads</span>
-            <span style="color:var(--muted-2);font-size:13px;"> / ${{ "%.2f"|format(mdata.cpl) }}</span>
+        {% for mkt in markets %}
+        {% set mdata = mo.get(mkt, {}) %}
+        <td style="text-align:right;font-size:14px;white-space:nowrap;">
+          {% if mdata and mdata.get('leads') %}
+            <span style="font-weight:600;color:var(--text);">{{ mdata.leads | int }} leads</span>
+            <span style="color:var(--muted-2);font-size:12px;"> ${{ "%.0f"|format(mdata.cpl) }}</span>
           {% else %}
             <span style="color:var(--muted-2);">—</span>
           {% endif %}
         </td>
         {% endfor %}
+        <td style="text-align:right;font-weight:700;white-space:nowrap;">
+          {{ mo.get('total', {}).get('leads', 0) | int }} leads
+        </td>
       </tr>
       {% endfor %}
       </tbody>
