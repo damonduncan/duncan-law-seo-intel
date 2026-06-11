@@ -317,8 +317,21 @@ def consult_data_page(
     combined_2025_total       = damon_2025 + anne_2025
     contract_conv_rate_2026   = round(contracts_2026_ytd / combined_2026_ytd * 100, 1) if combined_2026_ytd else None
     contract_conv_rate_2025   = round(contracts_2025 / combined_2025_total * 100, 1) if combined_2025_total else None
-    # Contract → Filed rate (signing appointments / contracts signed)
-    contract_to_filed_2026    = round(sign_combined_ytd / contracts_2026_ytd * 100, 1) if contracts_2026_ytd else None
+    # ── PACER filings for funnel ──────────────────────────────────────────────
+    _filing_row = db.query(DiscoveryCache).filter(DiscoveryCache.key == "duncan_law_filing_history").first()
+    _filing_hist = _filing_row.value if _filing_row else {}
+    if isinstance(_filing_hist, str):
+        import json as _j; _filing_hist = _j.loads(_filing_hist)
+    _pacer_2026 = next((r for r in _filing_hist.get("annual", []) if r["year"] == 2026), None)
+    pacer_filed_ytd = 0
+    if _pacer_2026:
+        _monthly = _pacer_2026.get("monthly") or []
+        pacer_filed_ytd = sum(_monthly[m - 1] or 0 for m in range(1, last_2026_month + 1) if m - 1 < len(_monthly))
+
+    # Contract → Filed rate (PACER filings / contracts signed)
+    contract_to_filed_2026    = round(pacer_filed_ytd / contracts_2026_ytd * 100, 1) if contracts_2026_ytd else None
+    # Overall consult → filed rate using PACER
+    pacer_consult_rate_2026   = round(pacer_filed_ytd / combined_2026_ytd * 100, 1) if combined_2026_ytd else None
 
     # AI insights
     insights, insights_updated = _get_or_refresh_insights(db, damon_months, anne_months)
@@ -368,6 +381,8 @@ def consult_data_page(
         "contract_conv_rate_2026":   contract_conv_rate_2026,
         "contract_conv_rate_2025":   contract_conv_rate_2025,
         "contract_to_filed_2026":    contract_to_filed_2026,
+        "pacer_filed_ytd":           pacer_filed_ytd,
+        "pacer_consult_rate_2026":   pacer_consult_rate_2026,
         # Shared
         "insights":              insights,
         "insights_updated":      insights_updated,

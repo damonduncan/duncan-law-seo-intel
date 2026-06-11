@@ -121,14 +121,15 @@
     <!-- Stage 3: Filed -->
     <div style="flex:1;min-width:120px;text-align:center;">
       <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Cases Filed</div>
-      <div style="font-size:36px;font-weight:700;color:#16a34a;line-height:1;">{{ sign_combined_ytd }}</div>
+      <div style="font-size:36px;font-weight:700;color:#16a34a;line-height:1;">{{ pacer_filed_ytd }}</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">PACER</div>
     </div>
 
     <!-- Overall rate -->
     <div style="flex:0 0 auto;border-left:1px solid var(--border-color);margin-left:16px;padding-left:20px;text-align:center;">
       <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Overall</div>
       <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">
-        {% if conv_rate_2026 %}{{ conv_rate_2026 }}%{% else %}—{% endif %}
+        {% if pacer_consult_rate_2026 %}{{ pacer_consult_rate_2026 }}%{% else %}—{% endif %}
       </div>
       <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">consult → filed</div>
     </div>
