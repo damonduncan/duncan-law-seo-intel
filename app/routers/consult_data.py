@@ -27,8 +27,9 @@ def _yoy_pct(current: int, prior: int):
     return round((current - prior) / prior * 100, 1)
 
 
-def _generate_insights(damon_months: dict, anne_months: dict) -> list:
-    """Call Claude to produce 4–5 analytical insights from the consultation data."""
+def _generate_insights(damon_months: dict, anne_months: dict,
+                        funnel_data: dict = None) -> list:
+    """Call Claude to produce 5 analytical insights from consultation and funnel data."""
     from app.config import settings
     import anthropic
 
@@ -37,14 +38,12 @@ def _generate_insights(damon_months: dict, anne_months: dict) -> list:
 
     all_years = sorted(set(y for (y, _) in list(damon_months.keys()) + list(anne_months.keys())))
 
-    # Annual totals
     annual_lines = []
     for year in all_years:
         d = sum(damon_months.get((year, m), 0) for m in range(1, 13))
         a = sum(anne_months.get((year, m), 0)  for m in range(1, 13))
         annual_lines.append(f"  {year}: Damon={d}, Anne={a}, Total={d + a}")
 
-    # Seasonality — Damon's average by calendar month across full years (2010–2025)
     full_years = [y for y in range(2010, 2026) if sum(damon_months.get((y, m), 0) for m in range(1, 13)) > 0]
     season_lines = []
     for m in range(1, 13):
@@ -53,14 +52,27 @@ def _generate_insights(damon_months: dict, anne_months: dict) -> list:
             avg = sum(vals) / len(vals)
             season_lines.append(f"  {MONTH_NAMES[m - 1]}: avg {avg:.1f} ({len(vals)} yrs of data)")
 
-    # YTD comparison (Jan–May)
-    d_2026 = sum(damon_months.get((2026, m), 0) for m in range(1, 6))
-    d_2025 = sum(damon_months.get((2025, m), 0) for m in range(1, 6))
-    a_2026 = sum(anne_months.get((2026, m), 0)  for m in range(1, 6))
+    last_month  = funnel_data.get("last_month", 5) if funnel_data else 5
+    ytd_label   = funnel_data.get("ytd_period", "Jan–May") if funnel_data else "Jan–May"
+    d_2026 = sum(damon_months.get((2026, m), 0) for m in range(1, last_month + 1))
+    d_2025 = sum(damon_months.get((2025, m), 0) for m in range(1, last_month + 1))
+    a_2026 = sum(anne_months.get((2026, m), 0)  for m in range(1, last_month + 1))
 
-    # Anne's ramp — last 8 months
     anne_recent = sorted([(y, m, anne_months[(y, m)]) for (y, m) in anne_months], key=lambda x: (x[0], x[1]))
     anne_lines  = [f"  {MONTH_NAMES[m - 1]} {y}: {c}" for y, m, c in anne_recent]
+
+    funnel_section = ""
+    if funnel_data:
+        fd = funnel_data
+        funnel_section = f"""
+INTAKE FUNNEL — {ytd_label} 2026 vs same period 2025:
+  Consultations:       2026={fd.get('combined_2026_ytd','?')}, 2025={fd.get('combined_2025_ytd','?')} (Damon only in 2025)
+  Contracts Signed:    2026={fd.get('contracts_2026_ytd','?')}, 2025={fd.get('contracts_2025_ytd','?')}
+    Consult→Contract:  2026={fd.get('contract_conv_rate_2026','?')}%, 2025={fd.get('contract_conv_rate_2025_ytd','?')}%
+  Cases Filed (PACER): 2026={fd.get('pacer_filed_ytd','?')}, 2025={fd.get('pacer_2025_ytd','?')}
+    Contract→Filed:    2026={fd.get('contract_to_filed_2026','?')}%, 2025={fd.get('contract_to_filed_2025','?')}%
+    Overall consult→filed: 2026={fd.get('pacer_consult_rate_2026','?')}%, 2025={fd.get('pacer_consult_rate_2025','?')}%
+"""
 
     prompt = f"""You are a practice management analyst for Duncan Law LLP, a consumer bankruptcy law firm in
 Charlotte, NC. Damon Duncan is the founding attorney; Anne Salter joined in October 2025.
@@ -75,10 +87,12 @@ CRITICAL CONTEXT — read before analyzing:
 - Damon reserves Tuesdays as administrative/business-development days with no client appointments.
   This intentionally reduces his available consult slots by roughly one day per week.
 - A pattern where Anne's consults rise while Damon's fall is the intended, healthy outcome.
+- Contracts Signed = attorney-client agreements via DocuSign (prospect becomes a paying client).
+- Cases Filed = bankruptcy petitions filed with the court, sourced from PACER.
 
 Analyze the data below and return exactly 5 concise, specific, actionable insights useful to the
-firm's principals — covering combined intake trends, seasonality, Anne's ramp trajectory, capacity
-for additional volume, and forecasts. Each insight must reference specific numbers.
+firm's principals — covering intake trends, funnel conversion rates, seasonality, Anne's ramp
+trajectory, and forecasts. Each insight must reference specific numbers.
 Write for attorneys, not data scientists. Do not flag Damon's individual decline as a concern.
 
 ANNUAL CONSULTATION TOTALS:
@@ -87,21 +101,21 @@ ANNUAL CONSULTATION TOTALS:
 DAMON'S HISTORICAL AVERAGE BY CALENDAR MONTH (2010–2025 full years only):
 {chr(10).join(season_lines)}
 
-2026 YTD JAN–MAY:  Damon={d_2026}, Anne={a_2026}, Combined={d_2026 + a_2026}
-2025 YTD JAN–MAY:  Damon={d_2025} (Anne not yet hired)
+{ytd_label} 2026 YTD:  Damon={d_2026}, Anne={a_2026}, Combined={d_2026 + a_2026}
+{ytd_label} 2025 YTD:  Damon={d_2025} (Anne not yet hired)
 
 ANNE'S MONTHLY COUNTS SINCE JOINING:
 {chr(10).join(anne_lines)}
-
+{funnel_section}
 Return ONLY a valid JSON array (no markdown, no explanation) with 5 objects, each having:
-  "category": one of trend | seasonality | capacity | forecast | comparison
+  "category": one of trend | seasonality | capacity | forecast | funnel
   "text": 1–2 sentences, specific numbers, actionable tone
   "sentiment": positive | negative | neutral"""
 
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
     resp = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=1000,
+        max_tokens=1200,
         messages=[{"role": "user", "content": prompt}],
     )
 
@@ -116,7 +130,8 @@ Return ONLY a valid JSON array (no markdown, no explanation) with 5 objects, eac
 
 
 def _get_or_refresh_insights(db: Session, damon_months: dict, anne_months: dict,
-                              force: bool = False) -> tuple[list, str]:
+                              force: bool = False,
+                              funnel_data: dict = None) -> tuple[list, str]:
     """Return (insights_list, updated_label). Regenerates if stale (>30 days) or forced."""
     row = db.query(DiscoveryCache).filter(
         DiscoveryCache.key == "consultation_insights"
@@ -129,7 +144,7 @@ def _get_or_refresh_insights(db: Session, damon_months: dict, anne_months: dict,
             return row.value or [], label
 
     try:
-        insights = _generate_insights(damon_months, anne_months)
+        insights = _generate_insights(damon_months, anne_months, funnel_data)
         now = datetime.now(timezone.utc)
         if row:
             row.value      = insights
@@ -146,12 +161,66 @@ def _get_or_refresh_insights(db: Session, damon_months: dict, anne_months: dict,
         return [], ""
 
 
-def _bg_refresh_insights(damon_months: dict, anne_months: dict) -> None:
-    """Background task — opens its own DB session so the HTTP response is not blocked."""
+def _bg_refresh_insights() -> None:
+    """Background task — loads all data from its own DB session."""
+    import json as _json
     from app.database import SessionLocal
     db = SessionLocal()
     try:
-        _get_or_refresh_insights(db, damon_months, anne_months, force=True)
+        def _load_bg(key):
+            row = db.query(DiscoveryCache).filter(DiscoveryCache.key == key).first()
+            data = row.value if row else {}
+            if isinstance(data, str):
+                data = _json.loads(data)
+            return {(m["year"], m["month"]): m["count"] for m in data.get("months", [])}
+
+        damon_months    = _load_bg("consultation_monthly_damon")
+        anne_months     = _load_bg("consultation_monthly_anne")
+        contract_months = _load_bg("docusign_monthly_contracts")
+
+        m2026      = [m for (y, m) in list(damon_months) + list(anne_months) if y == 2026]
+        last_month = max(m2026) if m2026 else 5
+        ytd_period = f"Jan–{MONTH_NAMES[last_month - 1]}"
+
+        _fr = db.query(DiscoveryCache).filter(DiscoveryCache.key == "duncan_law_filing_history").first()
+        _fh = _fr.value if _fr else {}
+        if isinstance(_fh, str):
+            _fh = _json.loads(_fh)
+
+        def _ytd(months, year):
+            return sum(months.get((year, m), 0) for m in range(1, last_month + 1))
+
+        def _pacer_ytd(fh, year):
+            annual = next((r for r in fh.get("annual", []) if r["year"] == year), None)
+            if not annual:
+                return 0
+            monthly = annual.get("monthly") or []
+            return sum(monthly[m - 1] or 0 for m in range(1, last_month + 1) if m - 1 < len(monthly))
+
+        def _pct(num, den):
+            return round(num / den * 100, 1) if den else None
+
+        c2026 = _ytd(damon_months, 2026) + _ytd(anne_months, 2026)
+        c2025 = _ytd(damon_months, 2025)
+        k2026 = _ytd(contract_months, 2026)
+        k2025 = _ytd(contract_months, 2025)
+        p2026 = _pacer_ytd(_fh, 2026)
+        p2025 = _pacer_ytd(_fh, 2025)
+
+        funnel_data = {
+            "last_month": last_month, "ytd_period": ytd_period,
+            "combined_2026_ytd": c2026,   "combined_2025_ytd": c2025,
+            "contracts_2026_ytd": k2026,  "contracts_2025_ytd": k2025,
+            "pacer_filed_ytd": p2026,     "pacer_2025_ytd": p2025,
+            "contract_conv_rate_2026": _pct(k2026, c2026),
+            "contract_conv_rate_2025_ytd": _pct(k2025, c2025),
+            "contract_to_filed_2026": _pct(p2026, k2026),
+            "contract_to_filed_2025": _pct(p2025, k2025),
+            "pacer_consult_rate_2026": _pct(p2026, c2026),
+            "pacer_consult_rate_2025": _pct(p2025, c2025),
+        }
+
+        _get_or_refresh_insights(db, damon_months, anne_months, force=True, funnel_data=funnel_data)
     except Exception as e:
         logger.error(f"Background insight refresh failed: {e}", exc_info=True)
     finally:
@@ -165,13 +234,7 @@ def refresh_insights(
     user: dict = Depends(auth_required),
     db: Session = Depends(get_db),
 ):
-    damon_row = db.query(DiscoveryCache).filter(DiscoveryCache.key == "consultation_monthly_damon").first()
-    anne_row  = db.query(DiscoveryCache).filter(DiscoveryCache.key == "consultation_monthly_anne").first()
-    damon_data = damon_row.value if damon_row else {}
-    anne_data  = anne_row.value  if anne_row  else {}
-    damon_months = {(m["year"], m["month"]): m["count"] for m in damon_data.get("months", [])}
-    anne_months  = {(m["year"], m["month"]): m["count"] for m in anne_data.get("months",  [])}
-    background_tasks.add_task(_bg_refresh_insights, damon_months, anne_months)
+    background_tasks.add_task(_bg_refresh_insights)
     return RedirectResponse(url="/consult-data?refreshing=1", status_code=303)
 
 
@@ -439,8 +502,22 @@ def consult_data_page(
     # ── Current month pacing ──────────────────────────────────────────────────
     current_month_pacing = _get_current_month_pacing(db, last_2026_month, damon_months, anne_months)
 
-    # AI insights
-    insights, insights_updated = _get_or_refresh_insights(db, damon_months, anne_months)
+    # AI insights — pass full funnel context so the model can reference conversion rates
+    funnel_data = {
+        "last_month": last_2026_month, "ytd_period": ytd_period,
+        "combined_2026_ytd": combined_2026_ytd,  "combined_2025_ytd": combined_2025_ytd,
+        "contracts_2026_ytd": contracts_2026_ytd, "contracts_2025_ytd": contracts_2025_ytd,
+        "pacer_filed_ytd": pacer_filed_ytd,       "pacer_2025_ytd": pacer_2025_ytd,
+        "contract_conv_rate_2026": contract_conv_rate_2026,
+        "contract_conv_rate_2025_ytd": contract_conv_rate_2025_ytd,
+        "contract_to_filed_2026": contract_to_filed_2026,
+        "contract_to_filed_2025": contract_to_filed_2025,
+        "pacer_consult_rate_2026": pacer_consult_rate_2026,
+        "pacer_consult_rate_2025": pacer_consult_rate_2025,
+    }
+    insights, insights_updated = _get_or_refresh_insights(
+        db, damon_months, anne_months, funnel_data=funnel_data
+    )
 
     return templates.TemplateResponse("consult_data.html", {
         "request":               request,
