@@ -3,17 +3,17 @@ from datetime import date, datetime, timezone
 
 logger = logging.getLogger(__name__)
 
-ATTORNEYS = [
-    {
-        "key":       "damon",
-        "email":     "damonduncan@duncanlawonline.com",
-        "cache_key": "consultation_monthly_damon",
-    },
-    {
-        "key":       "anne",
-        "email":     "anne@duncanlawonline.com",
-        "cache_key": "consultation_monthly_anne",
-    },
+ATTORNEY_JOBS = [
+    # Consultations
+    {"key": "damon", "email": "damonduncan@duncanlawonline.com",
+     "cache_key": "consultation_monthly_damon", "event_type": "consult"},
+    {"key": "anne",  "email": "anne@duncanlawonline.com",
+     "cache_key": "consultation_monthly_anne",  "event_type": "consult"},
+    # Signing appointments
+    {"key": "damon", "email": "damonduncan@duncanlawonline.com",
+     "cache_key": "signing_monthly_damon", "event_type": "signing"},
+    {"key": "anne",  "email": "anne@duncanlawonline.com",
+     "cache_key": "signing_monthly_anne",  "event_type": "signing"},
 ]
 
 
@@ -34,13 +34,14 @@ def run_monthly_consult_job() -> None:
 
     db = SessionLocal()
     try:
-        for atty in ATTORNEYS:
+        for atty in ATTORNEY_JOBS:
             try:
                 count = fetch_month_count(
                     email=atty["email"],
                     attorney=atty["key"],
                     year=target_year,
                     month=target_month,
+                    event_type=atty["event_type"],
                 )
 
                 row  = db.query(DiscoveryCache).filter(

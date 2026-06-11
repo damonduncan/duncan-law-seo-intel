@@ -154,6 +154,151 @@
   </div>
 </div>
 
+<!-- ── Signing Appointment Stat Cards ───────────────────────────────────── -->
+<div style="margin-bottom:10px;">
+  <h2 style="font-size:15px;font-weight:600;margin:0 0 14px;">Signing Appointments</h2>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px;">
+
+  <div class="card" style="padding:18px 20px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Damon — 2026 YTD</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ sign_damon_2026_ytd }}</div>
+    <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">{{ ytd_period }} 2026</div>
+    {% if sign_damon_yoy_pct is not none %}
+    <div style="margin-top:4px;display:flex;align-items:center;gap:5px;">
+      {% if sign_damon_yoy_pct >= 0 %}
+        <span style="font-size:11px;font-weight:700;color:#22c55e;">↑ {{ sign_damon_yoy_pct | abs }}%</span>
+      {% else %}
+        <span style="font-size:11px;font-weight:700;color:#ef4444;">↓ {{ sign_damon_yoy_pct | abs }}%</span>
+      {% endif %}
+      <span style="font-size:11px;color:var(--text-muted);">vs {{ ytd_period }} '25</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card" style="padding:18px 20px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Anne — 2026 YTD</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ sign_anne_2026_ytd }}</div>
+    <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">{{ ytd_period }} 2026</div>
+  </div>
+
+  <div class="card" style="padding:18px 20px;border-color:var(--accent-border,rgba(99,102,241,.3));">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Combined — 2026 YTD</div>
+    <div style="font-size:28px;font-weight:700;color:var(--accent,#6366f1);line-height:1;">{{ sign_combined_ytd }}</div>
+    <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">{{ ytd_period }} 2026</div>
+  </div>
+
+  <div class="card" style="padding:18px 20px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Consult → Signing Rate</div>
+    {% if conv_rate_2026 is not none %}
+    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ conv_rate_2026 }}%</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">
+      {{ ytd_period }} 2026
+      {% if conv_rate_2025 is not none %}&nbsp;·&nbsp;{{ conv_rate_2025 }}% in 2025{% endif %}
+    </div>
+    {% else %}
+    <div style="font-size:24px;font-weight:700;color:var(--text-primary);line-height:1;">—</div>
+    {% endif %}
+  </div>
+
+  <div class="card" style="padding:18px 20px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Damon — 2025</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ sign_damon_2025 }}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Full year</div>
+  </div>
+
+  <div class="card" style="padding:18px 20px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Damon — All-Time</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ sign_damon_alltime }}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Since Oct 2009</div>
+  </div>
+
+</div>
+
+<!-- ── 24-Month Signing Trend ────────────────────────────────────────────── -->
+<div class="card" style="margin-bottom:28px;">
+  <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);">
+    <h2 style="margin:0;font-size:15px;font-weight:600;">24-Month Signing Appointment Trend</h2>
+  </div>
+  <div style="padding:20px 20px 16px;position:relative;height:270px;">
+    <canvas id="signChart"></canvas>
+  </div>
+</div>
+
+<!-- ── Signing Annual Table ──────────────────────────────────────────────── -->
+<div class="card" style="margin-bottom:28px;">
+  <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);">
+    <h2 style="margin:0;font-size:15px;font-weight:600;">Annual Signing Totals</h2>
+  </div>
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="background:var(--table-header-bg,rgba(0,0,0,.03));">
+          <th style="padding:10px 20px;text-align:left;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Year</th>
+          <th style="padding:10px 16px;text-align:right;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Damon</th>
+          <th style="padding:10px 16px;text-align:right;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Anne</th>
+          <th style="padding:10px 20px;text-align:right;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Combined</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in sign_annual_rows | reverse %}
+        <tr class="sg-year-row" data-year="{{ row.year }}"
+            style="border-top:1px solid var(--border);cursor:pointer;transition:background .12s;"
+            onmouseenter="this.style.background='var(--row-hover,rgba(0,0,0,.03))'"
+            onmouseleave="this.style.background=''"
+            onclick="toggleSign({{ row.year }})">
+          <td style="padding:11px 20px;font-weight:600;color:var(--text-primary);">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              <svg class="sg-chevron-{{ row.year }}" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .2s;color:var(--text-muted);flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+              {{ row.year }}
+              {% if row.year == 2009 %}<span style="font-size:11px;color:var(--text-muted);font-weight:400;">(Oct–Dec only)</span>{% endif %}
+              {% if row.year == 2026 %}<span style="font-size:11px;color:var(--text-muted);font-weight:400;">(Jan–May only)</span>{% endif %}
+            </span>
+          </td>
+          <td style="padding:11px 16px;text-align:right;color:var(--text-primary);">{{ row.damon if row.damon > 0 else '—' }}</td>
+          <td style="padding:11px 16px;text-align:right;color:var(--text-primary);">{{ row.anne if row.anne > 0 else '—' }}</td>
+          <td style="padding:11px 20px;text-align:right;font-weight:600;color:var(--text-primary);">{{ row.combined }}</td>
+        </tr>
+        <tr id="sg-detail-{{ row.year }}" style="display:none;">
+          <td colspan="4" style="padding:0 20px 14px 38px;background:var(--table-header-bg,rgba(0,0,0,.02));">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;max-width:560px;">
+              <thead>
+                <tr>
+                  <th style="padding:6px 12px 6px 0;text-align:left;color:var(--text-muted);font-weight:600;font-size:11px;">Month</th>
+                  <th style="padding:6px 12px;text-align:right;color:var(--text-muted);font-weight:600;font-size:11px;">Damon</th>
+                  <th style="padding:6px 12px;text-align:right;color:var(--text-muted);font-weight:600;font-size:11px;">Anne</th>
+                  <th style="padding:6px 0 6px 12px;text-align:right;color:var(--text-muted);font-weight:600;font-size:11px;">Combined</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for mr in sign_monthly_by_year.get(row.year, []) %}
+                <tr style="border-top:1px solid var(--border);">
+                  <td style="padding:7px 12px 7px 0;color:var(--text-secondary);">{{ mr.month }}</td>
+                  <td style="padding:7px 12px;text-align:right;color:var(--text-primary);">{{ mr.damon if mr.damon > 0 else '—' }}</td>
+                  <td style="padding:7px 12px;text-align:right;color:var(--text-primary);">{{ mr.anne if mr.anne > 0 else '—' }}</td>
+                  <td style="padding:7px 0 7px 12px;text-align:right;font-weight:600;color:var(--text-primary);">{{ mr.combined }}</td>
+                </tr>
+                {% endfor %}
+                <tr style="border-top:2px solid var(--border);">
+                  <td style="padding:7px 12px 7px 0;font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Total</td>
+                  <td style="padding:7px 12px;text-align:right;font-weight:600;color:var(--text-primary);">{{ row.damon if row.damon > 0 else '—' }}</td>
+                  <td style="padding:7px 12px;text-align:right;font-weight:600;color:var(--text-primary);">{{ row.anne if row.anne > 0 else '—' }}</td>
+                  <td style="padding:7px 0 7px 12px;text-align:right;font-weight:700;color:var(--text-primary);">{{ row.combined }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Consultation Annual Summary Table ─────────────────────────────────── -->
+<div style="margin-bottom:10px;">
+  <h2 style="font-size:15px;font-weight:600;margin:0 0 14px;">Consultations</h2>
+</div>
 <!-- ── Annual Summary Table ──────────────────────────────────────────────── -->
 <div class="card" style="margin-bottom:28px;">
   <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);">
@@ -281,6 +426,62 @@
       },
     },
   });
+})();
+
+// Signing chart
+(function() {
+  const raw = {{ sign_trend_data | tojson }};
+  const labels    = raw.map(d => d.label);
+  const damonVals = raw.map(d => d.damon);
+  const anneVals  = raw.map(d => d.anne);
+  const cs        = getComputedStyle(document.documentElement);
+  const textMuted = cs.getPropertyValue('--text-muted').trim()  || '#888';
+  const borderClr = cs.getPropertyValue('--border').trim()      || 'rgba(0,0,0,0.1)';
+  const ctx = document.getElementById('signChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Damon', data: damonVals, backgroundColor: 'rgba(234,88,12,0.82)',  borderRadius: 3, stack: 'total' },
+        { label: 'Anne',  data: anneVals,  backgroundColor: 'rgba(168,85,247,0.82)', borderRadius: 3, stack: 'total' },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index' },
+      plugins: {
+        legend: { position: 'top', align: 'end',
+          labels: { color: textMuted, boxWidth: 12, padding: 16, font: { size: 12 } } },
+        tooltip: {
+          callbacks: { footer: items => 'Total: ' + items.reduce((s, i) => s + i.raw, 0) },
+        },
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false },
+             ticks: { color: textMuted, font: { size: 11 }, maxRotation: 45, minRotation: 45 },
+             border: { color: borderClr } },
+        y: { stacked: true, beginAtZero: true, grid: { color: borderClr },
+             ticks: { color: textMuted, font: { size: 11 }, precision: 0 },
+             border: { color: borderClr } },
+      },
+    },
+  });
+})();
+
+function toggleSign(year) {
+  const detail  = document.getElementById('sg-detail-' + year);
+  const chevron = document.querySelector('.sg-chevron-' + year);
+  const open    = detail.style.display !== 'none';
+  detail.style.display    = open ? 'none' : 'table-row';
+  chevron.style.transform = open ? '' : 'rotate(180deg)';
+}
+// Auto-expand two most recent signing years
+(function() {
+  const rows = document.querySelectorAll('.sg-year-row');
+  let opened = 0;
+  rows.forEach(r => { if (opened < 2) { toggleSign(parseInt(r.dataset.year)); opened++; } });
 })();
 
 function toggleYear(year) {

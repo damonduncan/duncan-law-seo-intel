@@ -175,97 +175,141 @@ def refresh_insights(
     return RedirectResponse(url="/consult-data?refreshing=1", status_code=303)
 
 
+def _build_annual_rows(d_months, a_months, all_years):
+    rows = []
+    for year in all_years:
+        d = sum(d_months.get((year, m), 0) for m in range(1, 13))
+        a = sum(a_months.get((year, m), 0) for m in range(1, 13))
+        rows.append({"year": year, "damon": d, "anne": a, "combined": d + a})
+    return rows
+
+
+def _build_monthly_by_year(d_months, a_months, all_years):
+    by_year = {}
+    for year in all_years:
+        rows = []
+        for m in range(1, 13):
+            d = d_months.get((year, m), 0)
+            a = a_months.get((year, m), 0)
+            if d > 0 or a > 0:
+                rows.append({"month_num": m, "month": MONTH_NAMES[m - 1],
+                             "damon": d, "anne": a, "combined": d + a})
+        by_year[year] = rows
+    return by_year
+
+
+def _build_trend(d_months, a_months, last_year, last_month, n=24):
+    ref_total = last_year * 12 + (last_month - 1)
+    data = []
+    for offset in range(n - 1, -1, -1):
+        t = ref_total - offset
+        y, rem = divmod(t, 12)
+        m = rem + 1
+        d = d_months.get((y, m), 0)
+        a = a_months.get((y, m), 0)
+        data.append({"label": f"{MONTH_NAMES[m - 1]} '{str(y)[-2:]}",
+                     "damon": d, "anne": a, "combined": d + a})
+    return data
+
+
 @router.get("/consult-data", response_class=HTMLResponse)
 def consult_data_page(
     request: Request,
     user: dict = Depends(auth_required),
     db: Session = Depends(get_db),
 ):
-    damon_row = db.query(DiscoveryCache).filter(DiscoveryCache.key == "consultation_monthly_damon").first()
-    anne_row  = db.query(DiscoveryCache).filter(DiscoveryCache.key == "consultation_monthly_anne").first()
+    def _load(key):
+        row = db.query(DiscoveryCache).filter(DiscoveryCache.key == key).first()
+        data = row.value if row else {}
+        return {(m["year"], m["month"]): m["count"] for m in data.get("months", [])}, data
 
-    damon_data = damon_row.value if damon_row else {}
-    anne_data  = anne_row.value  if anne_row  else {}
+    damon_months, damon_data = _load("consultation_monthly_damon")
+    anne_months,  anne_data  = _load("consultation_monthly_anne")
+    sign_d_months, _         = _load("signing_monthly_damon")
+    sign_a_months, _         = _load("signing_monthly_anne")
 
-    damon_months = {(m["year"], m["month"]): m["count"] for m in damon_data.get("months", [])}
-    anne_months  = {(m["year"], m["month"]): m["count"] for m in anne_data.get("months",  [])}
+    all_consult_years = sorted(set(y for (y, _) in list(damon_months) + list(anne_months)))
+    all_sign_years    = sorted(set(y for (y, _) in list(sign_d_months) + list(sign_a_months)))
 
-    all_years = sorted(set(y for (y, _) in list(damon_months) + list(anne_months)))
-
-    # Annual totals
-    annual_rows = []
-    for year in all_years:
-        d = sum(damon_months.get((year, m), 0) for m in range(1, 13))
-        a = sum(anne_months.get((year, m), 0)  for m in range(1, 13))
-        annual_rows.append({"year": year, "damon": d, "anne": a, "combined": d + a})
-
-    # Monthly detail per year
-    monthly_by_year = {}
-    for year in all_years:
-        rows = []
-        for m in range(1, 13):
-            d = damon_months.get((year, m), 0)
-            a = anne_months.get((year, m), 0)
-            if d > 0 or a > 0:
-                rows.append({"month_num": m, "month": MONTH_NAMES[m - 1],
-                             "damon": d, "anne": a, "combined": d + a})
-        monthly_by_year[year] = rows
-
-    damon_alltime = sum(damon_months.values())
-
-    m2026 = [m for (y, m) in list(damon_months.keys()) + list(anne_months.keys()) if y == 2026]
+    # YTD anchor — last month with 2026 data across all datasets
+    m2026 = [m for (y, m) in list(damon_months) + list(anne_months)
+                           + list(sign_d_months) + list(sign_a_months) if y == 2026]
     last_2026_month = max(m2026) if m2026 else 5
     ytd_period = f"Jan–{MONTH_NAMES[last_2026_month - 1]}"
 
-    damon_2026_ytd = sum(damon_months.get((2026, m), 0) for m in range(1, last_2026_month + 1))
-    anne_2026_ytd  = sum(anne_months.get((2026, m), 0)  for m in range(1, last_2026_month + 1))
-    damon_2025_ytd = sum(damon_months.get((2025, m), 0) for m in range(1, last_2026_month + 1))
+    # ── Consultation stats ────────────────────────────────────────────────────
+    annual_rows    = _build_annual_rows(damon_months, anne_months, all_consult_years)
+    monthly_by_year = _build_monthly_by_year(damon_months, anne_months, all_consult_years)
 
+    damon_alltime    = sum(damon_months.values())
+    damon_2026_ytd   = sum(damon_months.get((2026, m), 0) for m in range(1, last_2026_month + 1))
+    anne_2026_ytd    = sum(anne_months.get((2026, m), 0)  for m in range(1, last_2026_month + 1))
+    damon_2025_ytd   = sum(damon_months.get((2025, m), 0) for m in range(1, last_2026_month + 1))
     combined_2026_ytd = damon_2026_ytd + anne_2026_ytd
     combined_2025_ytd = damon_2025_ytd
+    damon_2025        = sum(damon_months.get((2025, m), 0) for m in range(1, 13))
+    anne_2025         = sum(anne_months.get((2025, m), 0)  for m in range(1, 13))
+    damon_yoy_pct     = _yoy_pct(damon_2026_ytd, damon_2025_ytd)
+    combined_yoy_pct  = _yoy_pct(combined_2026_ytd, combined_2025_ytd)
+    trend_data        = _build_trend(damon_months, anne_months, 2026, last_2026_month)
 
-    damon_2025 = sum(damon_months.get((2025, m), 0) for m in range(1, 13))
-    anne_2025  = sum(anne_months.get((2025, m), 0)  for m in range(1, 13))
+    # ── Signing stats ─────────────────────────────────────────────────────────
+    sign_annual_rows     = _build_annual_rows(sign_d_months, sign_a_months, all_sign_years)
+    sign_monthly_by_year = _build_monthly_by_year(sign_d_months, sign_a_months, all_sign_years)
 
-    damon_yoy_pct    = _yoy_pct(damon_2026_ytd, damon_2025_ytd)
-    combined_yoy_pct = _yoy_pct(combined_2026_ytd, combined_2025_ytd)
+    sign_damon_alltime   = sum(sign_d_months.values())
+    sign_damon_2026_ytd  = sum(sign_d_months.get((2026, m), 0) for m in range(1, last_2026_month + 1))
+    sign_anne_2026_ytd   = sum(sign_a_months.get((2026, m), 0) for m in range(1, last_2026_month + 1))
+    sign_damon_2025_ytd  = sum(sign_d_months.get((2025, m), 0) for m in range(1, last_2026_month + 1))
+    sign_combined_ytd    = sign_damon_2026_ytd + sign_anne_2026_ytd
+    sign_damon_2025      = sum(sign_d_months.get((2025, m), 0) for m in range(1, 13))
+    sign_damon_yoy_pct   = _yoy_pct(sign_damon_2026_ytd, sign_damon_2025_ytd)
+    sign_trend_data      = _build_trend(sign_d_months, sign_a_months, 2026, last_2026_month)
 
-    # 24-month trend
-    ref_total = 2026 * 12 + (last_2026_month - 1)
-    trend_data = []
-    for offset in range(23, -1, -1):
-        t = ref_total - offset
-        y, rem = divmod(t, 12)
-        m = rem + 1
-        d = damon_months.get((y, m), 0)
-        a = anne_months.get((y, m), 0)
-        trend_data.append({"label": f"{MONTH_NAMES[m - 1]} '{str(y)[-2:]}",
-                           "damon": d, "anne": a, "combined": d + a})
+    # Conversion rate: signings / consultations (combined, YTD)
+    conv_rate_2026 = round(sign_combined_ytd / combined_2026_ytd * 100, 1) if combined_2026_ytd else None
+    conv_rate_2025 = round(sign_damon_2025 / damon_2025 * 100, 1) if damon_2025 else None
 
     # AI insights
     insights, insights_updated = _get_or_refresh_insights(db, damon_months, anne_months)
 
     return templates.TemplateResponse("consult_data.html", {
-        "request":            request,
-        "user":               user,
-        "active_page":        "consult-data",
-        "annual_rows":        annual_rows,
-        "monthly_by_year":    monthly_by_year,
-        "all_years":          all_years,
-        "damon_alltime":      damon_alltime,
-        "damon_2026_ytd":     damon_2026_ytd,
-        "anne_2026_ytd":      anne_2026_ytd,
-        "combined_2026_ytd":  combined_2026_ytd,
-        "damon_2025_ytd":     damon_2025_ytd,
-        "combined_2025_ytd":  combined_2025_ytd,
-        "damon_yoy_pct":      damon_yoy_pct,
-        "combined_yoy_pct":   combined_yoy_pct,
-        "ytd_period":         ytd_period,
-        "damon_2025":         damon_2025,
-        "anne_2025":          anne_2025,
-        "trend_data":         trend_data,
-        "insights":           insights,
-        "insights_updated":   insights_updated,
-        "notes":              damon_data.get("notes", []) + anne_data.get("notes", []),
+        "request":               request,
+        "user":                  user,
+        "active_page":           "consult-data",
+        # Consultation
+        "annual_rows":           annual_rows,
+        "monthly_by_year":       monthly_by_year,
+        "all_years":             all_consult_years,
+        "damon_alltime":         damon_alltime,
+        "damon_2026_ytd":        damon_2026_ytd,
+        "anne_2026_ytd":         anne_2026_ytd,
+        "combined_2026_ytd":     combined_2026_ytd,
+        "damon_2025_ytd":        damon_2025_ytd,
+        "combined_2025_ytd":     combined_2025_ytd,
+        "damon_yoy_pct":         damon_yoy_pct,
+        "combined_yoy_pct":      combined_yoy_pct,
+        "ytd_period":            ytd_period,
+        "damon_2025":            damon_2025,
+        "anne_2025":             anne_2025,
+        "trend_data":            trend_data,
+        # Signing
+        "sign_annual_rows":      sign_annual_rows,
+        "sign_monthly_by_year":  sign_monthly_by_year,
+        "sign_all_years":        all_sign_years,
+        "sign_damon_alltime":    sign_damon_alltime,
+        "sign_damon_2026_ytd":   sign_damon_2026_ytd,
+        "sign_anne_2026_ytd":    sign_anne_2026_ytd,
+        "sign_combined_ytd":     sign_combined_ytd,
+        "sign_damon_2025_ytd":   sign_damon_2025_ytd,
+        "sign_damon_yoy_pct":    sign_damon_yoy_pct,
+        "sign_damon_2025":       sign_damon_2025,
+        "sign_trend_data":       sign_trend_data,
+        "conv_rate_2026":        conv_rate_2026,
+        "conv_rate_2025":        conv_rate_2025,
+        # Shared
+        "insights":              insights,
+        "insights_updated":      insights_updated,
+        "notes":                 damon_data.get("notes", []) + anne_data.get("notes", []),
         "updated_at":         damon_data.get("updated_at", ""),
     })
