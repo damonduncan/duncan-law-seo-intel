@@ -2,7 +2,7 @@ import json
 import logging
 from datetime import datetime, timezone, timedelta
 
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -146,18 +146,33 @@ def _get_or_refresh_insights(db: Session, damon_months: dict, anne_months: dict,
         return [], ""
 
 
+def _bg_refresh_insights(damon_months: dict, anne_months: dict) -> None:
+    """Background task — opens its own DB session so the HTTP response is not blocked."""
+    from app.database import SessionLocal
+    db = SessionLocal()
+    try:
+        _get_or_refresh_insights(db, damon_months, anne_months, force=True)
+    except Exception as e:
+        logger.error(f"Background insight refresh failed: {e}", exc_info=True)
+    finally:
+        db.close()
+
+
 @router.post("/consult-data/refresh-insights")
 def refresh_insights(
     request: Request,
+    background_tasks: BackgroundTasks,
     user: dict = Depends(auth_required),
     db: Session = Depends(get_db),
 ):
     damon_row = db.query(DiscoveryCache).filter(DiscoveryCache.key == "consultation_monthly_damon").first()
     anne_row  = db.query(DiscoveryCache).filter(DiscoveryCache.key == "consultation_monthly_anne").first()
-    damon_months = {(m["year"], m["month"]): m["count"] for m in (damon_row.value or {}).get("months", [])}
-    anne_months  = {(m["year"], m["month"]): m["count"] for m in (anne_row.value  or {}).get("months", [])}
-    _get_or_refresh_insights(db, damon_months, anne_months, force=True)
-    return RedirectResponse(url="/consult-data", status_code=303)
+    damon_data = damon_row.value if damon_row else {}
+    anne_data  = anne_row.value  if anne_row  else {}
+    damon_months = {(m["year"], m["month"]): m["count"] for m in damon_data.get("months", [])}
+    anne_months  = {(m["year"], m["month"]): m["count"] for m in anne_data.get("months",  [])}
+    background_tasks.add_task(_bg_refresh_insights, damon_months, anne_months)
+    return RedirectResponse(url="/consult-data?refreshing=1", status_code=303)
 
 
 @router.get("/consult-data", response_class=HTMLResponse)

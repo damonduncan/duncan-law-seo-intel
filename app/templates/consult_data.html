@@ -5,6 +5,14 @@
 <h1>Consult Data</h1>
 <p class="page-sub">Monthly consultation counts by attorney — Damon Duncan (2009–present) &amp; Anne Salter (Oct 2025–present)</p>
 
+{% if request.query_params.get('refreshing') %}
+<div style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:11px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-primary);">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.5" style="animation:spin 1.2s linear infinite;flex-shrink:0;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+  Insights are regenerating — reload this page in about 15 seconds to see the updated analysis.
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+{% endif %}
+
 <!-- ── AI Insights ───────────────────────────────────────────────────────── -->
 {% if insights %}
 <div class="card" style="margin-bottom:28px;">
