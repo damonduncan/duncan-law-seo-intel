@@ -135,7 +135,81 @@
     </div>
 
   </div>
+
+  <!-- 2025 comparison row -->
+  <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border-color);display:flex;align-items:center;gap:0;flex-wrap:wrap;opacity:.65;">
+    <div style="flex:1;min-width:120px;text-align:center;">
+      <div style="font-size:18px;font-weight:600;color:var(--text-muted);">{{ combined_2025_ytd }}</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">{{ ytd_period }} 2025 · Damon only</div>
+    </div>
+    <div style="flex:0 0 auto;text-align:center;padding:0 12px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text-muted);">{% if contract_conv_rate_2025_ytd %}{{ contract_conv_rate_2025_ytd }}%{% else %}—{% endif %}</div>
+      <div style="font-size:16px;color:var(--text-muted);margin-top:2px;">→</div>
+    </div>
+    <div style="flex:1;min-width:120px;text-align:center;">
+      <div style="font-size:18px;font-weight:600;color:var(--text-muted);">{{ contracts_2025_ytd }}</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">{{ ytd_period }} 2025</div>
+    </div>
+    <div style="flex:0 0 auto;text-align:center;padding:0 12px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text-muted);">{% if contract_to_filed_2025 %}{{ contract_to_filed_2025 }}%{% else %}—{% endif %}</div>
+      <div style="font-size:16px;color:var(--text-muted);margin-top:2px;">→</div>
+    </div>
+    <div style="flex:1;min-width:120px;text-align:center;">
+      <div style="font-size:18px;font-weight:600;color:var(--text-muted);">{{ pacer_2025_ytd }}</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">{{ ytd_period }} 2025</div>
+    </div>
+    <div style="flex:0 0 auto;border-left:1px solid var(--border-color);margin-left:16px;padding-left:20px;text-align:center;">
+      <div style="font-size:18px;font-weight:600;color:var(--text-muted);">{% if pacer_consult_rate_2025 %}{{ pacer_consult_rate_2025 }}%{% else %}—{% endif %}</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">overall '25</div>
+    </div>
+  </div>
+
 </div>
+
+<!-- ── Current Month Pacing ───────────────────────────────────────────────── -->
+{% if current_month_pacing %}
+<div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;padding:22px 28px;margin-bottom:28px;">
+  <div style="font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px;">
+    {{ current_month_pacing.month_name }} {{ current_month_pacing.year }} — Day {{ current_month_pacing.day_of_month }} of {{ current_month_pacing.days_in_month }}
+  </div>
+  <div style="display:flex;gap:0;flex-wrap:wrap;align-items:flex-start;">
+
+    <div style="padding-right:28px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Consultations So Far</div>
+      <div style="font-size:36px;font-weight:700;color:var(--text-primary);line-height:1;">{{ current_month_pacing.combined }}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:5px;">Damon {{ current_month_pacing.damon }} · Anne {{ current_month_pacing.anne }}</div>
+    </div>
+
+    {% if current_month_pacing.pace_full %}
+    <div style="border-left:1px solid var(--border-color);padding:0 28px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">On Pace For</div>
+      <div style="font-size:36px;font-weight:700;color:#6366f1;line-height:1;">{{ current_month_pacing.pace_full }}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:5px;">full-month projection</div>
+    </div>
+    {% endif %}
+
+    {% if current_month_pacing.prior_combined %}
+    <div style="border-left:1px solid var(--border-color);padding:0 28px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">{{ current_month_pacing.month_name }} {{ current_month_pacing.prior_year }} (full)</div>
+      <div style="font-size:36px;font-weight:700;color:var(--text-muted);line-height:1;">{{ current_month_pacing.prior_combined }}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:5px;">same month last year</div>
+    </div>
+    {% endif %}
+
+    <div style="flex:1;min-width:200px;align-self:center;padding-left:28px;border-left:1px solid var(--border-color);">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:5px;">
+        <span>Day {{ current_month_pacing.day_of_month }}</span>
+        <span>{{ ((current_month_pacing.day_of_month / current_month_pacing.days_in_month) * 100) | round | int }}% through month</span>
+      </div>
+      <div style="height:6px;background:var(--border-color);border-radius:3px;overflow:hidden;">
+        <div style="height:100%;width:{{ ((current_month_pacing.day_of_month / current_month_pacing.days_in_month) * 100) | round | int }}%;background:#6366f1;border-radius:3px;"></div>
+      </div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">Refreshes every 2 hours from Google Calendar</div>
+    </div>
+
+  </div>
+</div>
+{% endif %}
 
 <!-- ── Stat Cards ────────────────────────────────────────────────────────── -->
 <div style="margin-bottom:10px;">
@@ -487,6 +561,19 @@
   </div>
 </div>
 
+<!-- ── Cases Filed (PACER) ────────────────────────────────────────────────── -->
+<div style="margin-bottom:10px;">
+  <h2 style="font-size:15px;font-weight:600;margin:0 0 14px;">Cases Filed</h2>
+</div>
+<div class="card" style="margin-bottom:28px;">
+  <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);">
+    <h2 style="margin:0;font-size:15px;font-weight:600;">24-Month Filing Trend <span style="font-size:12px;font-weight:400;color:var(--text-muted);">· PACER</span></h2>
+  </div>
+  <div style="padding:20px 20px 16px;position:relative;height:270px;">
+    <canvas id="pacerChart"></canvas>
+  </div>
+</div>
+
 <!-- ── Consultation Annual Summary Table ─────────────────────────────────── -->
 <div style="margin-bottom:10px;">
   <h2 style="font-size:15px;font-weight:600;margin:0 0 14px;">Consultations</h2>
@@ -691,6 +778,42 @@
              ticks: { color: textMuted, font: { size: 11 }, maxRotation: 45, minRotation: 45 },
              border: { color: borderClr } },
         y: { stacked: true, beginAtZero: true, grid: { color: borderClr },
+             ticks: { color: textMuted, font: { size: 11 }, precision: 0 },
+             border: { color: borderClr } },
+      },
+    },
+  });
+})();
+
+// PACER filings chart
+(function() {
+  const raw = {{ pacer_trend_data | tojson }};
+  const labels = raw.map(d => d.label);
+  const vals   = raw.map(d => d.count);
+  const cs     = getComputedStyle(document.documentElement);
+  const textMuted = cs.getPropertyValue('--text-muted').trim() || '#888';
+  const borderClr = cs.getPropertyValue('--border').trim()     || 'rgba(0,0,0,0.1)';
+  const ctx = document.getElementById('pacerChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Cases Filed', data: vals, backgroundColor: 'rgba(22,163,74,0.82)', borderRadius: 3 },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', align: 'end',
+          labels: { color: textMuted, boxWidth: 12, padding: 16, font: { size: 12 } } },
+      },
+      scales: {
+        x: { grid: { display: false },
+             ticks: { color: textMuted, font: { size: 11 }, maxRotation: 45, minRotation: 45 },
+             border: { color: borderClr } },
+        y: { beginAtZero: true, grid: { color: borderClr },
              ticks: { color: textMuted, font: { size: 11 }, precision: 0 },
              border: { color: borderClr } },
       },

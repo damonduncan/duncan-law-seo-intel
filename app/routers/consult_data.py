@@ -241,6 +241,92 @@ def _build_monthly_by_year_single(c_months, all_years):
     return by_year
 
 
+def _build_pacer_trend(filing_hist: dict, last_year: int, last_month: int, n: int = 24):
+    monthly_map = {}
+    for annual in filing_hist.get("annual", []):
+        year = annual["year"]
+        for i, cnt in enumerate(annual.get("monthly") or []):
+            if cnt is not None:
+                monthly_map[(year, i + 1)] = cnt
+    ref_total = last_year * 12 + (last_month - 1)
+    data = []
+    for offset in range(n - 1, -1, -1):
+        t = ref_total - offset
+        y, rem = divmod(t, 12)
+        m = rem + 1
+        data.append({"label": f"{MONTH_NAMES[m - 1]} '{str(y)[-2:]}",
+                     "count": monthly_map.get((y, m), 0)})
+    return data
+
+
+def _get_current_month_pacing(db, last_complete_month: int,
+                               damon_months: dict, anne_months: dict) -> dict | None:
+    """Return current-month consultation counts with a 2-hour cache."""
+    import calendar as cal_mod
+    from datetime import date
+    today     = date.today()
+    curr_month = last_complete_month + 1
+    curr_year  = 2026
+    if curr_month > 12:
+        return None
+
+    import json as _json
+    cache_key = f"pacing_{curr_year}_{curr_month:02d}"
+    cache_row = db.query(DiscoveryCache).filter(DiscoveryCache.key == cache_key).first()
+
+    if cache_row and cache_row.updated_at:
+        age = datetime.now(timezone.utc) - cache_row.updated_at.replace(tzinfo=timezone.utc)
+        if age < timedelta(hours=2):
+            data = cache_row.value
+            if isinstance(data, str):
+                data = _json.loads(data)
+            return data
+
+    try:
+        from app.services.calendar_service import fetch_month_count
+        damon_count = fetch_month_count(
+            email="damonduncan@duncanlawonline.com",
+            attorney="damon",
+            year=curr_year, month=curr_month, event_type="consult",
+        )
+        anne_count = fetch_month_count(
+            email="anne@duncanlawonline.com",
+            attorney="anne",
+            year=curr_year, month=curr_month, event_type="consult",
+        )
+        days_in_month = cal_mod.monthrange(curr_year, curr_month)[1]
+        day_of_month  = min(today.day, days_in_month)
+        combined      = damon_count + anne_count
+        pace_full     = round(combined / day_of_month * days_in_month) if day_of_month else None
+        prior_damon   = damon_months.get((curr_year - 1, curr_month), 0)
+        prior_anne    = anne_months.get((curr_year - 1, curr_month), 0)
+        data = {
+            "year": curr_year, "month": curr_month,
+            "month_name": MONTH_NAMES[curr_month - 1],
+            "damon": damon_count, "anne": anne_count, "combined": combined,
+            "day_of_month": day_of_month, "days_in_month": days_in_month,
+            "pace_full": pace_full,
+            "prior_combined": prior_damon + prior_anne,
+            "prior_year": curr_year - 1,
+        }
+        now = datetime.now(timezone.utc)
+        if cache_row:
+            cache_row.value      = data
+            cache_row.updated_at = now
+        else:
+            db.add(DiscoveryCache(id=new_uuid(), key=cache_key, value=data, updated_at=now))
+        db.commit()
+        return data
+    except Exception as e:
+        logger.error(f"Current month pacing fetch failed: {e}", exc_info=True)
+        if cache_row:
+            data = cache_row.value
+            if isinstance(data, str):
+                data = _json.loads(data)
+            return data
+        return None
+
+
 @router.get("/consult-data", response_class=HTMLResponse)
 def consult_data_page(
     request: Request,
@@ -333,6 +419,26 @@ def consult_data_page(
     # Overall consult → filed rate using PACER
     pacer_consult_rate_2026   = round(pacer_filed_ytd / combined_2026_ytd * 100, 1) if combined_2026_ytd else None
 
+    # ── PACER 2025 YTD (same period, for funnel comparison row) ──────────────
+    _pacer_2025 = next((r for r in _filing_hist.get("annual", []) if r["year"] == 2025), None)
+    pacer_2025_ytd = 0
+    if _pacer_2025:
+        _monthly_2025 = _pacer_2025.get("monthly") or []
+        pacer_2025_ytd = sum(
+            _monthly_2025[m - 1] or 0
+            for m in range(1, last_2026_month + 1)
+            if m - 1 < len(_monthly_2025)
+        )
+    contract_conv_rate_2025_ytd = round(contracts_2025_ytd / combined_2025_ytd * 100, 1) if combined_2025_ytd else None
+    contract_to_filed_2025      = round(pacer_2025_ytd / contracts_2025_ytd * 100, 1) if contracts_2025_ytd else None
+    pacer_consult_rate_2025     = round(pacer_2025_ytd / combined_2025_ytd * 100, 1) if combined_2025_ytd else None
+
+    # ── PACER 24-month trend ──────────────────────────────────────────────────
+    pacer_trend_data = _build_pacer_trend(_filing_hist, 2026, last_2026_month)
+
+    # ── Current month pacing ──────────────────────────────────────────────────
+    current_month_pacing = _get_current_month_pacing(db, last_2026_month, damon_months, anne_months)
+
     # AI insights
     insights, insights_updated = _get_or_refresh_insights(db, damon_months, anne_months)
 
@@ -383,6 +489,14 @@ def consult_data_page(
         "contract_to_filed_2026":    contract_to_filed_2026,
         "pacer_filed_ytd":           pacer_filed_ytd,
         "pacer_consult_rate_2026":   pacer_consult_rate_2026,
+        # PACER 2025 comparison
+        "pacer_2025_ytd":            pacer_2025_ytd,
+        "contract_conv_rate_2025_ytd": contract_conv_rate_2025_ytd,
+        "contract_to_filed_2025":    contract_to_filed_2025,
+        "pacer_consult_rate_2025":   pacer_consult_rate_2025,
+        # PACER trend & pacing
+        "pacer_trend_data":          pacer_trend_data,
+        "current_month_pacing":      current_month_pacing,
         # Shared
         "insights":              insights,
         "insights_updated":      insights_updated,
