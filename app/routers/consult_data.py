@@ -248,8 +248,11 @@ def consult_data_page(
     db: Session = Depends(get_db),
 ):
     def _load(key):
+        import json as _json
         row = db.query(DiscoveryCache).filter(DiscoveryCache.key == key).first()
         data = row.value if row else {}
+        if isinstance(data, str):
+            data = _json.loads(data)
         return {(m["year"], m["month"]): m["count"] for m in data.get("months", [])}, data
 
     damon_months, damon_data  = _load("consultation_monthly_damon")

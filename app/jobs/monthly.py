@@ -23,8 +23,11 @@ def _upsert_cache_month(db, cache_key: str, year: int, month: int, count: int,
     from app.models.discovery import DiscoveryCache
     from app.models.base import new_uuid
 
+    import json as _json
     row  = db.query(DiscoveryCache).filter(DiscoveryCache.key == cache_key).first()
     data = row.value if row else {"months": [], "notes": notes or []}
+    if isinstance(data, str):
+        data = _json.loads(data)
 
     months   = data.get("months", [])
     existing = next((m for m in months if m["year"] == year and m["month"] == month), None)
