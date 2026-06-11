@@ -317,6 +317,8 @@ def consult_data_page(
     combined_2025_total       = damon_2025 + anne_2025
     contract_conv_rate_2026   = round(contracts_2026_ytd / combined_2026_ytd * 100, 1) if combined_2026_ytd else None
     contract_conv_rate_2025   = round(contracts_2025 / combined_2025_total * 100, 1) if combined_2025_total else None
+    # Contract → Filed rate (signing appointments / contracts signed)
+    contract_to_filed_2026    = round(sign_combined_ytd / contracts_2026_ytd * 100, 1) if contracts_2026_ytd else None
 
     # AI insights
     insights, insights_updated = _get_or_refresh_insights(db, damon_months, anne_months)
@@ -365,6 +367,7 @@ def consult_data_page(
         "contract_trend_data":       contract_trend_data,
         "contract_conv_rate_2026":   contract_conv_rate_2026,
         "contract_conv_rate_2025":   contract_conv_rate_2025,
+        "contract_to_filed_2026":    contract_to_filed_2026,
         # Shared
         "insights":              insights,
         "insights_updated":      insights_updated,
