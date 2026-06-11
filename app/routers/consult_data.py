@@ -20,6 +20,18 @@ logger = logging.getLogger(__name__)
 MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
+# Conservative blended average fee per case (Ch.7 $1,995 fixed; Ch.13 variable/dismissals pull it down)
+AVG_CASE_FEE = 1_500
+
+
+def _fmt_revenue(n: int) -> str:
+    """Format an integer dollar amount as $XK or $X.XM."""
+    if n >= 1_000_000:
+        return f"${n / 1_000_000:.1f}M"
+    if n >= 1_000:
+        return f"${round(n / 1_000)}K"
+    return f"${n:,}"
+
 
 def _yoy_pct(current: int, prior: int):
     if prior == 0:
@@ -72,6 +84,7 @@ INTAKE FUNNEL — {ytd_label} 2026 vs same period 2025:
   Cases Filed (PACER): 2026={fd.get('pacer_filed_ytd','?')}, 2025={fd.get('pacer_2025_ytd','?')}
     Contract→Filed:    2026={fd.get('contract_to_filed_2026','?')}%, 2025={fd.get('contract_to_filed_2025','?')}%
     Overall consult→filed: 2026={fd.get('pacer_consult_rate_2026','?')}%, 2025={fd.get('pacer_consult_rate_2025','?')}%
+  Est. Revenue (@ ${fd.get('avg_case_fee','?')}/case avg): 2026={fd.get('est_revenue_2026_ytd','?')}, 2025={fd.get('est_revenue_2025_ytd','?')}
 """
 
     prompt = f"""You are a practice management analyst for Duncan Law LLP, a consumer bankruptcy law firm in
@@ -496,6 +509,10 @@ def consult_data_page(
     contract_to_filed_2025      = round(pacer_2025_ytd / contracts_2025_ytd * 100, 1) if contracts_2025_ytd else None
     pacer_consult_rate_2025     = round(pacer_2025_ytd / combined_2025_ytd * 100, 1) if combined_2025_ytd else None
 
+    # ── Estimated revenue (conservative blended avg $1,500/case) ─────────────
+    est_revenue_2026_ytd = _fmt_revenue(pacer_filed_ytd * AVG_CASE_FEE)
+    est_revenue_2025_ytd = _fmt_revenue(pacer_2025_ytd * AVG_CASE_FEE)
+
     # ── PACER 24-month trend ──────────────────────────────────────────────────
     pacer_trend_data = _build_pacer_trend(_filing_hist, 2026, last_2026_month)
 
@@ -514,6 +531,9 @@ def consult_data_page(
         "contract_to_filed_2025": contract_to_filed_2025,
         "pacer_consult_rate_2026": pacer_consult_rate_2026,
         "pacer_consult_rate_2025": pacer_consult_rate_2025,
+        "est_revenue_2026_ytd": est_revenue_2026_ytd,
+        "est_revenue_2025_ytd": est_revenue_2025_ytd,
+        "avg_case_fee": AVG_CASE_FEE,
     }
     insights, insights_updated = _get_or_refresh_insights(
         db, damon_months, anne_months, funnel_data=funnel_data
@@ -574,6 +594,9 @@ def consult_data_page(
         # PACER trend & pacing
         "pacer_trend_data":          pacer_trend_data,
         "current_month_pacing":      current_month_pacing,
+        "est_revenue_2026_ytd":      est_revenue_2026_ytd,
+        "est_revenue_2025_ytd":      est_revenue_2025_ytd,
+        "avg_case_fee":              AVG_CASE_FEE,
         # Shared
         "insights":              insights,
         "insights_updated":      insights_updated,

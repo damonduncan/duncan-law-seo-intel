@@ -128,6 +128,10 @@
       <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Cases Filed</div>
       <div style="font-size:36px;font-weight:700;color:#16a34a;line-height:1;">{{ pacer_filed_ytd }}</div>
       <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">PACER</div>
+      {% if est_revenue_2026_ytd %}
+      <div style="font-size:15px;font-weight:700;color:#16a34a;margin-top:8px;">{{ est_revenue_2026_ytd }}</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">est. revenue · ${{ avg_case_fee | int }}/case avg</div>
+      {% endif %}
     </div>
 
     <!-- Overall rate -->
@@ -162,6 +166,9 @@
     <div style="flex:1;min-width:120px;text-align:center;">
       <div style="font-size:18px;font-weight:600;color:var(--text-muted);">{{ pacer_2025_ytd }}</div>
       <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">{{ ytd_period }} 2025</div>
+      {% if est_revenue_2025_ytd %}
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-top:6px;">{{ est_revenue_2025_ytd }}</div>
+      {% endif %}
     </div>
     <div style="flex:0 0 auto;border-left:1px solid var(--border-color);margin-left:16px;padding-left:20px;text-align:center;">
       <div style="font-size:18px;font-weight:600;color:var(--text-muted);">{% if pacer_consult_rate_2025 %}{{ pacer_consult_rate_2025 }}%{% else %}—{% endif %}</div>
