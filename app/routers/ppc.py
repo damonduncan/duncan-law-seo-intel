@@ -19,10 +19,11 @@ templates = Jinja2Templates(directory="app/templates")
 auth_required = RedirectIfNotAuthenticated()
 
 MARKET_DISPLAY = {
-    "charlotte":    "Charlotte",
-    "greensboro":   "Greensboro",
+    "charlotte":     "Charlotte",
+    "greensboro":    "Greensboro",
     "winston_salem": "Winston-Salem",
-    "salisbury":    "Salisbury",
+    "salisbury":     "Salisbury",
+    "asheville":     "Asheville",
 }
 MARKETS = list(MARKET_DISPLAY.keys())
 MONTH_NAMES = [
@@ -31,10 +32,11 @@ MONTH_NAMES = [
 ]
 
 MARKET_DISTRICT = {
-    "charlotte":    "WDNC",
-    "greensboro":   "MDNC",
+    "charlotte":     "WDNC",
+    "greensboro":    "MDNC",
     "winston_salem": "MDNC",
-    "salisbury":    "MDNC",
+    "salisbury":     "MDNC",
+    "asheville":     "WDNC",
 }
 
 
