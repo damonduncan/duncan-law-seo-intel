@@ -130,7 +130,8 @@
       <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">PACER</div>
       {% if est_revenue_2026_ytd %}
       <div style="font-size:15px;font-weight:700;color:#16a34a;margin-top:8px;">{{ est_revenue_2026_ytd }}</div>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">est. revenue · ${{ avg_case_fee | int }}/case avg</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">Estimated revenue only</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">~${{ avg_case_fee | int }}/case blended avg · not actual billed revenue</div>
       {% endif %}
     </div>
 
