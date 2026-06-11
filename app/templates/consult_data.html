@@ -11,39 +11,69 @@
   <div class="card" style="padding:18px 20px;">
     <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Damon — 2026 YTD</div>
     <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ damon_2026_ytd }}</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Jan – May 2026</div>
+    <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">{{ ytd_period }} 2026</div>
+    {% if damon_yoy_pct is not none %}
+    <div style="margin-top:4px;display:flex;align-items:center;gap:5px;">
+      {% if damon_yoy_pct >= 0 %}
+        <span style="font-size:11px;font-weight:700;color:#22c55e;">↑ {{ damon_yoy_pct | abs }}%</span>
+      {% else %}
+        <span style="font-size:11px;font-weight:700;color:#ef4444;">↓ {{ damon_yoy_pct | abs }}%</span>
+      {% endif %}
+      <span style="font-size:11px;color:var(--text-muted);">vs {{ ytd_period }} '25</span>
+    </div>
+    {% endif %}
   </div>
 
   <div class="card" style="padding:18px 20px;">
     <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Anne — 2026 YTD</div>
     <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ anne_2026_ytd }}</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Jan – May 2026</div>
+    <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">{{ ytd_period }} 2026</div>
   </div>
 
   <div class="card" style="padding:18px 20px;border-color:var(--accent-border,rgba(99,102,241,.3));">
     <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Combined — 2026 YTD</div>
-    <div style="font-size:28px;font-weight:700;color:var(--accent,#6366f1);line-height:1;">{{ damon_2026_ytd + anne_2026_ytd }}</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Jan – May 2026</div>
+    <div style="font-size:28px;font-weight:700;color:var(--accent,#6366f1);line-height:1;">{{ combined_2026_ytd }}</div>
+    <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">{{ ytd_period }} 2026</div>
+    {% if combined_yoy_pct is not none %}
+    <div style="margin-top:4px;display:flex;align-items:center;gap:5px;">
+      {% if combined_yoy_pct >= 0 %}
+        <span style="font-size:11px;font-weight:700;color:#22c55e;">↑ {{ combined_yoy_pct | abs }}%</span>
+      {% else %}
+        <span style="font-size:11px;font-weight:700;color:#ef4444;">↓ {{ combined_yoy_pct | abs }}%</span>
+      {% endif %}
+      <span style="font-size:11px;color:var(--text-muted);">vs {{ ytd_period }} '25</span>
+    </div>
+    {% endif %}
   </div>
 
   <div class="card" style="padding:18px 20px;">
     <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Damon — 2025</div>
     <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ damon_2025 }}</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Full year</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Full year</div>
   </div>
 
   <div class="card" style="padding:18px 20px;">
     <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Anne — 2025</div>
     <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ anne_2025 }}</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Oct – Dec only</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Oct – Dec only</div>
   </div>
 
   <div class="card" style="padding:18px 20px;">
     <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Damon — All-Time</div>
     <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ damon_alltime }}</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Since Oct 2009</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Since Oct 2009</div>
   </div>
 
+</div>
+
+<!-- ── 24-Month Trend Chart ──────────────────────────────────────────────── -->
+<div class="card" style="margin-bottom:28px;">
+  <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);">
+    <h2 style="margin:0;font-size:15px;font-weight:600;">24-Month Consultation Trend</h2>
+  </div>
+  <div style="padding:20px 20px 16px;position:relative;height:270px;">
+    <canvas id="trendChart"></canvas>
+  </div>
 </div>
 
 <!-- ── Annual Summary Table ──────────────────────────────────────────────── -->
@@ -132,7 +162,76 @@
 </div>
 {% endif %}
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
+(function() {
+  const raw = {{ trend_data | tojson }};
+  const labels   = raw.map(d => d.label);
+  const damonVals = raw.map(d => d.damon);
+  const anneVals  = raw.map(d => d.anne);
+
+  // Read theme colors from CSS variables for axis/grid
+  const cs = getComputedStyle(document.documentElement);
+  const textMuted  = cs.getPropertyValue('--text-muted').trim()  || '#888';
+  const borderClr  = cs.getPropertyValue('--border').trim()      || 'rgba(0,0,0,0.1)';
+
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Damon',
+          data: damonVals,
+          backgroundColor: 'rgba(99,102,241,0.85)',
+          borderRadius: 3,
+          stack: 'total',
+        },
+        {
+          label: 'Anne',
+          data: anneVals,
+          backgroundColor: 'rgba(20,184,166,0.82)',
+          borderRadius: 3,
+          stack: 'total',
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index' },
+      plugins: {
+        legend: {
+          position: 'top',
+          align: 'end',
+          labels: { color: textMuted, boxWidth: 12, padding: 16, font: { size: 12 } },
+        },
+        tooltip: {
+          callbacks: {
+            footer: items => 'Total: ' + items.reduce((s, i) => s + i.raw, 0),
+          },
+        },
+      },
+      scales: {
+        x: {
+          stacked: true,
+          grid: { display: false },
+          ticks: { color: textMuted, font: { size: 11 }, maxRotation: 45, minRotation: 45 },
+          border: { color: borderClr },
+        },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          grid: { color: borderClr },
+          ticks: { color: textMuted, font: { size: 11 }, precision: 0 },
+          border: { color: borderClr },
+        },
+      },
+    },
+  });
+})();
+
 function toggleYear(year) {
   const detail  = document.getElementById('cd-detail-' + year);
   const chevron = document.querySelector('.cd-chevron-' + year);
