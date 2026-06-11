@@ -131,6 +131,20 @@ def _build_prompt(ctx: dict) -> str:
             own_str = f"Duncan Law: {own_row['count']} cases" if own_row else "Duncan Law: not in top 6"
             lines.append(f"  {dist}: leader {top['name']} ({top['count']} cases) | {own_str}")
 
+    # Intake funnel
+    funnel = ctx.get("funnel", {})
+    if funnel and funnel.get("combined_ytd"):
+        f = funnel
+        lines.append("")
+        lines.append(f"## Intake Funnel — {f.get('period_label', 'YTD')}")
+        lines.append(f"  Consultations: {f.get('combined_ytd', 0):,} (Damon {f.get('damon_ytd',0)}, Anne {f.get('anne_ytd',0)})")
+        lines.append(f"  Contracts signed: {f.get('contract_ytd', 0):,} ({f.get('consult_to_contract','?')}% consult→contract)")
+        lines.append(f"  Cases filed (PACER): {f.get('pacer_ytd', 0)} ({f.get('consult_to_filed','?')}% consult→filed, {f.get('contract_to_filed','?')}% contract→filed)")
+        lines.append(f"  Est. revenue YTD: ~${f.get('est_revenue_ytd', 0):,} (at $1,500/case blended avg)")
+        if f.get("pacer_prev_ytd"):
+            delta = f["pacer_ytd"] - f["pacer_prev_ytd"]
+            lines.append(f"  vs same period prior year: {f['pacer_prev_ytd']} filings ({'+'if delta>=0 else ''}{delta} YoY)")
+
     lines += [
         "",
         "---",
@@ -399,6 +413,21 @@ def _build_narrative_prompt(ctx: dict) -> str:
             if not msg and hasattr(a, "alert_type"):
                 msg = a.alert_type
             lines.append(f"  - {str(msg)[:120]}")
+
+    # Intake funnel
+    funnel = ctx.get("funnel", {})
+    if funnel and funnel.get("combined_ytd"):
+        f = funnel
+        lines.append("")
+        lines.append(f"INTAKE FUNNEL — {f.get('period_label', 'YTD')}:")
+        lines.append(f"  Consultations: {f.get('combined_ytd', 0):,} (Damon {f.get('damon_ytd',0)}, Anne {f.get('anne_ytd',0)})")
+        lines.append(f"  Contracts signed: {f.get('contract_ytd', 0):,} ({f.get('consult_to_contract','?')}% consult→contract conversion rate)")
+        lines.append(f"  Cases filed (PACER): {f.get('pacer_ytd', 0)} ({f.get('consult_to_filed','?')}% of consultations → filed, {f.get('contract_to_filed','?')}% of contracts → filed)")
+        lines.append(f"  Est. revenue YTD: ~${f.get('est_revenue_ytd', 0):,} at $1,500/case blended average")
+        if f.get("pacer_prev_ytd"):
+            delta = f["pacer_ytd"] - f["pacer_prev_ytd"]
+            sign  = "+" if delta >= 0 else ""
+            lines.append(f"  Prior year same period: {f['pacer_prev_ytd']} filings ({sign}{delta} YoY change)")
 
     lines.append("")
     lines.append("Write the briefing now. Remember: no bullet points, no headers, flowing paragraphs only.")

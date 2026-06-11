@@ -98,6 +98,81 @@ def build_and_send_digest(db: Session) -> None:
 
 # ── Data gathering ────────────────────────────────────────────────────────────
 
+def _load_funnel_data(db: Session) -> dict:
+    """Load intake funnel metrics (consults → contracts → PACER filings) from cache."""
+    from app.models.discovery import DiscoveryCache
+    import json as _json
+
+    def _load(key):
+        row = db.query(DiscoveryCache).filter(DiscoveryCache.key == key).first()
+        if not row:
+            return {}
+        val = row.value
+        return _json.loads(val) if isinstance(val, str) else (val or {})
+
+    damon_cache    = _load("consultation_monthly_damon")
+    anne_cache     = _load("consultation_monthly_anne")
+    contract_cache = _load("docusign_monthly_contracts")
+    filing_hist    = _load("duncan_law_filing_history")
+
+    today = date.today()
+    if today.month == 1:
+        curr_year, curr_month = today.year - 1, 12
+    else:
+        curr_year, curr_month = today.year, today.month - 1
+
+    def _ytd(cache, year, thru_month):
+        return sum(
+            m["count"] for m in cache.get("months", [])
+            if m["year"] == year and m["month"] <= thru_month
+        )
+
+    def _last(cache, year, month):
+        return next(
+            (m["count"] for m in cache.get("months", [])
+             if m["year"] == year and m["month"] == month),
+            None,
+        )
+
+    damon_ytd    = _ytd(damon_cache, curr_year, curr_month)
+    anne_ytd     = _ytd(anne_cache,  curr_year, curr_month)
+    contract_ytd = _ytd(contract_cache, curr_year, curr_month)
+
+    pacer_ytd = pacer_prev_ytd = 0
+    for annual in filing_hist.get("annual", []):
+        yr      = annual["year"]
+        monthly = annual.get("monthly") or []
+        total   = sum(monthly[m - 1] or 0 for m in range(1, curr_month + 1) if m - 1 < len(monthly))
+        if yr == curr_year:
+            pacer_ytd = total
+        elif yr == curr_year - 1:
+            pacer_prev_ytd = total
+
+    combined_ytd = damon_ytd + anne_ytd
+
+    mn = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+    return {
+        "period_label":         f"Jan–{mn[curr_month]} {curr_year}",
+        "curr_year":            curr_year,
+        "curr_month":           curr_month,
+        "combined_ytd":         combined_ytd,
+        "damon_ytd":            damon_ytd,
+        "anne_ytd":             anne_ytd,
+        "contract_ytd":         contract_ytd,
+        "pacer_ytd":            pacer_ytd,
+        "pacer_prev_ytd":       pacer_prev_ytd,
+        "consult_to_contract":  round(contract_ytd / combined_ytd * 100, 1) if combined_ytd else None,
+        "contract_to_filed":    round(pacer_ytd / contract_ytd * 100, 1)   if contract_ytd else None,
+        "consult_to_filed":     round(pacer_ytd / combined_ytd * 100, 1)   if combined_ytd else None,
+        "est_revenue_ytd":      pacer_ytd * 1_500,
+        "damon_last_month":     _last(damon_cache, curr_year, curr_month),
+        "anne_last_month":      _last(anne_cache,  curr_year, curr_month),
+        "contract_last_month":  _last(contract_cache, curr_year, curr_month),
+    }
+
+
 def _gather_data(db: Session) -> dict:
     own_firm = db.query(Competitor).filter(Competitor.is_own_firm == True).first()
     own_id   = own_firm.id if own_firm else None
@@ -474,6 +549,12 @@ def _gather_data(db: Session) -> dict:
                 "is_leading":    gap is not None and gap <= 0,
             }
 
+    funnel = {}
+    try:
+        funnel = _load_funnel_data(db)
+    except Exception as _fe:
+        logger.warning(f"Funnel data load failed: {_fe}")
+
     return {
         "rankings_by_market":         rankings_by_market,
         "rank_direction":             rank_direction,
@@ -490,6 +571,7 @@ def _gather_data(db: Session) -> dict:
         "market_velocity":            market_velocity,
         "pack_entries_by_market":     dict(pack_entries_by_market),
         "gap_to_1_by_market":         gap_to_1_by_market,
+        "funnel":                     funnel,
     }
 
 
@@ -1007,6 +1089,82 @@ def _build_html(ctx: dict, week_str: str) -> str:
             "PACER Filing Standings",
             f'{pacer_blocks}<p style="margin:4px 0 0;font-size:12px;color:#6b7280;">'
             f'<a href="{base_url}/filings" style="color:#3b82f6;">View full filing data →</a></p>',
+        ))
+
+    # ── Intake Funnel section ─────────────────────────────────────────────────
+    funnel = ctx.get("funnel", {})
+    if funnel and funnel.get("combined_ytd"):
+        f = funnel
+        period  = f.get("period_label", "YTD")
+        cy      = f.get("curr_year", "")
+        combined  = f.get("combined_ytd", 0)
+        contracts = f.get("contract_ytd", 0)
+        filed     = f.get("pacer_ytd", 0)
+        prev_filed = f.get("pacer_prev_ytd", 0)
+
+        c2c  = f.get("consult_to_contract")
+        c2f  = f.get("consult_to_filed")
+        ct2f = f.get("contract_to_filed")
+        rev  = f.get("est_revenue_ytd", 0)
+
+        _fmt_rate = lambda r: f"{r}%" if r is not None else "—"
+        _fmt_k    = lambda v: f"${round(v / 1000)}K" if v >= 1000 else f"${v:,}"
+        _delta_str = ""
+        if prev_filed and filed:
+            delta = filed - prev_filed
+            sign  = "+" if delta >= 0 else ""
+            color = "#059669" if delta >= 0 else "#dc2626"
+            _delta_str = (
+                f'<span style="color:{color};font-weight:700;font-size:11px;margin-left:4px;">'
+                f'({sign}{delta} vs {cy - 1})</span>'
+            )
+
+        # Stage bars (width proportional to funnel drop-off)
+        def _bar(pct, color):
+            w = max(8, round(pct))
+            return (
+                f'<div style="background:#f3f4f6;border-radius:4px;height:8px;margin-top:4px;">'
+                f'<div style="background:{color};width:{w}%;height:8px;border-radius:4px;"></div>'
+                f'</div>'
+            )
+
+        contracts_pct = round(contracts / combined * 100) if combined else 0
+        filed_pct     = round(filed / combined * 100)     if combined else 0
+
+        sections.append(_section(
+            f"Intake Funnel — {period}",
+            f'''<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:12px;">
+              <tr>
+                <td style="padding:10px 8px;border-bottom:1px solid #f3f4f6;width:38%;">
+                  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:2px;">Consultations</div>
+                  <div style="font-size:20px;font-weight:700;color:#111827;">{combined:,}</div>
+                  <div style="font-size:11px;color:#6b7280;">Damon {f.get("damon_ytd",0)} · Anne {f.get("anne_ytd",0)}</div>
+                  {_bar(100, "#6b7280")}
+                </td>
+                <td style="padding:10px 8px;border-bottom:1px solid #f3f4f6;text-align:center;color:#9ca3af;font-size:16px;">→</td>
+                <td style="padding:10px 8px;border-bottom:1px solid #f3f4f6;width:38%;">
+                  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:2px;">Contracts Signed</div>
+                  <div style="font-size:20px;font-weight:700;color:#111827;">{contracts:,}</div>
+                  <div style="font-size:11px;color:#6b7280;">{_fmt_rate(c2c)} conversion</div>
+                  {_bar(contracts_pct, "#3b82f6")}
+                </td>
+              </tr>
+              <tr>
+                <td colspan="3" style="padding:10px 8px;">
+                  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:2px;">Cases Filed (PACER)</div>
+                  <div style="display:flex;align-items:baseline;gap:8px;">
+                    <span style="font-size:20px;font-weight:700;color:#111827;">{filed}</span>
+                    {_delta_str}
+                  </div>
+                  <div style="font-size:11px;color:#6b7280;">{_fmt_rate(c2f)} consult→filed · {_fmt_rate(ct2f)} contract→filed · est. {_fmt_k(rev)} revenue</div>
+                  {_bar(filed_pct, "#059669")}
+                </td>
+              </tr>
+            </table>
+            <p style="margin:4px 0 0;font-size:11px;color:#9ca3af;">
+              Estimated revenue · ~$1,500/case blended avg · not actual billed revenue ·
+              <a href="{base_url}/consult-data" style="color:#3b82f6;">View Consult Data →</a>
+            </p>''',
         ))
 
     # ── Alerts section ────────────────────────────────────────────────────────

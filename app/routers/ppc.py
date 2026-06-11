@@ -1,3 +1,4 @@
+import threading
 from datetime import date, datetime, timedelta, timezone
 from collections import defaultdict
 from fastapi import APIRouter, Request, Depends, Form
@@ -294,6 +295,19 @@ def ppc(
         sum(row["monthly_spend"] or 0 for row in organic_vs_ppc)
     )
 
+    # ── Google Ads setup status ───────────────────────────────────────────────
+    try:
+        from app.services.google_ads_service import is_configured as _ads_ok
+        from app.config import settings as _s
+        ads_connected    = _ads_ok()
+        ads_has_dev_token = bool(_s.google_ads_developer_token)
+        ads_has_customer  = bool(_s.google_ads_customer_id)
+    except Exception:
+        ads_connected = ads_has_dev_token = ads_has_customer = False
+
+    # Latest data point label
+    latest_data_label = months[-1]["label"] if months else None
+
     return templates.TemplateResponse("ppc.html", {
         "request":            request,
         "user":               user,
@@ -311,7 +325,11 @@ def ppc(
         "market_display":     MARKET_DISPLAY,
         "ga_summary":         ga_summary,
         "ga_trend_chart":     ga_trend_chart,
-        "total_monthly_spend": total_monthly_spend,
+        "total_monthly_spend":  total_monthly_spend,
+        "ads_connected":        ads_connected,
+        "ads_has_dev_token":    ads_has_dev_token,
+        "ads_has_customer":     ads_has_customer,
+        "latest_data_label":    latest_data_label,
     })
 
 
@@ -448,3 +466,181 @@ def ppc_data_json(
     ).first()
     data = (cache_row.value or []) if cache_row else []
     return JSONResponse(content={"months": data, "count": len(data)})
+
+
+# ── Google Ads connect / sync ─────────────────────────────────────────────────
+
+_GOOGLE_ADS_SCOPES = "https://www.googleapis.com/auth/adwords"
+_GOOGLE_TOKEN_URL  = "https://oauth2.googleapis.com/token"
+_GOOGLE_AUTH_URL   = "https://accounts.google.com/o/oauth2/v2/auth"
+
+
+@router.get("/ppc/connect-google-ads", response_class=HTMLResponse)
+def connect_google_ads(
+    request:  Request,
+    user:     dict = Depends(auth_required),
+    code:     str  = "",
+    error:    str  = "",
+):
+    """Step 1 (GET with no params): show connect page with OAuth URL.
+       Step 2 (GET with ?code=...): exchange code for tokens, save refresh token.
+    """
+    from app.config import settings
+    from app.services.google_ads_service import save_refresh_token
+
+    base_url     = settings.app_base_url.rstrip("/")
+    redirect_uri = f"{base_url}/ppc/connect-google-ads"
+    client_id    = settings.google_client_id
+    client_secret = settings.google_client_secret
+
+    message = ""
+    success = False
+
+    if error:
+        message = f"Google returned an error: {error}"
+
+    elif code:
+        # Exchange authorization code for tokens
+        try:
+            import httpx
+            resp = httpx.post(
+                _GOOGLE_TOKEN_URL,
+                data={
+                    "grant_type":    "authorization_code",
+                    "code":          code,
+                    "client_id":     client_id,
+                    "client_secret": client_secret,
+                    "redirect_uri":  redirect_uri,
+                },
+                timeout=15,
+            )
+            resp.raise_for_status()
+            tokens = resp.json()
+            refresh_token = tokens.get("refresh_token", "")
+            if refresh_token:
+                save_refresh_token(refresh_token)
+                message = "Google Ads connected successfully. Refresh token saved."
+                success = True
+            else:
+                message = (
+                    "Google returned tokens but no refresh_token. "
+                    "Make sure 'offline' access type was requested. "
+                    f"Response keys: {list(tokens.keys())}"
+                )
+        except Exception as e:
+            message = f"Token exchange failed: {e}"
+
+    # Build the OAuth URL for the connect button
+    from urllib.parse import urlencode
+    oauth_params = {
+        "client_id":     client_id,
+        "redirect_uri":  redirect_uri,
+        "response_type": "code",
+        "scope":         _GOOGLE_ADS_SCOPES,
+        "access_type":   "offline",
+        "prompt":        "consent",
+    }
+    oauth_url = f"{_GOOGLE_AUTH_URL}?{urlencode(oauth_params)}"
+
+    missing = []
+    if not settings.google_ads_developer_token:
+        missing.append("GOOGLE_ADS_DEVELOPER_TOKEN")
+    if not settings.google_ads_customer_id:
+        missing.append("GOOGLE_ADS_CUSTOMER_ID")
+
+    html = f"""
+    <!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8"><title>Connect Google Ads</title>
+    <style>
+      body {{font-family:-apple-system,Arial,sans-serif;background:#f3f4f6;padding:40px 24px;}}
+      .card {{max-width:600px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;box-shadow:0 1px 3px rgba(0,0,0,.1);}}
+      h2 {{margin:0 0 8px;font-size:20px;color:#111827;}}
+      p {{color:#374151;font-size:14px;line-height:1.6;}}
+      .btn {{display:inline-block;background:#2563eb;color:#fff;padding:10px 22px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600;margin-top:16px;}}
+      .ok {{background:#d1fae5;color:#065f46;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:14px;}}
+      .err {{background:#fee2e2;color:#991b1b;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:14px;}}
+      .warn {{background:#fef3c7;color:#78350f;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:14px;}}
+      code {{background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:13px;}}
+      ol {{color:#374151;font-size:14px;line-height:1.8;padding-left:20px;}}
+    </style>
+    </head><body>
+    <div class="card">
+      <h2>Connect Google Ads</h2>
+      <p>Authorize Market Pulse to read your Google Ads performance data. This is a one-time setup — once connected, monthly PPC data will sync automatically.</p>
+
+      {"<div class='ok'>✓ " + message + "</div>" if success else ""}
+      {"<div class='err'>✗ " + message + "</div>" if message and not success else ""}
+
+      {"<div class='warn'>⚠ Missing Railway env vars: <strong>" + ", ".join(missing) + "</strong>. Add these before connecting.</div>" if missing else ""}
+
+      <ol>
+        <li>In Railway, set <code>GOOGLE_ADS_DEVELOPER_TOKEN</code> and <code>GOOGLE_ADS_CUSTOMER_ID</code></li>
+        <li>Add <code>{redirect_uri}</code> to your Google Cloud Console OAuth authorized redirect URIs</li>
+        <li>Click the button below and authorize access to Google Ads</li>
+        <li>You'll be redirected back here with a success message</li>
+      </ol>
+
+      {"" if success else f'<a href="{oauth_url}" class="btn">Authorize Google Ads →</a>'}
+      {"<br><a href='/ppc' class='btn' style='background:#059669;margin-top:12px;'>Back to Lead Intelligence →</a>" if success else ""}
+      {"<br><br><a href='/ppc' style='font-size:13px;color:#6b7280;'>← Back to Lead Intelligence</a>" if not success else ""}
+    </div>
+    </body></html>
+    """
+    return HTMLResponse(content=html)
+
+
+def _run_google_ads_sync(months_back: int = 3) -> dict:
+    """Sync the last N months of Google Ads data into ppc_monthly_data cache."""
+    from datetime import date
+    from app.jobs.monthly import _upsert_ppc_month
+    from app.services.google_ads_service import fetch_ppc_monthly
+    from app.database import SessionLocal
+
+    today  = date.today()
+    synced = []
+    errors = []
+
+    db = SessionLocal()
+    try:
+        for offset in range(1, months_back + 1):
+            year  = today.year  if today.month > offset else today.year - 1
+            month = (today.month - offset - 1) % 12 + 1
+            # Simpler: subtract offset months from today
+            from datetime import date as d_
+            ref   = date(today.year, today.month, 1)
+            mo    = ref.month - offset
+            yr    = ref.year
+            while mo <= 0:
+                mo += 12
+                yr -= 1
+            try:
+                entry = fetch_ppc_monthly(yr, mo)
+                _upsert_ppc_month(db, entry)
+                synced.append(f"{yr}-{mo:02d}")
+            except Exception as e:
+                errors.append(f"{yr}-{mo:02d}: {e}")
+    finally:
+        db.close()
+
+    return {"synced": synced, "errors": errors}
+
+
+@router.post("/ppc/sync-google-ads")
+def sync_google_ads_now(
+    request: Request,
+    user:    dict = Depends(auth_required),
+    months:  int  = Form(3),
+):
+    """Manually trigger a Google Ads data sync for the last N months."""
+    from app.services.google_ads_service import is_configured
+
+    if not is_configured():
+        return RedirectResponse(url="/ppc/connect-google-ads", status_code=303)
+
+    def _bg():
+        result = _run_google_ads_sync(months_back=min(months, 24))
+        import logging
+        logging.getLogger(__name__).info(f"Google Ads manual sync: {result}")
+
+    threading.Thread(target=_bg, daemon=True).start()
+    return RedirectResponse(url="/ppc?msg=ads_sync_started", status_code=303)

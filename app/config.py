@@ -58,6 +58,10 @@ class Settings(BaseSettings):
     docusign_account_id: str = "0f3a2e88-0dfd-494d-a4b3-a273c3f74336"
     docusign_base_uri:   str = "https://na3.docusign.net"
 
+    # Google Ads API (for automated PPC data sync)
+    google_ads_developer_token: str = ""   # from Google Ads → Tools → API Center
+    google_ads_customer_id:     str = ""   # 10-digit account ID (hyphens optional)
+
     # Briefing
     briefing_token: str = ""   # set BRIEFING_TOKEN env var to share /briefing without OAuth
 

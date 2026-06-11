@@ -94,5 +94,51 @@ def run_monthly_consult_job() -> None:
         except Exception as e:
             logger.error(f"DocuSign contract pull failed: {e}", exc_info=True)
 
+        # ── Google Ads PPC data ───────────────────────────────────────────────
+        try:
+            from app.services.google_ads_service import is_configured, fetch_ppc_monthly
+            if is_configured():
+                ppc_entry = fetch_ppc_monthly(target_year, target_month)
+                _upsert_ppc_month(db, ppc_entry)
+                logger.info(
+                    f"Saved ppc_monthly_data {target_year}-{target_month:02d} "
+                    f"= {ppc_entry.get('total', {}).get('leads', '?')} leads"
+                )
+            else:
+                logger.info("Google Ads not configured — skipping PPC sync")
+        except Exception as e:
+            logger.error(f"Google Ads PPC pull failed: {e}", exc_info=True)
+
     finally:
         db.close()
+
+
+def _upsert_ppc_month(db, entry: dict) -> None:
+    """Upsert a single month's PPC entry into the ppc_monthly_data cache."""
+    from app.models.discovery import DiscoveryCache
+    from app.models.base import new_uuid
+    import json as _json
+    from datetime import datetime, timezone
+
+    year  = entry["year"]
+    month = entry["month"]
+
+    row  = db.query(DiscoveryCache).filter(DiscoveryCache.key == "ppc_monthly_data").first()
+    data = row.value if row else []
+    if isinstance(data, str):
+        data = _json.loads(data)
+    if isinstance(data, dict):
+        data = data.get("months", [])
+
+    data = [m for m in data if not (m["year"] == year and m["month"] == month)]
+    data.append(entry)
+
+    if row:
+        row.value      = data
+        row.updated_at = datetime.now(timezone.utc)
+    else:
+        db.add(DiscoveryCache(
+            id=new_uuid(), key="ppc_monthly_data", value=data,
+            updated_at=datetime.now(timezone.utc),
+        ))
+    db.commit()
