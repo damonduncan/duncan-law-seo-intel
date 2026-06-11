@@ -17,11 +17,38 @@ ATTORNEY_JOBS = [
 ]
 
 
-def run_monthly_consult_job() -> None:
-    """Pull previous month's consultation counts for all attorneys and update discovery_cache."""
-    from app.database import SessionLocal
+def _upsert_cache_month(db, cache_key: str, year: int, month: int, count: int,
+                        notes: list = None) -> None:
+    """Upsert a single month's count into a discovery_cache JSON blob."""
     from app.models.discovery import DiscoveryCache
     from app.models.base import new_uuid
+
+    row  = db.query(DiscoveryCache).filter(DiscoveryCache.key == cache_key).first()
+    data = row.value if row else {"months": [], "notes": notes or []}
+
+    months   = data.get("months", [])
+    existing = next((m for m in months if m["year"] == year and m["month"] == month), None)
+    if existing:
+        existing["count"] = count
+    else:
+        months.append({"year": year, "month": month, "count": count})
+
+    months.sort(key=lambda m: (m["year"], m["month"]))
+    data["months"]     = months
+    data["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    if row:
+        row.value      = data
+        row.updated_at = datetime.now(timezone.utc)
+    else:
+        db.add(DiscoveryCache(id=new_uuid(), key=cache_key, value=data,
+                              updated_at=datetime.now(timezone.utc)))
+    db.commit()
+
+
+def run_monthly_consult_job() -> None:
+    """Pull previous month's consultation, signing, and contract counts; update discovery_cache."""
+    from app.database import SessionLocal
     from app.services.calendar_service import fetch_month_count
 
     today = date.today()
@@ -34,6 +61,7 @@ def run_monthly_consult_job() -> None:
 
     db = SessionLocal()
     try:
+        # ── Calendar pulls (consultations + signing appointments) ─────────────
         for atty in ATTORNEY_JOBS:
             try:
                 count = fetch_month_count(
@@ -43,45 +71,25 @@ def run_monthly_consult_job() -> None:
                     month=target_month,
                     event_type=atty["event_type"],
                 )
-
-                row  = db.query(DiscoveryCache).filter(
-                    DiscoveryCache.key == atty["cache_key"]
-                ).first()
-                data = row.value if row else {"months": [], "notes": []}
-
-                months = data.get("months", [])
-                existing = next(
-                    (m for m in months
-                     if m["year"] == target_year and m["month"] == target_month),
-                    None,
-                )
-                if existing:
-                    existing["count"] = count
-                else:
-                    months.append({"year": target_year, "month": target_month, "count": count})
-
-                months.sort(key=lambda m: (m["year"], m["month"]))
-                data["months"]     = months
-                data["updated_at"] = datetime.now(timezone.utc).isoformat()
-
-                if row:
-                    row.value      = data
-                    row.updated_at = datetime.now(timezone.utc)
-                else:
-                    db.add(DiscoveryCache(
-                        id=new_uuid(),
-                        key=atty["cache_key"],
-                        value=data,
-                        updated_at=datetime.now(timezone.utc),
-                    ))
-
-                db.commit()
+                _upsert_cache_month(db, atty["cache_key"], target_year, target_month, count)
                 logger.info(f"Saved {atty['cache_key']} {target_year}-{target_month:02d} = {count}")
-
             except Exception as e:
                 logger.error(
-                    f"Monthly consult pull failed for {atty['email']}: {e}",
+                    f"Monthly calendar pull failed for {atty['email']}: {e}",
                     exc_info=True,
                 )
+
+        # ── DocuSign attorney-client agreements ───────────────────────────────
+        try:
+            from app.services.docusign_service import fetch_contracts_count
+            count = fetch_contracts_count(target_year, target_month)
+            _upsert_cache_month(
+                db, "docusign_monthly_contracts", target_year, target_month, count,
+                notes=["DocuSign attorney-client agreements. Available from Dec 2022."],
+            )
+            logger.info(f"Saved docusign_monthly_contracts {target_year}-{target_month:02d} = {count}")
+        except Exception as e:
+            logger.error(f"DocuSign contract pull failed: {e}", exc_info=True)
+
     finally:
         db.close()

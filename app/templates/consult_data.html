@@ -157,6 +157,141 @@
   </div>
 </div>
 
+<!-- ── Contracts Signed ──────────────────────────────────────────────────── -->
+<div style="margin-bottom:10px;">
+  <h2 style="font-size:15px;font-weight:600;margin:0 0 14px;">Contracts Signed</h2>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px;">
+
+  <div class="card" style="padding:18px 20px;border-color:rgba(34,197,94,.35);">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">2026 YTD</div>
+    {% if contracts_2026_ytd > 0 %}
+    <div style="font-size:28px;font-weight:700;color:#16a34a;line-height:1;">{{ contracts_2026_ytd }}</div>
+    <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">{{ ytd_period }} 2026</div>
+    {% if contracts_yoy_pct is not none %}
+    <div style="margin-top:4px;display:flex;align-items:center;gap:5px;">
+      {% if contracts_yoy_pct >= 0 %}
+        <span style="font-size:11px;font-weight:700;color:#22c55e;">↑ {{ contracts_yoy_pct | abs }}%</span>
+      {% else %}
+        <span style="font-size:11px;font-weight:700;color:#ef4444;">↓ {{ contracts_yoy_pct | abs }}%</span>
+      {% endif %}
+      <span style="font-size:11px;color:var(--text-muted);">vs {{ ytd_period }} '25</span>
+    </div>
+    {% endif %}
+    {% else %}
+    <div style="font-size:24px;font-weight:700;color:var(--text-muted);line-height:1;">—</div>
+    <div style="margin-top:6px;font-size:11px;color:var(--text-muted);">Sync pending</div>
+    {% endif %}
+  </div>
+
+  <div class="card" style="padding:18px 20px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">2025 Full Year</div>
+    {% if contracts_2025 > 0 %}
+    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ contracts_2025 }}</div>
+    {% else %}
+    <div style="font-size:24px;font-weight:700;color:var(--text-muted);line-height:1;">—</div>
+    {% endif %}
+    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Full year</div>
+  </div>
+
+  <div class="card" style="padding:18px 20px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">All-Time</div>
+    {% if contracts_alltime > 0 %}
+    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ contracts_alltime }}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Dec 2022–present</div>
+    {% else %}
+    <div style="font-size:24px;font-weight:700;color:var(--text-muted);line-height:1;">—</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Sync pending</div>
+    {% endif %}
+  </div>
+
+  <div class="card" style="padding:18px 20px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Consult → Contract Rate</div>
+    {% if contract_conv_rate_2026 is not none and contracts_2026_ytd > 0 %}
+    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ contract_conv_rate_2026 }}%</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">
+      {{ ytd_period }} 2026
+      {% if contract_conv_rate_2025 is not none %}&nbsp;·&nbsp;{{ contract_conv_rate_2025 }}% in 2025{% endif %}
+    </div>
+    {% else %}
+    <div style="font-size:24px;font-weight:700;color:var(--text-muted);line-height:1;">—</div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- ── 24-Month Contracts Trend ───────────────────────────────────────────── -->
+<div class="card" style="margin-bottom:28px;">
+  <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);">
+    <h2 style="margin:0;font-size:15px;font-weight:600;">24-Month Contracts Trend</h2>
+  </div>
+  <div style="padding:20px 20px 16px;position:relative;height:270px;">
+    <canvas id="contractChart"></canvas>
+  </div>
+</div>
+
+<!-- ── Annual Contracts Table ─────────────────────────────────────────────── -->
+{% if contract_annual_rows %}
+<div class="card" style="margin-bottom:28px;">
+  <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);">
+    <h2 style="margin:0;font-size:15px;font-weight:600;">Annual Contract Totals</h2>
+  </div>
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="background:var(--table-header-bg,rgba(0,0,0,.03));">
+          <th style="padding:10px 20px;text-align:left;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Year</th>
+          <th style="padding:10px 20px;text-align:right;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Contracts Signed</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in contract_annual_rows | reverse %}
+        <tr class="cn-year-row" data-year="{{ row.year }}"
+            style="border-top:1px solid var(--border);cursor:pointer;transition:background .12s;"
+            onmouseenter="this.style.background='var(--row-hover,rgba(0,0,0,.03))'"
+            onmouseleave="this.style.background=''"
+            onclick="toggleContract({{ row.year }})">
+          <td style="padding:11px 20px;font-weight:600;color:var(--text-primary);">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              <svg class="cn-chevron-{{ row.year }}" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .2s;color:var(--text-muted);flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+              {{ row.year }}
+              {% if row.year == 2022 %}<span style="font-size:11px;color:var(--text-muted);font-weight:400;">(Dec only — DocuSign adoption)</span>{% endif %}
+              {% if row.year == 2026 %}<span style="font-size:11px;color:var(--text-muted);font-weight:400;">(Jan–{{ ytd_period.split('–')[1] }} only)</span>{% endif %}
+            </span>
+          </td>
+          <td style="padding:11px 20px;text-align:right;font-weight:600;color:var(--text-primary);">{{ row.count }}</td>
+        </tr>
+        <tr id="cn-detail-{{ row.year }}" style="display:none;">
+          <td colspan="2" style="padding:0 20px 14px 38px;background:var(--table-header-bg,rgba(0,0,0,.02));">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;max-width:320px;">
+              <thead>
+                <tr>
+                  <th style="padding:6px 12px 6px 0;text-align:left;color:var(--text-muted);font-weight:600;font-size:11px;">Month</th>
+                  <th style="padding:6px 0 6px 12px;text-align:right;color:var(--text-muted);font-weight:600;font-size:11px;">Contracts</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for mr in contract_monthly_by_year.get(row.year, []) %}
+                <tr style="border-top:1px solid var(--border);">
+                  <td style="padding:7px 12px 7px 0;color:var(--text-secondary);">{{ mr.month }}</td>
+                  <td style="padding:7px 0 7px 12px;text-align:right;color:var(--text-primary);">{{ mr.count }}</td>
+                </tr>
+                {% endfor %}
+                <tr style="border-top:2px solid var(--border);">
+                  <td style="padding:7px 12px 7px 0;font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Total</td>
+                  <td style="padding:7px 0 7px 12px;text-align:right;font-weight:700;color:var(--text-primary);">{{ row.count }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 <!-- ── Signing Appointment Stat Cards ───────────────────────────────────── -->
 <div style="margin-bottom:10px;">
   <h2 style="font-size:15px;font-weight:600;margin:0 0 14px;">Signing Appointments</h2>
@@ -431,6 +566,42 @@
   });
 })();
 
+// Contracts chart
+(function() {
+  const raw = {{ contract_trend_data | tojson }};
+  const labels = raw.map(d => d.label);
+  const vals   = raw.map(d => d.count);
+  const cs     = getComputedStyle(document.documentElement);
+  const textMuted = cs.getPropertyValue('--text-muted').trim() || '#888';
+  const borderClr = cs.getPropertyValue('--border').trim()     || 'rgba(0,0,0,0.1)';
+  const ctx = document.getElementById('contractChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Contracts Signed', data: vals, backgroundColor: 'rgba(22,163,74,0.82)', borderRadius: 3 },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', align: 'end',
+          labels: { color: textMuted, boxWidth: 12, padding: 16, font: { size: 12 } } },
+      },
+      scales: {
+        x: { grid: { display: false },
+             ticks: { color: textMuted, font: { size: 11 }, maxRotation: 45, minRotation: 45 },
+             border: { color: borderClr } },
+        y: { beginAtZero: true, grid: { color: borderClr },
+             ticks: { color: textMuted, font: { size: 11 }, precision: 0 },
+             border: { color: borderClr } },
+      },
+    },
+  });
+})();
+
 // Signing chart
 (function() {
   const raw = {{ sign_trend_data | tojson }};
@@ -471,6 +642,20 @@
       },
     },
   });
+})();
+
+function toggleContract(year) {
+  const detail  = document.getElementById('cn-detail-' + year);
+  const chevron = document.querySelector('.cn-chevron-' + year);
+  const open    = detail.style.display !== 'none';
+  detail.style.display    = open ? 'none' : 'table-row';
+  chevron.style.transform = open ? '' : 'rotate(180deg)';
+}
+// Auto-expand two most recent contract years
+(function() {
+  const rows = document.querySelectorAll('.cn-year-row');
+  let opened = 0;
+  rows.forEach(r => { if (opened < 2) { toggleContract(parseInt(r.dataset.year)); opened++; } });
 })();
 
 function toggleSign(year) {

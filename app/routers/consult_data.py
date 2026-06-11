@@ -212,6 +212,35 @@ def _build_trend(d_months, a_months, last_year, last_month, n=24):
     return data
 
 
+def _build_contract_trend(c_months, last_year, last_month, n=24):
+    ref_total = last_year * 12 + (last_month - 1)
+    data = []
+    for offset in range(n - 1, -1, -1):
+        t = ref_total - offset
+        y, rem = divmod(t, 12)
+        m = rem + 1
+        data.append({"label": f"{MONTH_NAMES[m - 1]} '{str(y)[-2:]}",
+                     "count": c_months.get((y, m), 0)})
+    return data
+
+
+def _build_annual_rows_single(c_months, all_years):
+    return [{"year": y, "count": sum(c_months.get((y, m), 0) for m in range(1, 13))}
+            for y in all_years]
+
+
+def _build_monthly_by_year_single(c_months, all_years):
+    by_year = {}
+    for year in all_years:
+        rows = []
+        for m in range(1, 13):
+            c = c_months.get((year, m), 0)
+            if c > 0:
+                rows.append({"month_num": m, "month": MONTH_NAMES[m - 1], "count": c})
+        by_year[year] = rows
+    return by_year
+
+
 @router.get("/consult-data", response_class=HTMLResponse)
 def consult_data_page(
     request: Request,
@@ -223,10 +252,11 @@ def consult_data_page(
         data = row.value if row else {}
         return {(m["year"], m["month"]): m["count"] for m in data.get("months", [])}, data
 
-    damon_months, damon_data = _load("consultation_monthly_damon")
-    anne_months,  anne_data  = _load("consultation_monthly_anne")
-    sign_d_months, _         = _load("signing_monthly_damon")
-    sign_a_months, _         = _load("signing_monthly_anne")
+    damon_months, damon_data  = _load("consultation_monthly_damon")
+    anne_months,  anne_data   = _load("consultation_monthly_anne")
+    sign_d_months, _          = _load("signing_monthly_damon")
+    sign_a_months, _          = _load("signing_monthly_anne")
+    contract_months, _        = _load("docusign_monthly_contracts")
 
     all_consult_years = sorted(set(y for (y, _) in list(damon_months) + list(anne_months)))
     all_sign_years    = sorted(set(y for (y, _) in list(sign_d_months) + list(sign_a_months)))
@@ -270,6 +300,21 @@ def consult_data_page(
     conv_rate_2026 = round(sign_combined_ytd / combined_2026_ytd * 100, 1) if combined_2026_ytd else None
     conv_rate_2025 = round(sign_damon_2025 / damon_2025 * 100, 1) if damon_2025 else None
 
+    # ── DocuSign contracts ────────────────────────────────────────────────────
+    contract_all_years        = sorted(set(y for (y, _) in contract_months))
+    contracts_alltime         = sum(contract_months.values())
+    contracts_2026_ytd        = sum(contract_months.get((2026, m), 0) for m in range(1, last_2026_month + 1))
+    contracts_2025_ytd        = sum(contract_months.get((2025, m), 0) for m in range(1, last_2026_month + 1))
+    contracts_2025            = sum(contract_months.get((2025, m), 0) for m in range(1, 13))
+    contracts_yoy_pct         = _yoy_pct(contracts_2026_ytd, contracts_2025_ytd)
+    contract_trend_data       = _build_contract_trend(contract_months, 2026, last_2026_month)
+    contract_annual_rows      = _build_annual_rows_single(contract_months, contract_all_years)
+    contract_monthly_by_year  = _build_monthly_by_year_single(contract_months, contract_all_years)
+    # Consult → Contract conversion rate (contracts / combined consultations)
+    combined_2025_total       = damon_2025 + anne_2025
+    contract_conv_rate_2026   = round(contracts_2026_ytd / combined_2026_ytd * 100, 1) if combined_2026_ytd else None
+    contract_conv_rate_2025   = round(contracts_2025 / combined_2025_total * 100, 1) if combined_2025_total else None
+
     # AI insights
     insights, insights_updated = _get_or_refresh_insights(db, damon_months, anne_months)
 
@@ -307,6 +352,16 @@ def consult_data_page(
         "sign_trend_data":       sign_trend_data,
         "conv_rate_2026":        conv_rate_2026,
         "conv_rate_2025":        conv_rate_2025,
+        # Contracts (DocuSign)
+        "contract_annual_rows":      contract_annual_rows,
+        "contract_monthly_by_year":  contract_monthly_by_year,
+        "contracts_alltime":         contracts_alltime,
+        "contracts_2026_ytd":        contracts_2026_ytd,
+        "contracts_2025":            contracts_2025,
+        "contracts_yoy_pct":         contracts_yoy_pct,
+        "contract_trend_data":       contract_trend_data,
+        "contract_conv_rate_2026":   contract_conv_rate_2026,
+        "contract_conv_rate_2025":   contract_conv_rate_2025,
         # Shared
         "insights":              insights,
         "insights_updated":      insights_updated,

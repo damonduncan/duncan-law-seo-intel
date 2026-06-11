@@ -49,6 +49,15 @@ class Settings(BaseSettings):
     # Google Calendar (consultation sync)
     calendar_credentials_json: str = ""  # service account JSON with domain-wide delegation (CALENDAR_CREDENTIALS_JSON env var)
 
+    # DocuSign (attorney-client agreement counts)
+    # Set DOCUSIGN_INTEGRATION_KEY and DOCUSIGN_PRIVATE_KEY in Railway to enable automated monthly pulls.
+    docusign_integration_key: str = ""
+    docusign_private_key: str     = ""  # RSA private key PEM — use \\n for newlines in Railway env var
+    # Known values for Duncan Law — no need to override these in Railway
+    docusign_user_id:    str = "234f1c97-dd04-4c37-b829-cd64cdc7b9b1"
+    docusign_account_id: str = "0f3a2e88-0dfd-494d-a4b3-a273c3f74336"
+    docusign_base_uri:   str = "https://na3.docusign.net"
+
     # Briefing
     briefing_token: str = ""   # set BRIEFING_TOKEN env var to share /briefing without OAuth
 
