@@ -65,9 +65,21 @@ def _generate_insights(damon_months: dict, anne_months: dict) -> list:
     prompt = f"""You are a practice management analyst for Duncan Law LLP, a consumer bankruptcy law firm in
 Charlotte, NC. Damon Duncan is the founding attorney; Anne Salter joined in October 2025.
 
+CRITICAL CONTEXT — read before analyzing:
+- Damon deliberately shifted from doing consultations to doing signing appointments as Anne ramped up.
+  His declining individual consult count is NOT a negative trend — it reflects successful delegation.
+- Signing appointments (Damon's new focus) are the step where a prospect becomes a paying client and
+  a case gets filed. More signing appointments = more cases filed = more revenue.
+- The right measure of intake pipeline health is COMBINED consultation volume (Damon + Anne), not
+  Damon's count alone. Never flag Damon's declining share as a problem.
+- Damon reserves Tuesdays as administrative/business-development days with no client appointments.
+  This intentionally reduces his available consult slots by roughly one day per week.
+- A pattern where Anne's consults rise while Damon's fall is the intended, healthy outcome.
+
 Analyze the data below and return exactly 5 concise, specific, actionable insights useful to the
-firm's principals — covering trends, seasonality, capacity, forecasts, and Anne's trajectory.
-Each insight must reference specific numbers. Write for attorneys, not data scientists.
+firm's principals — covering combined intake trends, seasonality, Anne's ramp trajectory, capacity
+for additional volume, and forecasts. Each insight must reference specific numbers.
+Write for attorneys, not data scientists. Do not flag Damon's individual decline as a concern.
 
 ANNUAL CONSULTATION TOTALS:
 {chr(10).join(annual_lines)}
