@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Consult Data{% endblock %}
+{% block content %}
+
+<h1>Consult Data</h1>
+<p class="page-sub">Monthly consultation counts by attorney — Damon Duncan (2009–present) &amp; Anne Salter (Oct 2025–present)</p>
+
+<!-- ── Stat Cards ────────────────────────────────────────────────────────── -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px;">
+
+  <div class="card" style="padding:18px 20px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Damon — 2026 YTD</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ damon_2026_ytd }}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Jan – May 2026</div>
+  </div>
+
+  <div class="card" style="padding:18px 20px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Anne — 2026 YTD</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ anne_2026_ytd }}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Jan – May 2026</div>
+  </div>
+
+  <div class="card" style="padding:18px 20px;border-color:var(--accent-border,rgba(99,102,241,.3));">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Combined — 2026 YTD</div>
+    <div style="font-size:28px;font-weight:700;color:var(--accent,#6366f1);line-height:1;">{{ damon_2026_ytd + anne_2026_ytd }}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Jan – May 2026</div>
+  </div>
+
+  <div class="card" style="padding:18px 20px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Damon — 2025</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ damon_2025 }}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Full year</div>
+  </div>
+
+  <div class="card" style="padding:18px 20px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Anne — 2025</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ anne_2025 }}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Oct – Dec only</div>
+  </div>
+
+  <div class="card" style="padding:18px 20px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Damon — All-Time</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ damon_alltime }}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Since Oct 2009</div>
+  </div>
+
+</div>
+
+<!-- ── Annual Summary Table ──────────────────────────────────────────────── -->
+<div class="card" style="margin-bottom:28px;">
+  <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);">
+    <h2 style="margin:0;font-size:15px;font-weight:600;">Annual Totals</h2>
+  </div>
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="background:var(--table-header-bg,rgba(0,0,0,.03));">
+          <th style="padding:10px 20px;text-align:left;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Year</th>
+          <th style="padding:10px 16px;text-align:right;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Damon</th>
+          <th style="padding:10px 16px;text-align:right;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Anne</th>
+          <th style="padding:10px 20px;text-align:right;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Combined</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in annual_rows | reverse %}
+        <tr class="cd-year-row" data-year="{{ row.year }}"
+            style="border-top:1px solid var(--border);cursor:pointer;transition:background .12s;"
+            onmouseenter="this.style.background='var(--row-hover,rgba(0,0,0,.03))'"
+            onmouseleave="this.style.background=''"
+            onclick="toggleYear({{ row.year }})">
+          <td style="padding:11px 20px;font-weight:600;color:var(--text-primary);">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              <svg class="cd-chevron-{{ row.year }}" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .2s;color:var(--text-muted);flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+              {{ row.year }}
+              {% if row.year == 2009 %}<span style="font-size:11px;color:var(--text-muted);font-weight:400;">(Oct–Dec only)</span>{% endif %}
+              {% if row.year == 2026 %}<span style="font-size:11px;color:var(--text-muted);font-weight:400;">(Jan–May only)</span>{% endif %}
+            </span>
+          </td>
+          <td style="padding:11px 16px;text-align:right;color:var(--text-primary);">{{ row.damon if row.damon > 0 else '—' }}</td>
+          <td style="padding:11px 16px;text-align:right;color:var(--text-primary);">{{ row.anne if row.anne > 0 else '—' }}</td>
+          <td style="padding:11px 20px;text-align:right;font-weight:600;color:var(--text-primary);">{{ row.combined }}</td>
+        </tr>
+        <!-- Monthly detail row (hidden by default) -->
+        <tr id="cd-detail-{{ row.year }}" style="display:none;">
+          <td colspan="4" style="padding:0 20px 14px 38px;background:var(--table-header-bg,rgba(0,0,0,.02));">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;max-width:560px;">
+              <thead>
+                <tr>
+                  <th style="padding:6px 12px 6px 0;text-align:left;color:var(--text-muted);font-weight:600;font-size:11px;">Month</th>
+                  <th style="padding:6px 12px;text-align:right;color:var(--text-muted);font-weight:600;font-size:11px;">Damon</th>
+                  <th style="padding:6px 12px;text-align:right;color:var(--text-muted);font-weight:600;font-size:11px;">Anne</th>
+                  <th style="padding:6px 0 6px 12px;text-align:right;color:var(--text-muted);font-weight:600;font-size:11px;">Combined</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for mr in monthly_by_year.get(row.year, []) %}
+                <tr style="border-top:1px solid var(--border);">
+                  <td style="padding:7px 12px 7px 0;color:var(--text-secondary);">{{ mr.month }}</td>
+                  <td style="padding:7px 12px;text-align:right;color:var(--text-primary);">{{ mr.damon if mr.damon > 0 else '—' }}</td>
+                  <td style="padding:7px 12px;text-align:right;color:var(--text-primary);">{{ mr.anne if mr.anne > 0 else '—' }}</td>
+                  <td style="padding:7px 0 7px 12px;text-align:right;font-weight:600;color:var(--text-primary);">{{ mr.combined }}</td>
+                </tr>
+                {% endfor %}
+                <tr style="border-top:2px solid var(--border);">
+                  <td style="padding:7px 12px 7px 0;font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Total</td>
+                  <td style="padding:7px 12px;text-align:right;font-weight:600;color:var(--text-primary);">{{ row.damon if row.damon > 0 else '—' }}</td>
+                  <td style="padding:7px 12px;text-align:right;font-weight:600;color:var(--text-primary);">{{ row.anne if row.anne > 0 else '—' }}</td>
+                  <td style="padding:7px 0 7px 12px;text-align:right;font-weight:700;color:var(--text-primary);">{{ row.combined }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Notes ──────────────────────────────────────────────────────────────── -->
+{% if notes %}
+<div class="card" style="padding:16px 20px;">
+  <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Data Notes</div>
+  <ul style="margin:0;padding:0 0 0 16px;font-size:13px;color:var(--text-secondary);line-height:1.7;">
+    {% for note in notes %}
+    <li>{{ note }}</li>
+    {% endfor %}
+  </ul>
+  {% if updated_at %}
+  <div style="font-size:11px;color:var(--text-muted);margin-top:10px;">Last updated: {{ updated_at[:10] }}</div>
+  {% endif %}
+</div>
+{% endif %}
+
+<script>
+function toggleYear(year) {
+  const detail  = document.getElementById('cd-detail-' + year);
+  const chevron = document.querySelector('.cd-chevron-' + year);
+  const open    = detail.style.display !== 'none';
+  detail.style.display  = open ? 'none' : 'table-row';
+  chevron.style.transform = open ? '' : 'rotate(180deg)';
+}
+// Auto-expand the two most recent years
+(function() {
+  const rows = document.querySelectorAll('.cd-year-row');
+  let opened = 0;
+  rows.forEach(r => {
+    if (opened < 2) { toggleYear(parseInt(r.dataset.year)); opened++; }
+  });
+})();
+</script>
+
+{% endblock %}
