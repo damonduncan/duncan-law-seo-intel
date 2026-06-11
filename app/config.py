@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     ga_property_id: str = "359981496"
     ga_credentials_json: str = ""   # full service account JSON string (GA_CREDENTIALS_JSON env var)
 
+    # Google Calendar (consultation sync)
+    calendar_credentials_json: str = ""  # service account JSON with domain-wide delegation (CALENDAR_CREDENTIALS_JSON env var)
+
     # Briefing
     briefing_token: str = ""   # set BRIEFING_TOKEN env var to share /briefing without OAuth
 

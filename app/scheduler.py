@@ -13,6 +13,7 @@ scheduler = BackgroundScheduler(
 def register_jobs() -> None:
     from app.jobs.daily import run_daily_job
     from app.jobs.weekly import run_weekly_job
+    from app.jobs.monthly import run_monthly_consult_job
 
     # Daily at 6:00 AM ET — own rankings, own GBP, alert checks
     scheduler.add_job(
@@ -39,4 +40,17 @@ def register_jobs() -> None:
         replace_existing=True,
     )
 
-    logger.info("Scheduler jobs registered: daily (6 AM ET), weekly (Mon 5 AM ET)")
+    # 2nd of each month at 7:00 AM ET — pull previous month's consultation counts
+    scheduler.add_job(
+        run_monthly_consult_job,
+        trigger="cron",
+        day=2,
+        hour=7,
+        minute=0,
+        timezone="America/New_York",
+        id="monthly_consult_job",
+        name="Monthly: consultation counts",
+        replace_existing=True,
+    )
+
+    logger.info("Scheduler jobs registered: daily (6 AM ET), weekly (Mon 5 AM ET), monthly consult (2nd 7 AM ET)")
