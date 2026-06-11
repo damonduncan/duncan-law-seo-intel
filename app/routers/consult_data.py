@@ -337,17 +337,18 @@ def _build_pacer_trend(filing_hist: dict, last_year: int, last_month: int, n: in
 
 def _get_current_month_pacing(db, last_complete_month: int,
                                damon_months: dict, anne_months: dict) -> dict | None:
-    """Return current-month consultation counts with a 2-hour cache."""
+    """Return current-month consultation + signing counts with a 2-hour cache."""
     import calendar as cal_mod
     from datetime import date
-    today     = date.today()
+    today      = date.today()
     curr_month = last_complete_month + 1
     curr_year  = 2026
     if curr_month > 12:
         return None
 
     import json as _json
-    cache_key = f"pacing_{curr_year}_{curr_month:02d}"
+    # v2 cache key includes signing appointments
+    cache_key = f"pacing_v2_{curr_year}_{curr_month:02d}"
     cache_row = db.query(DiscoveryCache).filter(DiscoveryCache.key == cache_key).first()
 
     if cache_row and cache_row.updated_at:
@@ -360,26 +361,32 @@ def _get_current_month_pacing(db, last_complete_month: int,
 
     try:
         from app.services.calendar_service import fetch_month_count
-        damon_count = fetch_month_count(
-            email="damonduncan@duncanlawonline.com",
-            attorney="damon",
-            year=curr_year, month=curr_month, event_type="consult",
-        )
-        anne_count = fetch_month_count(
-            email="anne@duncanlawonline.com",
-            attorney="anne",
-            year=curr_year, month=curr_month, event_type="consult",
-        )
+        damon_count  = fetch_month_count(email="damonduncan@duncanlawonline.com",
+                                          attorney="damon", year=curr_year, month=curr_month,
+                                          event_type="consult")
+        anne_count   = fetch_month_count(email="anne@duncanlawonline.com",
+                                          attorney="anne",  year=curr_year, month=curr_month,
+                                          event_type="consult")
+        damon_sign   = fetch_month_count(email="damonduncan@duncanlawonline.com",
+                                          attorney="damon", year=curr_year, month=curr_month,
+                                          event_type="signing")
+        anne_sign    = fetch_month_count(email="anne@duncanlawonline.com",
+                                          attorney="anne",  year=curr_year, month=curr_month,
+                                          event_type="signing")
+
         days_in_month = cal_mod.monthrange(curr_year, curr_month)[1]
         day_of_month  = min(today.day, days_in_month)
         combined      = damon_count + anne_count
         pace_full     = round(combined / day_of_month * days_in_month) if day_of_month else None
         prior_damon   = damon_months.get((curr_year - 1, curr_month), 0)
         prior_anne    = anne_months.get((curr_year - 1, curr_month), 0)
+
         data = {
             "year": curr_year, "month": curr_month,
             "month_name": MONTH_NAMES[curr_month - 1],
             "damon": damon_count, "anne": anne_count, "combined": combined,
+            "sign_damon": damon_sign, "sign_anne": anne_sign,
+            "sign_combined": damon_sign + anne_sign,
             "day_of_month": day_of_month, "days_in_month": days_in_month,
             "pace_full": pace_full,
             "prior_combined": prior_damon + prior_anne,
@@ -515,6 +522,13 @@ def consult_data_page(
 
     # ── PACER 24-month trend ──────────────────────────────────────────────────
     pacer_trend_data = _build_pacer_trend(_filing_hist, 2026, last_2026_month)
+    for _item in pacer_trend_data:
+        _item["revenue"] = _item["count"] * AVG_CASE_FEE
+
+    # Annual pace projection
+    filings_monthly_avg    = pacer_filed_ytd / last_2026_month if last_2026_month else 0
+    filings_full_year_pace = round(filings_monthly_avg * 12)
+    est_revenue_annual_pace = _fmt_revenue(filings_full_year_pace * AVG_CASE_FEE)
 
     # ── Current month pacing ──────────────────────────────────────────────────
     current_month_pacing = _get_current_month_pacing(db, last_2026_month, damon_months, anne_months)
@@ -597,6 +611,8 @@ def consult_data_page(
         "est_revenue_2026_ytd":      est_revenue_2026_ytd,
         "est_revenue_2025_ytd":      est_revenue_2025_ytd,
         "avg_case_fee":              AVG_CASE_FEE,
+        "filings_full_year_pace":    filings_full_year_pace,
+        "est_revenue_annual_pace":   est_revenue_annual_pace,
         # Shared
         "insights":              insights,
         "insights_updated":      insights_updated,

@@ -177,6 +177,13 @@
     </div>
   </div>
 
+  <!-- Annual pace projection -->
+  {% if filings_full_year_pace and est_revenue_annual_pace %}
+  <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color);text-align:center;font-size:11px;color:var(--text-muted);">
+    At current pace: <strong style="color:var(--text-primary);">~{{ filings_full_year_pace }} cases</strong> filed · <strong style="color:#16a34a;">{{ est_revenue_annual_pace }}</strong> est. revenue for all of 2026
+  </div>
+  {% endif %}
+
 </div>
 
 <!-- ── Current Month Pacing ───────────────────────────────────────────────── -->
@@ -198,6 +205,14 @@
       <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">On Pace For</div>
       <div style="font-size:36px;font-weight:700;color:#6366f1;line-height:1;">{{ current_month_pacing.pace_full }}</div>
       <div style="font-size:11px;color:var(--text-muted);margin-top:5px;">full-month projection</div>
+    </div>
+    {% endif %}
+
+    {% if current_month_pacing.sign_combined is not none and current_month_pacing.sign_combined >= 0 %}
+    <div style="border-left:1px solid var(--border-color);padding:0 28px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Signing Appts So Far</div>
+      <div style="font-size:36px;font-weight:700;color:#ea580c;line-height:1;">{{ current_month_pacing.sign_combined }}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:5px;">Damon {{ current_month_pacing.sign_damon }} · Anne {{ current_month_pacing.sign_anne }}</div>
     </div>
     {% endif %}
 
@@ -580,7 +595,7 @@
 </div>
 <div class="card" style="margin-bottom:28px;">
   <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);">
-    <h2 style="margin:0;font-size:15px;font-weight:600;">24-Month Filing Trend <span style="font-size:12px;font-weight:400;color:var(--text-muted);">· PACER</span></h2>
+    <h2 style="margin:0;font-size:15px;font-weight:600;">24-Month Est. Revenue Trend <span style="font-size:12px;font-weight:400;color:var(--text-muted);">· PACER filings × ${{ avg_case_fee | int }}/case avg</span></h2>
   </div>
   <div style="padding:20px 20px 16px;position:relative;height:270px;">
     <canvas id="pacerChart"></canvas>
@@ -798,12 +813,13 @@
   });
 })();
 
-// PACER filings chart
+// PACER filings chart — bars show estimated revenue, tooltip shows case count
 (function() {
   const raw = {{ pacer_trend_data | tojson }};
-  const labels = raw.map(d => d.label);
-  const vals   = raw.map(d => d.count);
-  const cs     = getComputedStyle(document.documentElement);
+  const labels  = raw.map(d => d.label);
+  const revVals = raw.map(d => d.revenue);
+  const cntVals = raw.map(d => d.count);
+  const cs      = getComputedStyle(document.documentElement);
   const textMuted = cs.getPropertyValue('--text-muted').trim() || '#888';
   const borderClr = cs.getPropertyValue('--border').trim()     || 'rgba(0,0,0,0.1)';
   const ctx = document.getElementById('pacerChart').getContext('2d');
@@ -812,7 +828,7 @@
     data: {
       labels,
       datasets: [
-        { label: 'Cases Filed', data: vals, backgroundColor: 'rgba(22,163,74,0.82)', borderRadius: 3 },
+        { label: 'Est. Revenue', data: revVals, backgroundColor: 'rgba(22,163,74,0.82)', borderRadius: 3 },
       ],
     },
     options: {
@@ -821,13 +837,25 @@
       plugins: {
         legend: { position: 'top', align: 'end',
           labels: { color: textMuted, boxWidth: 12, padding: 16, font: { size: 12 } } },
+        tooltip: {
+          callbacks: {
+            label: item => {
+              const k = Math.round(item.raw / 1000);
+              return `Est. Revenue: $${k}K`;
+            },
+            afterLabel: (item) => `Cases filed: ${cntVals[item.dataIndex]}`,
+          },
+        },
       },
       scales: {
         x: { grid: { display: false },
              ticks: { color: textMuted, font: { size: 11 }, maxRotation: 45, minRotation: 45 },
              border: { color: borderClr } },
         y: { beginAtZero: true, grid: { color: borderClr },
-             ticks: { color: textMuted, font: { size: 11 }, precision: 0 },
+             ticks: {
+               color: textMuted, font: { size: 11 }, precision: 0,
+               callback: v => '$' + Math.round(v / 1000) + 'K',
+             },
              border: { color: borderClr } },
       },
     },
