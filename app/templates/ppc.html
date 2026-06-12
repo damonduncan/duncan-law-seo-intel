@@ -261,7 +261,7 @@
           type: 'bar',
           label: 'Total Leads',
           data: d.leads,
-          backgroundColor: 'rgba(37,99,235,0.75)',
+          backgroundColor: 'rgba(201,162,74,0.82)',
           borderRadius: 3,
           yAxisID: 'y',
           order: 2,
@@ -406,8 +406,8 @@
   var avgLeads = d.map(function(m) { return m.avg_leads; });
   var colors   = d.map(function(m) {
     return peakNums.indexOf(m.month_num) >= 0
-      ? 'rgba(37,99,235,0.85)'
-      : 'rgba(37,99,235,0.38)';
+      ? 'rgba(23,35,63,0.85)'
+      : 'rgba(23,35,63,0.38)';
   });
   new Chart(document.getElementById('ppcSeasonalChart'), {
     type: 'bar',

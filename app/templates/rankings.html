@@ -614,7 +614,7 @@
       <tbody>
       {% for market in MARKET_ORDER %}
       {% set md = markets[market] %}
-      <tr style="{% if not md.own_present and md.firms | length > 0 %}background:rgba(244,63,94,.04);{% elif md.own_present %}background:rgba(37,99,235,.03);{% endif %}">
+      <tr style="{% if not md.own_present and md.firms | length > 0 %}background:rgba(244,63,94,.04);{% elif md.own_present %}background:rgba(201,162,74,0.82);{% endif %}">
         <td style="font-weight:600;font-size:14px;">{{ market | replace('_', ' ') | title }}</td>
         {% for slot in range(3) %}
         <td style="font-size:14px;vertical-align:top;">
@@ -675,10 +675,10 @@
 
 <!-- MDNC Competitor Intelligence -->
 {% if mdnc_by_market %}
-<div style="border-radius:var(--r);background:rgba(37,99,235,.07);border-top:4px solid var(--accent);padding:18px 24px;margin:32px 0 20px;">
+<div style="border-radius:var(--r);background:rgba(201,162,74,0.82);border-top:4px solid var(--accent);padding:18px 24px;margin:32px 0 20px;">
   <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
     <div style="font-size:32px;font-weight:900;color:var(--accent);letter-spacing:-.03em;line-height:1;">MDNC</div>
-    <div style="width:1px;height:40px;background:rgba(37,99,235,.2);flex-shrink:0;"></div>
+    <div style="width:1px;height:40px;background:rgba(201,162,74,0.82);flex-shrink:0;"></div>
     <div>
       <div style="font-size:16px;font-weight:700;color:var(--text);">Middle District of North Carolina</div>
       <div style="font-size:13px;color:var(--muted);margin-top:2px;">Greensboro · Winston-Salem · High Point · Salisbury</div>
@@ -712,7 +712,7 @@
     <div style="margin-bottom:12px;">
       <div style="font-size:12px;color:var(--muted-2);font-weight:600;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ keyword }}</div>
       {% for firm in firms %}
-      <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px;{% if firm.is_own %}background:rgba(37,99,235,.04);margin:0 -4px;padding-left:4px;padding-right:4px;{% endif %}">
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px;{% if firm.is_own %}background:rgba(201,162,74,0.82);margin:0 -4px;padding-left:4px;padding-right:4px;{% endif %}">
         {% if firm.rank == 1 %}
         <span class="rank-badge rank-gold" style="font-size:11px;min-width:26px;height:20px;padding:0 4px;">#1</span>
         {% elif firm.rank <= 3 %}
@@ -777,7 +777,7 @@
     <div style="margin-bottom:12px;">
       <div style="font-size:12px;color:var(--muted-2);font-weight:600;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ keyword }}</div>
       {% for firm in firms %}
-      <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px;{% if firm.is_own %}background:rgba(37,99,235,.04);margin:0 -4px;padding-left:4px;padding-right:4px;{% endif %}">
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px;{% if firm.is_own %}background:rgba(201,162,74,0.82);margin:0 -4px;padding-left:4px;padding-right:4px;{% endif %}">
         {% if firm.rank == 1 %}
         <span class="rank-badge rank-gold" style="font-size:11px;min-width:26px;height:20px;padding:0 4px;">#1</span>
         {% elif firm.rank <= 3 %}
@@ -979,7 +979,7 @@
     if (hasTrendData) {
       var ownFirm = md.firms.find(function(f) { return f.is_own; });
       var isLeading = ownFirm && ownFirm.rank === 1;
-      var lineColor = isLeading ? '#10b981' : '#2563eb';
+      var lineColor = isLeading ? '#10b981' : '#C9A24A';
       var kwS = window._kwRankData[market].series.find(function(s) { return s.label === kw; });
       _modalChart = new Chart(document.getElementById('kw-modal-chart'), {
         type: 'line',

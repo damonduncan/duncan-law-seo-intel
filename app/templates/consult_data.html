@@ -6,8 +6,8 @@
 <p class="page-sub">Monthly consultation counts by attorney — Damon Duncan (2009–present) &amp; Anne Salter (Oct 2025–present)</p>
 
 {% if request.query_params.get('refreshing') %}
-<div style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:11px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-primary);">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.5" style="animation:spin 1.2s linear infinite;flex-shrink:0;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+<div style="background:var(--accent-light);border:1px solid rgba(201,162,74,.3);border-radius:8px;padding:11px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text);">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#17233F" stroke-width="2.5" style="animation:spin 1.2s linear infinite;flex-shrink:0;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
   Insights are regenerating — reload this page in about 15 seconds to see the updated analysis.
 </div>
 <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
@@ -18,18 +18,18 @@
 <div class="card" style="margin-bottom:28px;">
   <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
     <div style="display:flex;align-items:center;gap:10px;">
-      <div style="width:28px;height:28px;border-radius:7px;background:rgba(99,102,241,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <div style="width:28px;height:28px;border-radius:7px;background:rgba(23,35,63,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#17233F" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
       </div>
       <div>
-        <div style="font-size:14px;font-weight:600;color:var(--text-primary);">Analytics Insights</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">Analytics Insights</div>
         {% if insights_updated %}
-        <div style="font-size:11px;color:var(--text-muted);">Updated {{ insights_updated }}</div>
+        <div style="font-size:11px;color:var(--muted);">Updated {{ insights_updated }}</div>
         {% endif %}
       </div>
     </div>
     <form method="POST" action="/consult-data/refresh-insights" style="margin:0;">
-      <button type="submit" style="font-size:11px;color:var(--text-muted);background:none;border:1px solid var(--border);border-radius:5px;padding:4px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;">
+      <button type="submit" style="font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:5px;padding:4px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         Refresh
       </button>
@@ -39,7 +39,7 @@
     {% for insight in insights %}
     {% set cat = insight.category | lower %}
     {% if cat == 'trend' %}
-      {% set icon_color = '#6366f1' %}{% set icon_bg = 'rgba(99,102,241,.1)' %}
+      {% set icon_color = '#17233F' %}{% set icon_bg = 'rgba(23,35,63,.08)' %}
       {% set icon_svg %}
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{ icon_color }}" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
       {% endset %}
@@ -59,7 +59,7 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{ icon_color }}" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
       {% endset %}
     {% elif cat == 'funnel' %}
-      {% set icon_color = '#2563eb' %}{% set icon_bg = 'rgba(37,99,235,.1)' %}
+      {% set icon_color = '#243B63' %}{% set icon_bg = 'rgba(23,35,63,.1)' %}
       {% set icon_svg %}
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{ icon_color }}" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
       {% endset %}
@@ -75,7 +75,7 @@
       </div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:{{ icon_color }};margin-bottom:3px;">{{ insight.category | title }}</div>
-        <div style="font-size:13px;color:var(--text-primary);line-height:1.55;">{{ insight.text }}</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.55;">{{ insight.text }}</div>
       </div>
       {% if insight.sentiment == 'positive' %}
         <div style="flex-shrink:0;margin-top:2px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg></div>
@@ -89,98 +89,98 @@
 {% endif %}
 
 <!-- ── Intake Funnel ─────────────────────────────────────────────────────── -->
-<div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;padding:22px 28px;margin-bottom:28px;">
-  <div style="font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:18px;">Intake Funnel — {{ ytd_period }} 2026</div>
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 28px;margin-bottom:28px;">
+  <div style="font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;">Intake Funnel — {{ ytd_period }} 2026</div>
   <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;">
 
     <!-- Stage 1: Consultations -->
     <div style="flex:1;min-width:120px;text-align:center;">
-      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Consultations</div>
-      <div style="font-size:36px;font-weight:700;color:var(--text-primary);line-height:1;">{{ combined_2026_ytd }}</div>
+      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Consultations</div>
+      <div style="font-size:36px;font-weight:700;color:var(--text);line-height:1;">{{ combined_2026_ytd }}</div>
     </div>
 
     <!-- Arrow 1: Consult → Contract -->
     <div style="flex:0 0 auto;text-align:center;padding:0 12px;">
-      <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;">
         {% if contract_conv_rate_2026 %}{{ contract_conv_rate_2026 }}%{% else %}—{% endif %}
       </div>
-      <div style="font-size:11px;color:var(--text-muted);white-space:nowrap;">retained</div>
-      <div style="font-size:18px;color:var(--text-muted);margin-top:2px;">→</div>
+      <div style="font-size:11px;color:var(--muted);white-space:nowrap;">retained</div>
+      <div style="font-size:18px;color:var(--muted);margin-top:2px;">→</div>
     </div>
 
     <!-- Stage 2: Contracts Signed -->
     <div style="flex:1;min-width:120px;text-align:center;">
-      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Contracts Signed</div>
-      <div style="font-size:36px;font-weight:700;color:#2563eb;line-height:1;">{{ contracts_2026_ytd }}</div>
+      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Contracts Signed</div>
+      <div style="font-size:36px;font-weight:700;color:#243B63;line-height:1;">{{ contracts_2026_ytd }}</div>
     </div>
 
     <!-- Arrow 2: Contract → Filed -->
     <div style="flex:0 0 auto;text-align:center;padding:0 12px;">
-      <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;">
         {% if contract_to_filed_2026 %}{{ contract_to_filed_2026 }}%{% else %}—{% endif %}
       </div>
-      <div style="font-size:11px;color:var(--text-muted);white-space:nowrap;">filed</div>
-      <div style="font-size:18px;color:var(--text-muted);margin-top:2px;">→</div>
+      <div style="font-size:11px;color:var(--muted);white-space:nowrap;">filed</div>
+      <div style="font-size:18px;color:var(--muted);margin-top:2px;">→</div>
     </div>
 
     <!-- Stage 3: Filed -->
     <div style="flex:1;min-width:120px;text-align:center;">
-      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Cases Filed</div>
+      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Cases Filed</div>
       <div style="font-size:36px;font-weight:700;color:#16a34a;line-height:1;">{{ pacer_filed_ytd }}</div>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">PACER</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;">PACER</div>
       {% if est_revenue_2026_ytd %}
       <div style="font-size:15px;font-weight:700;color:#16a34a;margin-top:8px;">{{ est_revenue_2026_ytd }}</div>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">Estimated revenue only</div>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">~${{ avg_case_fee | int }}/case blended avg · not actual billed revenue</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:1px;">Estimated revenue only</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:1px;">~${{ avg_case_fee | int }}/case blended avg · not actual billed revenue</div>
       {% endif %}
     </div>
 
     <!-- Overall rate -->
-    <div style="flex:0 0 auto;border-left:1px solid var(--border-color);margin-left:16px;padding-left:20px;text-align:center;">
-      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Overall</div>
-      <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">
+    <div style="flex:0 0 auto;border-left:1px solid var(--border);margin-left:16px;padding-left:20px;text-align:center;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Overall</div>
+      <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;">
         {% if pacer_consult_rate_2026 %}{{ pacer_consult_rate_2026 }}%{% else %}—{% endif %}
       </div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">consult → filed</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px;">consult → filed</div>
     </div>
 
   </div>
 
   <!-- 2025 comparison row -->
-  <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border-color);display:flex;align-items:center;gap:0;flex-wrap:wrap;opacity:.65;">
+  <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:0;flex-wrap:wrap;opacity:.65;">
     <div style="flex:1;min-width:120px;text-align:center;">
-      <div style="font-size:18px;font-weight:600;color:var(--text-muted);">{{ combined_2025_ytd }}</div>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">{{ ytd_period }} 2025 · Damon only</div>
+      <div style="font-size:18px;font-weight:600;color:var(--muted);">{{ combined_2025_ytd }}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px;">{{ ytd_period }} 2025 · Damon only</div>
     </div>
     <div style="flex:0 0 auto;text-align:center;padding:0 12px;">
-      <div style="font-size:11px;font-weight:600;color:var(--text-muted);">{% if contract_conv_rate_2025_ytd %}{{ contract_conv_rate_2025_ytd }}%{% else %}—{% endif %}</div>
-      <div style="font-size:16px;color:var(--text-muted);margin-top:2px;">→</div>
+      <div style="font-size:11px;font-weight:600;color:var(--muted);">{% if contract_conv_rate_2025_ytd %}{{ contract_conv_rate_2025_ytd }}%{% else %}—{% endif %}</div>
+      <div style="font-size:16px;color:var(--muted);margin-top:2px;">→</div>
     </div>
     <div style="flex:1;min-width:120px;text-align:center;">
-      <div style="font-size:18px;font-weight:600;color:var(--text-muted);">{{ contracts_2025_ytd }}</div>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">{{ ytd_period }} 2025</div>
+      <div style="font-size:18px;font-weight:600;color:var(--muted);">{{ contracts_2025_ytd }}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px;">{{ ytd_period }} 2025</div>
     </div>
     <div style="flex:0 0 auto;text-align:center;padding:0 12px;">
-      <div style="font-size:11px;font-weight:600;color:var(--text-muted);">{% if contract_to_filed_2025 %}{{ contract_to_filed_2025 }}%{% else %}—{% endif %}</div>
-      <div style="font-size:16px;color:var(--text-muted);margin-top:2px;">→</div>
+      <div style="font-size:11px;font-weight:600;color:var(--muted);">{% if contract_to_filed_2025 %}{{ contract_to_filed_2025 }}%{% else %}—{% endif %}</div>
+      <div style="font-size:16px;color:var(--muted);margin-top:2px;">→</div>
     </div>
     <div style="flex:1;min-width:120px;text-align:center;">
-      <div style="font-size:18px;font-weight:600;color:var(--text-muted);">{{ pacer_2025_ytd }}</div>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">{{ ytd_period }} 2025</div>
+      <div style="font-size:18px;font-weight:600;color:var(--muted);">{{ pacer_2025_ytd }}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px;">{{ ytd_period }} 2025</div>
       {% if est_revenue_2025_ytd %}
-      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-top:6px;">{{ est_revenue_2025_ytd }}</div>
+      <div style="font-size:12px;font-weight:600;color:var(--muted);margin-top:6px;">{{ est_revenue_2025_ytd }}</div>
       {% endif %}
     </div>
-    <div style="flex:0 0 auto;border-left:1px solid var(--border-color);margin-left:16px;padding-left:20px;text-align:center;">
-      <div style="font-size:18px;font-weight:600;color:var(--text-muted);">{% if pacer_consult_rate_2025 %}{{ pacer_consult_rate_2025 }}%{% else %}—{% endif %}</div>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">overall '25</div>
+    <div style="flex:0 0 auto;border-left:1px solid var(--border);margin-left:16px;padding-left:20px;text-align:center;">
+      <div style="font-size:18px;font-weight:600;color:var(--muted);">{% if pacer_consult_rate_2025 %}{{ pacer_consult_rate_2025 }}%{% else %}—{% endif %}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px;">overall '25</div>
     </div>
   </div>
 
   <!-- Annual pace projection -->
   {% if filings_full_year_pace and est_revenue_annual_pace %}
-  <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color);text-align:center;font-size:11px;color:var(--text-muted);">
-    At current pace: <strong style="color:var(--text-primary);">~{{ filings_full_year_pace }} cases</strong> filed · <strong style="color:#16a34a;">{{ est_revenue_annual_pace }}</strong> est. revenue for all of 2026
+  <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);text-align:center;font-size:11px;color:var(--muted);">
+    At current pace: <strong style="color:var(--text);">~{{ filings_full_year_pace }} cases</strong> filed · <strong style="color:#16a34a;">{{ est_revenue_annual_pace }}</strong> est. revenue for all of 2026
   </div>
   {% endif %}
 
@@ -188,51 +188,51 @@
 
 <!-- ── Current Month Pacing ───────────────────────────────────────────────── -->
 {% if current_month_pacing %}
-<div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;padding:22px 28px;margin-bottom:28px;">
-  <div style="font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px;">
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 28px;margin-bottom:28px;">
+  <div style="font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;">
     {{ current_month_pacing.month_name }} {{ current_month_pacing.year }} — Day {{ current_month_pacing.day_of_month }} of {{ current_month_pacing.days_in_month }}
   </div>
   <div style="display:flex;gap:0;flex-wrap:wrap;align-items:flex-start;">
 
     <div style="padding-right:28px;">
-      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Consultations So Far</div>
-      <div style="font-size:36px;font-weight:700;color:var(--text-primary);line-height:1;">{{ current_month_pacing.combined }}</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:5px;">Damon {{ current_month_pacing.damon }} · Anne {{ current_month_pacing.anne }}</div>
+      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Consultations So Far</div>
+      <div style="font-size:36px;font-weight:700;color:var(--text);line-height:1;">{{ current_month_pacing.combined }}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:5px;">Damon {{ current_month_pacing.damon }} · Anne {{ current_month_pacing.anne }}</div>
     </div>
 
     {% if current_month_pacing.pace_full %}
-    <div style="border-left:1px solid var(--border-color);padding:0 28px;">
-      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">On Pace For</div>
-      <div style="font-size:36px;font-weight:700;color:#6366f1;line-height:1;">{{ current_month_pacing.pace_full }}</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:5px;">full-month projection</div>
+    <div style="border-left:1px solid var(--border);padding:0 28px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">On Pace For</div>
+      <div style="font-size:36px;font-weight:700;color:#17233F;line-height:1;">{{ current_month_pacing.pace_full }}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:5px;">full-month projection</div>
     </div>
     {% endif %}
 
     {% if current_month_pacing.sign_combined is not none and current_month_pacing.sign_combined >= 0 %}
-    <div style="border-left:1px solid var(--border-color);padding:0 28px;">
-      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Signing Appts So Far</div>
+    <div style="border-left:1px solid var(--border);padding:0 28px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Signing Appts So Far</div>
       <div style="font-size:36px;font-weight:700;color:#ea580c;line-height:1;">{{ current_month_pacing.sign_combined }}</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:5px;">Damon {{ current_month_pacing.sign_damon }} · Anne {{ current_month_pacing.sign_anne }}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:5px;">Damon {{ current_month_pacing.sign_damon }} · Anne {{ current_month_pacing.sign_anne }}</div>
     </div>
     {% endif %}
 
     {% if current_month_pacing.prior_combined %}
-    <div style="border-left:1px solid var(--border-color);padding:0 28px;">
-      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">{{ current_month_pacing.month_name }} {{ current_month_pacing.prior_year }} (full)</div>
-      <div style="font-size:36px;font-weight:700;color:var(--text-muted);line-height:1;">{{ current_month_pacing.prior_combined }}</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:5px;">same month last year</div>
+    <div style="border-left:1px solid var(--border);padding:0 28px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">{{ current_month_pacing.month_name }} {{ current_month_pacing.prior_year }} (full)</div>
+      <div style="font-size:36px;font-weight:700;color:var(--muted);line-height:1;">{{ current_month_pacing.prior_combined }}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:5px;">same month last year</div>
     </div>
     {% endif %}
 
-    <div style="flex:1;min-width:200px;align-self:center;padding-left:28px;border-left:1px solid var(--border-color);">
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:5px;">
+    <div style="flex:1;min-width:200px;align-self:center;padding-left:28px;border-left:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:5px;">
         <span>Day {{ current_month_pacing.day_of_month }}</span>
         <span>{{ ((current_month_pacing.day_of_month / current_month_pacing.days_in_month) * 100) | round | int }}% through month</span>
       </div>
-      <div style="height:6px;background:var(--border-color);border-radius:3px;overflow:hidden;">
-        <div style="height:100%;width:{{ ((current_month_pacing.day_of_month / current_month_pacing.days_in_month) * 100) | round | int }}%;background:#6366f1;border-radius:3px;"></div>
+      <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+        <div style="height:100%;width:{{ ((current_month_pacing.day_of_month / current_month_pacing.days_in_month) * 100) | round | int }}%;background:#17233F;border-radius:3px;"></div>
       </div>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">Refreshes every 2 hours from Google Calendar</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;">Refreshes every 2 hours from Google Calendar</div>
     </div>
 
   </div>
@@ -246,9 +246,9 @@
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px;">
 
   <div class="card" style="padding:18px 20px;">
-    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Damon — 2026 YTD</div>
-    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ damon_2026_ytd }}</div>
-    <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">{{ ytd_period }} 2026</div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Damon — 2026 YTD</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;">{{ damon_2026_ytd }}</div>
+    <div style="margin-top:6px;font-size:12px;color:var(--muted);">{{ ytd_period }} 2026</div>
     {% if damon_yoy_pct is not none %}
     <div style="margin-top:4px;display:flex;align-items:center;gap:5px;">
       {% if damon_yoy_pct >= 0 %}
@@ -256,21 +256,21 @@
       {% else %}
         <span style="font-size:11px;font-weight:700;color:#ef4444;">↓ {{ damon_yoy_pct | abs }}%</span>
       {% endif %}
-      <span style="font-size:11px;color:var(--text-muted);">vs {{ ytd_period }} '25</span>
+      <span style="font-size:11px;color:var(--muted);">vs {{ ytd_period }} '25</span>
     </div>
     {% endif %}
   </div>
 
   <div class="card" style="padding:18px 20px;">
-    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Anne — 2026 YTD</div>
-    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ anne_2026_ytd }}</div>
-    <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">{{ ytd_period }} 2026</div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Anne — 2026 YTD</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;">{{ anne_2026_ytd }}</div>
+    <div style="margin-top:6px;font-size:12px;color:var(--muted);">{{ ytd_period }} 2026</div>
   </div>
 
-  <div class="card" style="padding:18px 20px;border-color:var(--accent-border,rgba(99,102,241,.3));">
-    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Combined — 2026 YTD</div>
-    <div style="font-size:28px;font-weight:700;color:var(--accent,#6366f1);line-height:1;">{{ combined_2026_ytd }}</div>
-    <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">{{ ytd_period }} 2026</div>
+  <div class="card" style="padding:18px 20px;border-color:var(--accent-border,rgba(23,35,63,.25));">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Combined — 2026 YTD</div>
+    <div style="font-size:28px;font-weight:700;color:var(--accent,#17233F);line-height:1;">{{ combined_2026_ytd }}</div>
+    <div style="margin-top:6px;font-size:12px;color:var(--muted);">{{ ytd_period }} 2026</div>
     {% if combined_yoy_pct is not none %}
     <div style="margin-top:4px;display:flex;align-items:center;gap:5px;">
       {% if combined_yoy_pct >= 0 %}
@@ -278,27 +278,27 @@
       {% else %}
         <span style="font-size:11px;font-weight:700;color:#ef4444;">↓ {{ combined_yoy_pct | abs }}%</span>
       {% endif %}
-      <span style="font-size:11px;color:var(--text-muted);">vs {{ ytd_period }} '25</span>
+      <span style="font-size:11px;color:var(--muted);">vs {{ ytd_period }} '25</span>
     </div>
     {% endif %}
   </div>
 
   <div class="card" style="padding:18px 20px;">
-    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Damon — 2025</div>
-    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ damon_2025 }}</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Full year</div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Damon — 2025</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;">{{ damon_2025 }}</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px;">Full year</div>
   </div>
 
   <div class="card" style="padding:18px 20px;">
-    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Anne — 2025</div>
-    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ anne_2025 }}</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Oct – Dec only</div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Anne — 2025</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;">{{ anne_2025 }}</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px;">Oct – Dec only</div>
   </div>
 
   <div class="card" style="padding:18px 20px;">
-    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Damon — All-Time</div>
-    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ damon_alltime }}</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Since Oct 2009</div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Damon — All-Time</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;">{{ damon_alltime }}</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px;">Since Oct 2009</div>
   </div>
 
 </div>
@@ -320,10 +320,10 @@
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px;">
 
   <div class="card" style="padding:18px 20px;border-color:rgba(34,197,94,.35);">
-    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">2026 YTD</div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">2026 YTD</div>
     {% if contracts_2026_ytd > 0 %}
     <div style="font-size:28px;font-weight:700;color:#16a34a;line-height:1;">{{ contracts_2026_ytd }}</div>
-    <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">{{ ytd_period }} 2026</div>
+    <div style="margin-top:6px;font-size:12px;color:var(--muted);">{{ ytd_period }} 2026</div>
     {% if contracts_yoy_pct is not none %}
     <div style="margin-top:4px;display:flex;align-items:center;gap:5px;">
       {% if contracts_yoy_pct >= 0 %}
@@ -331,46 +331,46 @@
       {% else %}
         <span style="font-size:11px;font-weight:700;color:#ef4444;">↓ {{ contracts_yoy_pct | abs }}%</span>
       {% endif %}
-      <span style="font-size:11px;color:var(--text-muted);">vs {{ ytd_period }} '25</span>
+      <span style="font-size:11px;color:var(--muted);">vs {{ ytd_period }} '25</span>
     </div>
     {% endif %}
     {% else %}
-    <div style="font-size:24px;font-weight:700;color:var(--text-muted);line-height:1;">—</div>
-    <div style="margin-top:6px;font-size:11px;color:var(--text-muted);">Sync pending</div>
+    <div style="font-size:24px;font-weight:700;color:var(--muted);line-height:1;">—</div>
+    <div style="margin-top:6px;font-size:11px;color:var(--muted);">Sync pending</div>
     {% endif %}
   </div>
 
   <div class="card" style="padding:18px 20px;">
-    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">2025 Full Year</div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">2025 Full Year</div>
     {% if contracts_2025 > 0 %}
-    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ contracts_2025 }}</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;">{{ contracts_2025 }}</div>
     {% else %}
-    <div style="font-size:24px;font-weight:700;color:var(--text-muted);line-height:1;">—</div>
+    <div style="font-size:24px;font-weight:700;color:var(--muted);line-height:1;">—</div>
     {% endif %}
-    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Full year</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px;">Full year</div>
   </div>
 
   <div class="card" style="padding:18px 20px;">
-    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">All-Time</div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">All-Time</div>
     {% if contracts_alltime > 0 %}
-    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ contracts_alltime }}</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Dec 2022–present</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;">{{ contracts_alltime }}</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px;">Dec 2022–present</div>
     {% else %}
-    <div style="font-size:24px;font-weight:700;color:var(--text-muted);line-height:1;">—</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Sync pending</div>
+    <div style="font-size:24px;font-weight:700;color:var(--muted);line-height:1;">—</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px;">Sync pending</div>
     {% endif %}
   </div>
 
   <div class="card" style="padding:18px 20px;">
-    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Consult → Contract Rate</div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Consult → Contract Rate</div>
     {% if contract_conv_rate_2026 is not none and contracts_2026_ytd > 0 %}
-    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ contract_conv_rate_2026 }}%</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">
+    <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;">{{ contract_conv_rate_2026 }}%</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px;">
       {{ ytd_period }} 2026
       {% if contract_conv_rate_2025 is not none %}&nbsp;·&nbsp;{{ contract_conv_rate_2025 }}% in 2025{% endif %}
     </div>
     {% else %}
-    <div style="font-size:24px;font-weight:700;color:var(--text-muted);line-height:1;">—</div>
+    <div style="font-size:24px;font-weight:700;color:var(--muted);line-height:1;">—</div>
     {% endif %}
   </div>
 
@@ -396,8 +396,8 @@
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead>
         <tr style="background:var(--table-header-bg,rgba(0,0,0,.03));">
-          <th style="padding:10px 20px;text-align:left;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Year</th>
-          <th style="padding:10px 20px;text-align:right;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Contracts Signed</th>
+          <th style="padding:10px 20px;text-align:left;font-weight:600;color:var(--muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Year</th>
+          <th style="padding:10px 20px;text-align:right;font-weight:600;color:var(--muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Contracts Signed</th>
         </tr>
       </thead>
       <tbody>
@@ -407,35 +407,35 @@
             onmouseenter="this.style.background='var(--row-hover,rgba(0,0,0,.03))'"
             onmouseleave="this.style.background=''"
             onclick="toggleContract({{ row.year }})">
-          <td style="padding:11px 20px;font-weight:600;color:var(--text-primary);">
+          <td style="padding:11px 20px;font-weight:600;color:var(--text);">
             <span style="display:inline-flex;align-items:center;gap:6px;">
-              <svg class="cn-chevron-{{ row.year }}" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .2s;color:var(--text-muted);flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+              <svg class="cn-chevron-{{ row.year }}" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .2s;color:var(--muted);flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
               {{ row.year }}
-              {% if row.year == 2022 %}<span style="font-size:11px;color:var(--text-muted);font-weight:400;">(Dec only — DocuSign adoption)</span>{% endif %}
-              {% if row.year == 2026 %}<span style="font-size:11px;color:var(--text-muted);font-weight:400;">(Jan–{{ ytd_period.split('–')[1] }} only)</span>{% endif %}
+              {% if row.year == 2022 %}<span style="font-size:11px;color:var(--muted);font-weight:400;">(Dec only — DocuSign adoption)</span>{% endif %}
+              {% if row.year == 2026 %}<span style="font-size:11px;color:var(--muted);font-weight:400;">(Jan–{{ ytd_period.split('–')[1] }} only)</span>{% endif %}
             </span>
           </td>
-          <td style="padding:11px 20px;text-align:right;font-weight:600;color:var(--text-primary);">{{ row.count }}</td>
+          <td style="padding:11px 20px;text-align:right;font-weight:600;color:var(--text);">{{ row.count }}</td>
         </tr>
         <tr id="cn-detail-{{ row.year }}" style="display:none;">
           <td colspan="2" style="padding:0 20px 14px 38px;background:var(--table-header-bg,rgba(0,0,0,.02));">
             <table style="width:100%;border-collapse:collapse;font-size:12px;max-width:320px;">
               <thead>
                 <tr>
-                  <th style="padding:6px 12px 6px 0;text-align:left;color:var(--text-muted);font-weight:600;font-size:11px;">Month</th>
-                  <th style="padding:6px 0 6px 12px;text-align:right;color:var(--text-muted);font-weight:600;font-size:11px;">Contracts</th>
+                  <th style="padding:6px 12px 6px 0;text-align:left;color:var(--muted);font-weight:600;font-size:11px;">Month</th>
+                  <th style="padding:6px 0 6px 12px;text-align:right;color:var(--muted);font-weight:600;font-size:11px;">Contracts</th>
                 </tr>
               </thead>
               <tbody>
                 {% for mr in contract_monthly_by_year.get(row.year, []) %}
                 <tr style="border-top:1px solid var(--border);">
                   <td style="padding:7px 12px 7px 0;color:var(--text-secondary);">{{ mr.month }}</td>
-                  <td style="padding:7px 0 7px 12px;text-align:right;color:var(--text-primary);">{{ mr.count }}</td>
+                  <td style="padding:7px 0 7px 12px;text-align:right;color:var(--text);">{{ mr.count }}</td>
                 </tr>
                 {% endfor %}
                 <tr style="border-top:2px solid var(--border);">
-                  <td style="padding:7px 12px 7px 0;font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Total</td>
-                  <td style="padding:7px 0 7px 12px;text-align:right;font-weight:700;color:var(--text-primary);">{{ row.count }}</td>
+                  <td style="padding:7px 12px 7px 0;font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Total</td>
+                  <td style="padding:7px 0 7px 12px;text-align:right;font-weight:700;color:var(--text);">{{ row.count }}</td>
                 </tr>
               </tbody>
             </table>
@@ -455,9 +455,9 @@
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px;">
 
   <div class="card" style="padding:18px 20px;">
-    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Damon — 2026 YTD</div>
-    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ sign_damon_2026_ytd }}</div>
-    <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">{{ ytd_period }} 2026</div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Damon — 2026 YTD</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;">{{ sign_damon_2026_ytd }}</div>
+    <div style="margin-top:6px;font-size:12px;color:var(--muted);">{{ ytd_period }} 2026</div>
     {% if sign_damon_yoy_pct is not none %}
     <div style="margin-top:4px;display:flex;align-items:center;gap:5px;">
       {% if sign_damon_yoy_pct >= 0 %}
@@ -465,46 +465,46 @@
       {% else %}
         <span style="font-size:11px;font-weight:700;color:#ef4444;">↓ {{ sign_damon_yoy_pct | abs }}%</span>
       {% endif %}
-      <span style="font-size:11px;color:var(--text-muted);">vs {{ ytd_period }} '25</span>
+      <span style="font-size:11px;color:var(--muted);">vs {{ ytd_period }} '25</span>
     </div>
     {% endif %}
   </div>
 
   <div class="card" style="padding:18px 20px;">
-    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Anne — 2026 YTD</div>
-    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ sign_anne_2026_ytd }}</div>
-    <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">{{ ytd_period }} 2026</div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Anne — 2026 YTD</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;">{{ sign_anne_2026_ytd }}</div>
+    <div style="margin-top:6px;font-size:12px;color:var(--muted);">{{ ytd_period }} 2026</div>
   </div>
 
-  <div class="card" style="padding:18px 20px;border-color:var(--accent-border,rgba(99,102,241,.3));">
-    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Combined — 2026 YTD</div>
-    <div style="font-size:28px;font-weight:700;color:var(--accent,#6366f1);line-height:1;">{{ sign_combined_ytd }}</div>
-    <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">{{ ytd_period }} 2026</div>
+  <div class="card" style="padding:18px 20px;border-color:var(--accent-border,rgba(23,35,63,.25));">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Combined — 2026 YTD</div>
+    <div style="font-size:28px;font-weight:700;color:var(--accent,#17233F);line-height:1;">{{ sign_combined_ytd }}</div>
+    <div style="margin-top:6px;font-size:12px;color:var(--muted);">{{ ytd_period }} 2026</div>
   </div>
 
   <div class="card" style="padding:18px 20px;">
-    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Consult → Signing Rate</div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Consult → Signing Rate</div>
     {% if conv_rate_2026 is not none %}
-    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ conv_rate_2026 }}%</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">
+    <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;">{{ conv_rate_2026 }}%</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px;">
       {{ ytd_period }} 2026
       {% if conv_rate_2025 is not none %}&nbsp;·&nbsp;{{ conv_rate_2025 }}% in 2025{% endif %}
     </div>
     {% else %}
-    <div style="font-size:24px;font-weight:700;color:var(--text-primary);line-height:1;">—</div>
+    <div style="font-size:24px;font-weight:700;color:var(--text);line-height:1;">—</div>
     {% endif %}
   </div>
 
   <div class="card" style="padding:18px 20px;">
-    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Damon — 2025</div>
-    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ sign_damon_2025 }}</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Full year</div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Damon — 2025</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;">{{ sign_damon_2025 }}</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px;">Full year</div>
   </div>
 
   <div class="card" style="padding:18px 20px;">
-    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Damon — All-Time</div>
-    <div style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1;">{{ sign_damon_alltime }}</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Since Oct 2009</div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Damon — All-Time</div>
+    <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;">{{ sign_damon_alltime }}</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px;">Since Oct 2009</div>
   </div>
 
 </div>
@@ -528,10 +528,10 @@
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead>
         <tr style="background:var(--table-header-bg,rgba(0,0,0,.03));">
-          <th style="padding:10px 20px;text-align:left;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Year</th>
-          <th style="padding:10px 16px;text-align:right;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Damon</th>
-          <th style="padding:10px 16px;text-align:right;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Anne</th>
-          <th style="padding:10px 20px;text-align:right;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Combined</th>
+          <th style="padding:10px 20px;text-align:left;font-weight:600;color:var(--muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Year</th>
+          <th style="padding:10px 16px;text-align:right;font-weight:600;color:var(--muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Damon</th>
+          <th style="padding:10px 16px;text-align:right;font-weight:600;color:var(--muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Anne</th>
+          <th style="padding:10px 20px;text-align:right;font-weight:600;color:var(--muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Combined</th>
         </tr>
       </thead>
       <tbody>
@@ -541,43 +541,43 @@
             onmouseenter="this.style.background='var(--row-hover,rgba(0,0,0,.03))'"
             onmouseleave="this.style.background=''"
             onclick="toggleSign({{ row.year }})">
-          <td style="padding:11px 20px;font-weight:600;color:var(--text-primary);">
+          <td style="padding:11px 20px;font-weight:600;color:var(--text);">
             <span style="display:inline-flex;align-items:center;gap:6px;">
-              <svg class="sg-chevron-{{ row.year }}" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .2s;color:var(--text-muted);flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+              <svg class="sg-chevron-{{ row.year }}" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .2s;color:var(--muted);flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
               {{ row.year }}
-              {% if row.year == 2009 %}<span style="font-size:11px;color:var(--text-muted);font-weight:400;">(Oct–Dec only)</span>{% endif %}
-              {% if row.year == 2026 %}<span style="font-size:11px;color:var(--text-muted);font-weight:400;">(Jan–May only)</span>{% endif %}
+              {% if row.year == 2009 %}<span style="font-size:11px;color:var(--muted);font-weight:400;">(Oct–Dec only)</span>{% endif %}
+              {% if row.year == 2026 %}<span style="font-size:11px;color:var(--muted);font-weight:400;">(Jan–May only)</span>{% endif %}
             </span>
           </td>
-          <td style="padding:11px 16px;text-align:right;color:var(--text-primary);">{{ row.damon if row.damon > 0 else '—' }}</td>
-          <td style="padding:11px 16px;text-align:right;color:var(--text-primary);">{{ row.anne if row.anne > 0 else '—' }}</td>
-          <td style="padding:11px 20px;text-align:right;font-weight:600;color:var(--text-primary);">{{ row.combined }}</td>
+          <td style="padding:11px 16px;text-align:right;color:var(--text);">{{ row.damon if row.damon > 0 else '—' }}</td>
+          <td style="padding:11px 16px;text-align:right;color:var(--text);">{{ row.anne if row.anne > 0 else '—' }}</td>
+          <td style="padding:11px 20px;text-align:right;font-weight:600;color:var(--text);">{{ row.combined }}</td>
         </tr>
         <tr id="sg-detail-{{ row.year }}" style="display:none;">
           <td colspan="4" style="padding:0 20px 14px 38px;background:var(--table-header-bg,rgba(0,0,0,.02));">
             <table style="width:100%;border-collapse:collapse;font-size:12px;max-width:560px;">
               <thead>
                 <tr>
-                  <th style="padding:6px 12px 6px 0;text-align:left;color:var(--text-muted);font-weight:600;font-size:11px;">Month</th>
-                  <th style="padding:6px 12px;text-align:right;color:var(--text-muted);font-weight:600;font-size:11px;">Damon</th>
-                  <th style="padding:6px 12px;text-align:right;color:var(--text-muted);font-weight:600;font-size:11px;">Anne</th>
-                  <th style="padding:6px 0 6px 12px;text-align:right;color:var(--text-muted);font-weight:600;font-size:11px;">Combined</th>
+                  <th style="padding:6px 12px 6px 0;text-align:left;color:var(--muted);font-weight:600;font-size:11px;">Month</th>
+                  <th style="padding:6px 12px;text-align:right;color:var(--muted);font-weight:600;font-size:11px;">Damon</th>
+                  <th style="padding:6px 12px;text-align:right;color:var(--muted);font-weight:600;font-size:11px;">Anne</th>
+                  <th style="padding:6px 0 6px 12px;text-align:right;color:var(--muted);font-weight:600;font-size:11px;">Combined</th>
                 </tr>
               </thead>
               <tbody>
                 {% for mr in sign_monthly_by_year.get(row.year, []) %}
                 <tr style="border-top:1px solid var(--border);">
                   <td style="padding:7px 12px 7px 0;color:var(--text-secondary);">{{ mr.month }}</td>
-                  <td style="padding:7px 12px;text-align:right;color:var(--text-primary);">{{ mr.damon if mr.damon > 0 else '—' }}</td>
-                  <td style="padding:7px 12px;text-align:right;color:var(--text-primary);">{{ mr.anne if mr.anne > 0 else '—' }}</td>
-                  <td style="padding:7px 0 7px 12px;text-align:right;font-weight:600;color:var(--text-primary);">{{ mr.combined }}</td>
+                  <td style="padding:7px 12px;text-align:right;color:var(--text);">{{ mr.damon if mr.damon > 0 else '—' }}</td>
+                  <td style="padding:7px 12px;text-align:right;color:var(--text);">{{ mr.anne if mr.anne > 0 else '—' }}</td>
+                  <td style="padding:7px 0 7px 12px;text-align:right;font-weight:600;color:var(--text);">{{ mr.combined }}</td>
                 </tr>
                 {% endfor %}
                 <tr style="border-top:2px solid var(--border);">
-                  <td style="padding:7px 12px 7px 0;font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Total</td>
-                  <td style="padding:7px 12px;text-align:right;font-weight:600;color:var(--text-primary);">{{ row.damon if row.damon > 0 else '—' }}</td>
-                  <td style="padding:7px 12px;text-align:right;font-weight:600;color:var(--text-primary);">{{ row.anne if row.anne > 0 else '—' }}</td>
-                  <td style="padding:7px 0 7px 12px;text-align:right;font-weight:700;color:var(--text-primary);">{{ row.combined }}</td>
+                  <td style="padding:7px 12px 7px 0;font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Total</td>
+                  <td style="padding:7px 12px;text-align:right;font-weight:600;color:var(--text);">{{ row.damon if row.damon > 0 else '—' }}</td>
+                  <td style="padding:7px 12px;text-align:right;font-weight:600;color:var(--text);">{{ row.anne if row.anne > 0 else '—' }}</td>
+                  <td style="padding:7px 0 7px 12px;text-align:right;font-weight:700;color:var(--text);">{{ row.combined }}</td>
                 </tr>
               </tbody>
             </table>
@@ -595,7 +595,7 @@
 </div>
 <div class="card" style="margin-bottom:28px;">
   <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);">
-    <h2 style="margin:0;font-size:15px;font-weight:600;">24-Month Est. Revenue Trend <span style="font-size:12px;font-weight:400;color:var(--text-muted);">· PACER filings × ${{ avg_case_fee | int }}/case avg</span></h2>
+    <h2 style="margin:0;font-size:15px;font-weight:600;">24-Month Est. Revenue Trend <span style="font-size:12px;font-weight:400;color:var(--muted);">· PACER filings × ${{ avg_case_fee | int }}/case avg</span></h2>
   </div>
   <div style="padding:20px 20px 16px;position:relative;height:270px;">
     <canvas id="pacerChart"></canvas>
@@ -615,10 +615,10 @@
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead>
         <tr style="background:var(--table-header-bg,rgba(0,0,0,.03));">
-          <th style="padding:10px 20px;text-align:left;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Year</th>
-          <th style="padding:10px 16px;text-align:right;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Damon</th>
-          <th style="padding:10px 16px;text-align:right;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Anne</th>
-          <th style="padding:10px 20px;text-align:right;font-weight:600;color:var(--text-muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Combined</th>
+          <th style="padding:10px 20px;text-align:left;font-weight:600;color:var(--muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Year</th>
+          <th style="padding:10px 16px;text-align:right;font-weight:600;color:var(--muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Damon</th>
+          <th style="padding:10px 16px;text-align:right;font-weight:600;color:var(--muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Anne</th>
+          <th style="padding:10px 20px;text-align:right;font-weight:600;color:var(--muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase;">Combined</th>
         </tr>
       </thead>
       <tbody>
@@ -628,43 +628,43 @@
             onmouseenter="this.style.background='var(--row-hover,rgba(0,0,0,.03))'"
             onmouseleave="this.style.background=''"
             onclick="toggleYear({{ row.year }})">
-          <td style="padding:11px 20px;font-weight:600;color:var(--text-primary);">
+          <td style="padding:11px 20px;font-weight:600;color:var(--text);">
             <span style="display:inline-flex;align-items:center;gap:6px;">
-              <svg class="cd-chevron-{{ row.year }}" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .2s;color:var(--text-muted);flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+              <svg class="cd-chevron-{{ row.year }}" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .2s;color:var(--muted);flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
               {{ row.year }}
-              {% if row.year == 2009 %}<span style="font-size:11px;color:var(--text-muted);font-weight:400;">(Oct–Dec only)</span>{% endif %}
-              {% if row.year == 2026 %}<span style="font-size:11px;color:var(--text-muted);font-weight:400;">(Jan–May only)</span>{% endif %}
+              {% if row.year == 2009 %}<span style="font-size:11px;color:var(--muted);font-weight:400;">(Oct–Dec only)</span>{% endif %}
+              {% if row.year == 2026 %}<span style="font-size:11px;color:var(--muted);font-weight:400;">(Jan–May only)</span>{% endif %}
             </span>
           </td>
-          <td style="padding:11px 16px;text-align:right;color:var(--text-primary);">{{ row.damon if row.damon > 0 else '—' }}</td>
-          <td style="padding:11px 16px;text-align:right;color:var(--text-primary);">{{ row.anne if row.anne > 0 else '—' }}</td>
-          <td style="padding:11px 20px;text-align:right;font-weight:600;color:var(--text-primary);">{{ row.combined }}</td>
+          <td style="padding:11px 16px;text-align:right;color:var(--text);">{{ row.damon if row.damon > 0 else '—' }}</td>
+          <td style="padding:11px 16px;text-align:right;color:var(--text);">{{ row.anne if row.anne > 0 else '—' }}</td>
+          <td style="padding:11px 20px;text-align:right;font-weight:600;color:var(--text);">{{ row.combined }}</td>
         </tr>
         <tr id="cd-detail-{{ row.year }}" style="display:none;">
           <td colspan="4" style="padding:0 20px 14px 38px;background:var(--table-header-bg,rgba(0,0,0,.02));">
             <table style="width:100%;border-collapse:collapse;font-size:12px;max-width:560px;">
               <thead>
                 <tr>
-                  <th style="padding:6px 12px 6px 0;text-align:left;color:var(--text-muted);font-weight:600;font-size:11px;">Month</th>
-                  <th style="padding:6px 12px;text-align:right;color:var(--text-muted);font-weight:600;font-size:11px;">Damon</th>
-                  <th style="padding:6px 12px;text-align:right;color:var(--text-muted);font-weight:600;font-size:11px;">Anne</th>
-                  <th style="padding:6px 0 6px 12px;text-align:right;color:var(--text-muted);font-weight:600;font-size:11px;">Combined</th>
+                  <th style="padding:6px 12px 6px 0;text-align:left;color:var(--muted);font-weight:600;font-size:11px;">Month</th>
+                  <th style="padding:6px 12px;text-align:right;color:var(--muted);font-weight:600;font-size:11px;">Damon</th>
+                  <th style="padding:6px 12px;text-align:right;color:var(--muted);font-weight:600;font-size:11px;">Anne</th>
+                  <th style="padding:6px 0 6px 12px;text-align:right;color:var(--muted);font-weight:600;font-size:11px;">Combined</th>
                 </tr>
               </thead>
               <tbody>
                 {% for mr in monthly_by_year.get(row.year, []) %}
                 <tr style="border-top:1px solid var(--border);">
                   <td style="padding:7px 12px 7px 0;color:var(--text-secondary);">{{ mr.month }}</td>
-                  <td style="padding:7px 12px;text-align:right;color:var(--text-primary);">{{ mr.damon if mr.damon > 0 else '—' }}</td>
-                  <td style="padding:7px 12px;text-align:right;color:var(--text-primary);">{{ mr.anne if mr.anne > 0 else '—' }}</td>
-                  <td style="padding:7px 0 7px 12px;text-align:right;font-weight:600;color:var(--text-primary);">{{ mr.combined }}</td>
+                  <td style="padding:7px 12px;text-align:right;color:var(--text);">{{ mr.damon if mr.damon > 0 else '—' }}</td>
+                  <td style="padding:7px 12px;text-align:right;color:var(--text);">{{ mr.anne if mr.anne > 0 else '—' }}</td>
+                  <td style="padding:7px 0 7px 12px;text-align:right;font-weight:600;color:var(--text);">{{ mr.combined }}</td>
                 </tr>
                 {% endfor %}
                 <tr style="border-top:2px solid var(--border);">
-                  <td style="padding:7px 12px 7px 0;font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Total</td>
-                  <td style="padding:7px 12px;text-align:right;font-weight:600;color:var(--text-primary);">{{ row.damon if row.damon > 0 else '—' }}</td>
-                  <td style="padding:7px 12px;text-align:right;font-weight:600;color:var(--text-primary);">{{ row.anne if row.anne > 0 else '—' }}</td>
-                  <td style="padding:7px 0 7px 12px;text-align:right;font-weight:700;color:var(--text-primary);">{{ row.combined }}</td>
+                  <td style="padding:7px 12px 7px 0;font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Total</td>
+                  <td style="padding:7px 12px;text-align:right;font-weight:600;color:var(--text);">{{ row.damon if row.damon > 0 else '—' }}</td>
+                  <td style="padding:7px 12px;text-align:right;font-weight:600;color:var(--text);">{{ row.anne if row.anne > 0 else '—' }}</td>
+                  <td style="padding:7px 0 7px 12px;text-align:right;font-weight:700;color:var(--text);">{{ row.combined }}</td>
                 </tr>
               </tbody>
             </table>
@@ -678,14 +678,14 @@
 
 {% if notes %}
 <div class="card" style="padding:16px 20px;">
-  <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Data Notes</div>
+  <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Data Notes</div>
   <ul style="margin:0;padding:0 0 0 16px;font-size:13px;color:var(--text-secondary);line-height:1.7;">
     {% for note in notes %}
     <li>{{ note }}</li>
     {% endfor %}
   </ul>
   {% if updated_at %}
-  <div style="font-size:11px;color:var(--text-muted);margin-top:10px;">Last updated: {{ updated_at[:10] }}</div>
+  <div style="font-size:11px;color:var(--muted);margin-top:10px;">Last updated: {{ updated_at[:10] }}</div>
   {% endif %}
 </div>
 {% endif %}
@@ -708,7 +708,7 @@
     data: {
       labels,
       datasets: [
-        { label: 'Damon', data: damonVals, backgroundColor: 'rgba(99,102,241,0.85)',  borderRadius: 3, stack: 'total' },
+        { label: 'Damon', data: damonVals, backgroundColor: 'rgba(23,35,63,0.85)',  borderRadius: 3, stack: 'total' },
         { label: 'Anne',  data: anneVals,  backgroundColor: 'rgba(20,184,166,0.82)',  borderRadius: 3, stack: 'total' },
       ],
     },
