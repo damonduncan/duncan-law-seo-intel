@@ -592,6 +592,7 @@ def consult_data_page(
         "contract_monthly_by_year":  contract_monthly_by_year,
         "contracts_alltime":         contracts_alltime,
         "contracts_2026_ytd":        contracts_2026_ytd,
+        "contracts_2025_ytd":        contracts_2025_ytd,
         "contracts_2025":            contracts_2025,
         "contracts_yoy_pct":         contracts_yoy_pct,
         "contract_trend_data":       contract_trend_data,
