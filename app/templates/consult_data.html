@@ -89,98 +89,133 @@
 {% endif %}
 
 <!-- ── Intake Funnel ─────────────────────────────────────────────────────── -->
-<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 28px;margin-bottom:28px;">
-  <div style="font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;">Intake Funnel — {{ ytd_period }} 2026</div>
-  <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;">
+{% set bar_max = combined_2026_ytd if combined_2026_ytd else 1 %}
+{% set pct_contracts_bar = ((contracts_2026_ytd / bar_max * 100) | round(1)) if bar_max else 0 %}
+{% set pct_filed_bar     = ((pacer_filed_ytd   / bar_max * 100) | round(1)) if bar_max else 0 %}
+{% set pct_2025_consult  = ((combined_2025_ytd / bar_max * 100) | round(1)) if bar_max else 0 %}
+{% set pct_2025_contract = ((contracts_2025_ytd / bar_max * 100) | round(1)) if bar_max else 0 %}
+{% set pct_2025_filed    = ((pacer_2025_ytd    / bar_max * 100) | round(1)) if bar_max else 0 %}
 
-    <!-- Stage 1: Consultations -->
-    <div style="flex:1;min-width:120px;text-align:center;">
-      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Consultations</div>
-      <div style="font-size:36px;font-weight:700;color:var(--text);line-height:1;">{{ combined_2026_ytd }}</div>
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden;">
+
+  <!-- Card header -->
+  <div style="padding:18px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+    <div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);">Intake Funnel</div>
+      <div style="font-size:18px;font-weight:700;color:var(--navy);line-height:1.2;margin-top:2px;">{{ ytd_period }} 2026</div>
     </div>
-
-    <!-- Arrow 1: Consult → Contract -->
-    <div style="flex:0 0 auto;text-align:center;padding:0 12px;">
-      <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;">
-        {% if contract_conv_rate_2026 %}{{ contract_conv_rate_2026 }}%{% else %}—{% endif %}
+    <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+      <!-- Legend -->
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="display:flex;align-items:center;gap:5px;">
+          <div style="width:10px;height:10px;border-radius:2px;background:#17233F;"></div>
+          <span style="font-size:11px;color:var(--muted);">2026</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;">
+          <div style="width:10px;height:10px;border-radius:2px;background:rgba(23,35,63,.22);border:1px solid rgba(23,35,63,.15);"></div>
+          <span style="font-size:11px;color:var(--muted);">2025</span>
+        </div>
       </div>
-      <div style="font-size:11px;color:var(--muted);white-space:nowrap;">retained</div>
-      <div style="font-size:18px;color:var(--muted);margin-top:2px;">→</div>
-    </div>
-
-    <!-- Stage 2: Contracts Signed -->
-    <div style="flex:1;min-width:120px;text-align:center;">
-      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Contracts Signed</div>
-      <div style="font-size:36px;font-weight:700;color:#243B63;line-height:1;">{{ contracts_2026_ytd }}</div>
-    </div>
-
-    <!-- Arrow 2: Contract → Filed -->
-    <div style="flex:0 0 auto;text-align:center;padding:0 12px;">
-      <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;">
-        {% if contract_to_filed_2026 %}{{ contract_to_filed_2026 }}%{% else %}—{% endif %}
+      <!-- Overall rate chip -->
+      <div style="background:rgba(201,162,74,.08);border:1.5px solid rgba(201,162,74,.35);border-radius:10px;padding:8px 20px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9a7a33;">Consult → Filed</div>
+        <div style="font-size:30px;font-weight:800;color:#17233F;line-height:1.05;letter-spacing:-.03em;">{% if pacer_consult_rate_2026 %}{{ pacer_consult_rate_2026 }}%{% else %}—{% endif %}</div>
+        <div style="font-size:10px;color:var(--muted);">overall rate</div>
       </div>
-      <div style="font-size:11px;color:var(--muted);white-space:nowrap;">filed</div>
-      <div style="font-size:18px;color:var(--muted);margin-top:2px;">→</div>
     </div>
+  </div>
 
-    <!-- Stage 3: Filed -->
-    <div style="flex:1;min-width:120px;text-align:center;">
-      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Cases Filed</div>
-      <div style="font-size:36px;font-weight:700;color:#16a34a;line-height:1;">{{ pacer_filed_ytd }}</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;">PACER</div>
-      {% if est_revenue_2026_ytd %}
-      <div style="font-size:15px;font-weight:700;color:#16a34a;margin-top:8px;">{{ est_revenue_2026_ytd }}</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:1px;">Estimated revenue only</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:1px;">~${{ avg_case_fee | int }}/case blended avg · not actual billed revenue</div>
-      {% endif %}
-    </div>
+  <!-- Funnel bars body -->
+  <div style="padding:24px 28px 20px;">
 
-    <!-- Overall rate -->
-    <div style="flex:0 0 auto;border-left:1px solid var(--border);margin-left:16px;padding-left:20px;text-align:center;">
-      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Overall</div>
-      <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;">
-        {% if pacer_consult_rate_2026 %}{{ pacer_consult_rate_2026 }}%{% else %}—{% endif %}
+    <!-- ── Stage 1: Consultations ──────────────────────────── -->
+    <div style="display:flex;align-items:flex-start;gap:20px;margin-bottom:4px;">
+      <div style="width:170px;flex-shrink:0;padding-top:6px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:rgba(201,162,74,.9);margin-bottom:4px;">① Consultations</div>
+        <div style="font-size:42px;font-weight:800;color:#17233F;line-height:1;letter-spacing:-.04em;">{{ combined_2026_ytd }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px;">D {{ damon_2026_ytd }} · A {{ anne_2026_ytd }}</div>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:3px;">consult → filed</div>
+      <div style="flex:1;min-width:0;">
+        <div style="height:36px;background:#17233F;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding:0 14px;box-shadow:0 2px 10px rgba(23,35,63,.18);">
+          <span style="font-size:13px;font-weight:700;color:rgba(201,162,74,.85);">100%</span>
+        </div>
+        <div style="margin-top:5px;height:10px;background:rgba(23,35,63,.08);border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:{{ pct_2025_consult }}%;background:rgba(23,35,63,.28);border-radius:3px;"></div>
+        </div>
+        <div style="margin-top:3px;font-size:10px;color:var(--muted);">{{ combined_2025_ytd }} · {{ ytd_period }} 2025 (Damon only)</div>
+      </div>
+    </div>
+
+    <!-- Connector 1 -->
+    <div style="display:flex;align-items:center;gap:10px;margin:6px 0 6px 190px;">
+      <div style="width:1.5px;height:18px;background:rgba(23,35,63,.15);flex-shrink:0;"></div>
+      <div style="background:#f0fdf4;border:1px solid rgba(22,163,74,.25);border-radius:99px;padding:3px 13px;font-size:11.5px;font-weight:700;color:#15803d;white-space:nowrap;">
+        ↓ {% if contract_conv_rate_2026 %}{{ contract_conv_rate_2026 }}%{% else %}—{% endif %} retained as clients
+      </div>
+    </div>
+
+    <!-- ── Stage 2: Contracts Signed ───────────────────────── -->
+    <div style="display:flex;align-items:flex-start;gap:20px;margin-bottom:4px;">
+      <div style="width:170px;flex-shrink:0;padding-top:6px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:rgba(201,162,74,.9);margin-bottom:4px;">② Contracts Signed</div>
+        <div style="font-size:42px;font-weight:800;color:#243B63;line-height:1;letter-spacing:-.04em;">{{ contracts_2026_ytd }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px;">of {{ combined_2026_ytd }} consults</div>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="height:36px;background:#243B63;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding:0 14px;box-shadow:0 2px 10px rgba(23,35,63,.14);width:{{ pct_contracts_bar }}%;">
+          <span style="font-size:13px;font-weight:700;color:rgba(201,162,74,.85);">{{ pct_contracts_bar }}%</span>
+        </div>
+        <div style="margin-top:5px;height:10px;background:rgba(23,35,63,.08);border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:{{ pct_2025_contract }}%;background:rgba(36,59,99,.3);border-radius:3px;"></div>
+        </div>
+        <div style="margin-top:3px;font-size:10px;color:var(--muted);">{{ contracts_2025_ytd }} · {{ ytd_period }} 2025 · {% if contract_conv_rate_2025_ytd %}{{ contract_conv_rate_2025_ytd }}% conv.{% else %}—{% endif %}</div>
+      </div>
+    </div>
+
+    <!-- Connector 2 -->
+    <div style="display:flex;align-items:center;gap:10px;margin:6px 0 6px 190px;">
+      <div style="width:1.5px;height:18px;background:rgba(23,35,63,.15);flex-shrink:0;"></div>
+      <div style="background:#f0fdf4;border:1px solid rgba(22,163,74,.25);border-radius:99px;padding:3px 13px;font-size:11.5px;font-weight:700;color:#15803d;white-space:nowrap;">
+        ↓ {% if contract_to_filed_2026 %}{{ contract_to_filed_2026 }}%{% else %}—{% endif %} filed with court
+      </div>
+    </div>
+
+    <!-- ── Stage 3: Cases Filed ────────────────────────────── -->
+    <div style="display:flex;align-items:flex-start;gap:20px;">
+      <div style="width:170px;flex-shrink:0;padding-top:6px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:rgba(5,150,105,.85);margin-bottom:4px;">③ Cases Filed</div>
+        <div style="font-size:42px;font-weight:800;color:#059669;line-height:1;letter-spacing:-.04em;">{{ pacer_filed_ytd }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px;">PACER confirmed</div>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="height:36px;background:linear-gradient(135deg,#059669,#10b981);border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding:0 14px;box-shadow:0 2px 12px rgba(5,150,105,.22);width:{{ pct_filed_bar }}%;">
+          <span style="font-size:13px;font-weight:700;color:rgba(255,255,255,.9);">{{ pct_filed_bar }}%</span>
+        </div>
+        {% if est_revenue_2026_ytd %}
+        <div style="margin-top:8px;display:inline-flex;align-items:baseline;gap:8px;background:#f0fdf4;border:1.5px solid rgba(22,163,74,.2);border-radius:8px;padding:7px 16px;">
+          <span style="font-size:22px;font-weight:800;color:#15803d;letter-spacing:-.03em;">{{ est_revenue_2026_ytd }}</span>
+          <span style="font-size:11px;color:#16a34a;font-weight:600;">est. revenue</span>
+          <span style="font-size:10px;color:var(--muted);">~${{ avg_case_fee | int }}/case · not actual billed</span>
+        </div>
+        {% endif %}
+        <div style="margin-top:6px;height:10px;background:rgba(5,150,105,.08);border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:{{ pct_2025_filed }}%;background:rgba(5,150,105,.3);border-radius:3px;"></div>
+        </div>
+        <div style="margin-top:3px;font-size:10px;color:var(--muted);">{{ pacer_2025_ytd }} · {{ ytd_period }} 2025{% if pacer_consult_rate_2025 %} · {{ pacer_consult_rate_2025 }}% overall{% endif %}{% if est_revenue_2025_ytd %} · {{ est_revenue_2025_ytd }} est.{% endif %}</div>
+      </div>
     </div>
 
   </div>
 
-  <!-- 2025 comparison row -->
-  <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:0;flex-wrap:wrap;opacity:.65;">
-    <div style="flex:1;min-width:120px;text-align:center;">
-      <div style="font-size:18px;font-weight:600;color:var(--muted);">{{ combined_2025_ytd }}</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:2px;">{{ ytd_period }} 2025 · Damon only</div>
-    </div>
-    <div style="flex:0 0 auto;text-align:center;padding:0 12px;">
-      <div style="font-size:11px;font-weight:600;color:var(--muted);">{% if contract_conv_rate_2025_ytd %}{{ contract_conv_rate_2025_ytd }}%{% else %}—{% endif %}</div>
-      <div style="font-size:16px;color:var(--muted);margin-top:2px;">→</div>
-    </div>
-    <div style="flex:1;min-width:120px;text-align:center;">
-      <div style="font-size:18px;font-weight:600;color:var(--muted);">{{ contracts_2025_ytd }}</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:2px;">{{ ytd_period }} 2025</div>
-    </div>
-    <div style="flex:0 0 auto;text-align:center;padding:0 12px;">
-      <div style="font-size:11px;font-weight:600;color:var(--muted);">{% if contract_to_filed_2025 %}{{ contract_to_filed_2025 }}%{% else %}—{% endif %}</div>
-      <div style="font-size:16px;color:var(--muted);margin-top:2px;">→</div>
-    </div>
-    <div style="flex:1;min-width:120px;text-align:center;">
-      <div style="font-size:18px;font-weight:600;color:var(--muted);">{{ pacer_2025_ytd }}</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:2px;">{{ ytd_period }} 2025</div>
-      {% if est_revenue_2025_ytd %}
-      <div style="font-size:12px;font-weight:600;color:var(--muted);margin-top:6px;">{{ est_revenue_2025_ytd }}</div>
-      {% endif %}
-    </div>
-    <div style="flex:0 0 auto;border-left:1px solid var(--border);margin-left:16px;padding-left:20px;text-align:center;">
-      <div style="font-size:18px;font-weight:600;color:var(--muted);">{% if pacer_consult_rate_2025 %}{{ pacer_consult_rate_2025 }}%{% else %}—{% endif %}</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:2px;">overall '25</div>
-    </div>
-  </div>
-
-  <!-- Annual pace projection -->
+  <!-- Annual pace footer -->
   {% if filings_full_year_pace and est_revenue_annual_pace %}
-  <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);text-align:center;font-size:11px;color:var(--muted);">
-    At current pace: <strong style="color:var(--text);">~{{ filings_full_year_pace }} cases</strong> filed · <strong style="color:#16a34a;">{{ est_revenue_annual_pace }}</strong> est. revenue for all of 2026
+  <div style="padding:12px 28px;border-top:1px solid var(--border);background:rgba(23,35,63,.025);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9a7a33" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    <span style="font-size:12px;color:var(--muted);">At current pace:</span>
+    <strong style="font-size:13px;color:var(--navy);">~{{ filings_full_year_pace }} cases</strong>
+    <span style="font-size:12px;color:var(--muted);">filed · est.</span>
+    <strong style="font-size:13px;color:#15803d;">{{ est_revenue_annual_pace }}</strong>
+    <span style="font-size:12px;color:var(--muted);">revenue for all of 2026</span>
   </div>
   {% endif %}
 
