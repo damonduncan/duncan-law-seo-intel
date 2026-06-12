@@ -138,6 +138,27 @@
 
 </div>
 
+<!-- Analyze: ppc -->
+<div data-analyze="ppc" style="margin-bottom:24px;">
+  <div id="analysis-panel-ppc" style="display:none;margin-bottom:10px;">
+    <div style="background:rgba(23,35,63,.03);border:1px solid rgba(23,35,63,.1);border-left:3px solid #C9A24A;border-radius:10px;padding:16px 20px;display:flex;gap:12px;align-items:flex-start;">
+      <svg style="flex-shrink:0;margin-top:1px;" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C9A24A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9a7a33;margin-bottom:6px;">AI Analysis · <span id="analysis-updated-ppc"></span></div>
+        <p id="analysis-text-ppc" style="font-size:13.5px;line-height:1.65;color:var(--text);margin:0;"></p>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;">
+    <button id="analyze-btn-ppc" onclick="runAnalysis('ppc', this)"
+      style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;border:1.5px solid rgba(201,162,74,.4);background:rgba(201,162,74,.07);color:#9a7a33;font-size:12px;font-weight:700;letter-spacing:.03em;cursor:pointer;font-family:inherit;"
+      onmouseenter="this.style.background='rgba(201,162,74,.14)'" onmouseleave="this.style.background='rgba(201,162,74,.07)'">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Analyze
+    </button>
+  </div>
+</div>
+
 {# ─── Section 1b: Website Traffic (GA4) ──────────────────────────────────── #}
 {% if ga_summary %}
 <div class="card" style="margin-bottom:24px;">
