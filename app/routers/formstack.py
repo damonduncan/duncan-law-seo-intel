@@ -26,8 +26,41 @@ _FIELD_ID   = "95584661"   # "How did you hear about us?" checkbox field
 _CACHE_KEY  = "formstack_referral_sources"
 _TTL_HOURS  = 6
 
+# Historical referral data extracted from PDF exports (Sep–Oct 2025).
+# These submissions were deleted from Formstack to free up storage space;
+# the PDFs are the only record. Applied at query time, never written to cache.
+_HIST_MONTHLY = {
+    "2025-09": {"Online Search": 11, "Referral (Someone told me about you)": 1},
+    "2025-10": {"Online Search": 70, "Referral (Someone told me about you)": 10,
+                "Other / Returning": 5, "Letter in the Mail": 1},
+}
+_HIST_TOTAL = 98  # 2 submissions had no referral answer
+
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
+
+def _merge_historical(data: dict) -> dict:
+    """Overlay historical PDF data onto live API aggregate."""
+    merged_all: Counter = Counter()
+    for ym, counts in _HIST_MONTHLY.items():
+        merged_all.update(counts)
+    merged_all.update(data.get("all_time", {}))
+
+    merged_monthly: dict = dict(_HIST_MONTHLY)
+    for ym, counts in data.get("monthly", {}).items():
+        if ym in merged_monthly:
+            c = Counter(merged_monthly[ym])
+            c.update(counts)
+            merged_monthly[ym] = dict(c)
+        else:
+            merged_monthly[ym] = counts
+
+    return {
+        **data,
+        "total_submissions": data.get("total_submissions", 0) + _HIST_TOTAL,
+        "all_time": dict(merged_all.most_common()),
+        "monthly": {k: v for k, v in sorted(merged_monthly.items())},
+    }
 
 def _fs_get(path: str) -> dict:
     token = settings.formstack_token
@@ -110,19 +143,20 @@ def load_referral_sources(db: Session) -> Optional[dict]:
         if synced_at:
             age = datetime.now(timezone.utc) - datetime.fromisoformat(synced_at)
             if age < timedelta(hours=_TTL_HOURS):
-                return data
+                return _merge_historical(data)
 
     # Stale or missing — refresh now
     try:
         subs   = _fetch_submissions()
         result = _aggregate(subs)
         _write_cache(db, result)
-        return result
+        return _merge_historical(result)
     except Exception as exc:
         logger.error(f"Formstack sync failed: {exc}", exc_info=True)
         # Return stale data if available
         if row and row.value:
-            return row.value if isinstance(row.value, dict) else json.loads(row.value)
+            raw = row.value if isinstance(row.value, dict) else json.loads(row.value)
+            return _merge_historical(raw)
         return None
 
 
