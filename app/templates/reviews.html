@@ -529,10 +529,10 @@
 
 <!-- MDNC Review Intelligence -->
 {% if mdnc_comps or own_mdnc_snaps %}
-<div style="border-radius:var(--r);background:rgba(201,162,74,0.82);border-top:4px solid var(--accent);padding:18px 24px;margin:32px 0 20px;">
+<div style="border-radius:var(--r);background:rgba(37,99,235,.07);border-top:4px solid var(--accent);padding:18px 24px;margin:32px 0 20px;">
   <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
     <div style="font-size:32px;font-weight:900;color:var(--accent);letter-spacing:-.03em;line-height:1;">MDNC</div>
-    <div style="width:1px;height:40px;background:rgba(201,162,74,0.82);flex-shrink:0;"></div>
+    <div style="width:1px;height:40px;background:rgba(37,99,235,.2);flex-shrink:0;"></div>
     <div>
       <div style="font-size:16px;font-weight:700;color:var(--text);">Middle District of North Carolina</div>
       <div style="font-size:13px;color:var(--muted);margin-top:2px;">Greensboro · Winston-Salem · High Point · Salisbury · Durham</div>
@@ -542,7 +542,7 @@
 </div>
 <div class="card" style="margin-bottom:24px;">
   <div class="section-title" onclick="toggleSection('sec-reviews-mdnc')" style="cursor:pointer;user-select:none;">
-    <span class="section-icon" style="background:rgba(201,162,74,0.82);color:var(--accent);">
+    <span class="section-icon" style="background:rgba(37,99,235,.1);color:var(--accent);">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     </span>
     MDNC Review Intelligence
@@ -568,10 +568,10 @@
     </tr></thead>
     <tbody>
     {% for s in own_mdnc_snaps %}
-    <tr style="background:rgba(201,162,74,0.82);" data-pinned="1">
+    <tr style="background:rgba(37,99,235,.04);" data-pinned="1">
       <td>
         <div style="display:flex;align-items:center;gap:10px;">
-          <div class="firm-badge" style="background:rgba(201,162,74,0.82);color:var(--accent);">DL</div>
+          <div class="firm-badge" style="background:rgba(37,99,235,.15);color:var(--accent);">DL</div>
           <span style="font-weight:700;color:var(--accent);">Duncan Law — {{ s.market | replace('_',' ') | title }}</span>
         </div>
       </td>
@@ -584,7 +584,7 @@
       <td>
         {% if s.review_count is not none %}
         <div style="display:flex;align-items:center;gap:8px;min-width:100px;">
-          <div style="flex:1;height:5px;background:rgba(201,162,74,0.82);border-radius:3px;overflow:hidden;">
+          <div style="flex:1;height:5px;background:rgba(37,99,235,.15);border-radius:3px;overflow:hidden;">
             <div style="height:100%;width:{{ (s.review_count / mdnc_ns.max_count * 100)|int }}%;background:var(--accent);border-radius:3px;"></div>
           </div>
           <span style="font-weight:700;font-size:14px;color:var(--accent);">{{ s.review_count }}</span>
@@ -702,10 +702,10 @@
     </tr></thead>
     <tbody>
     {% for s in own_wdnc_snaps %}
-    <tr style="background:rgba(201,162,74,0.82);" data-pinned="1">
+    <tr style="background:rgba(37,99,235,.04);" data-pinned="1">
       <td>
         <div style="display:flex;align-items:center;gap:10px;">
-          <div class="firm-badge" style="background:rgba(201,162,74,0.82);color:var(--accent);">DL</div>
+          <div class="firm-badge" style="background:rgba(37,99,235,.15);color:var(--accent);">DL</div>
           <span style="font-weight:700;color:var(--accent);">Duncan Law — {{ s.market | replace('_',' ') | title }}</span>
         </div>
       </td>
@@ -718,7 +718,7 @@
       <td>
         {% if s.review_count is not none %}
         <div style="display:flex;align-items:center;gap:8px;min-width:100px;">
-          <div style="flex:1;height:5px;background:rgba(201,162,74,0.82);border-radius:3px;overflow:hidden;">
+          <div style="flex:1;height:5px;background:rgba(37,99,235,.15);border-radius:3px;overflow:hidden;">
             <div style="height:100%;width:{{ (s.review_count / wdnc_ns.max_count * 100)|int }}%;background:var(--accent);border-radius:3px;"></div>
           </div>
           <span style="font-weight:700;font-size:14px;color:var(--accent);">{{ s.review_count }}</span>

@@ -6,8 +6,8 @@
 <p class="page-sub">Monthly consultation counts by attorney — Damon Duncan (2009–present) &amp; Anne Salter (Oct 2025–present)</p>
 
 {% if request.query_params.get('refreshing') %}
-<div style="background:var(--accent-light);border:1px solid rgba(201,162,74,.3);border-radius:8px;padding:11px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text);">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#17233F" stroke-width="2.5" style="animation:spin 1.2s linear infinite;flex-shrink:0;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+<div style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:11px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text);">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.5" style="animation:spin 1.2s linear infinite;flex-shrink:0;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
   Insights are regenerating — reload this page in about 15 seconds to see the updated analysis.
 </div>
 <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
@@ -18,8 +18,8 @@
 <div class="card" style="margin-bottom:28px;">
   <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
     <div style="display:flex;align-items:center;gap:10px;">
-      <div style="width:28px;height:28px;border-radius:7px;background:rgba(23,35,63,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#17233F" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <div style="width:28px;height:28px;border-radius:7px;background:rgba(99,102,241,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
       </div>
       <div>
         <div style="font-size:14px;font-weight:600;color:var(--text);">Analytics Insights</div>
@@ -39,7 +39,7 @@
     {% for insight in insights %}
     {% set cat = insight.category | lower %}
     {% if cat == 'trend' %}
-      {% set icon_color = '#17233F' %}{% set icon_bg = 'rgba(23,35,63,.08)' %}
+      {% set icon_color = '#6366f1' %}{% set icon_bg = 'rgba(99,102,241,.1)' %}
       {% set icon_svg %}
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{ icon_color }}" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
       {% endset %}
@@ -59,7 +59,7 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{ icon_color }}" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
       {% endset %}
     {% elif cat == 'funnel' %}
-      {% set icon_color = '#243B63' %}{% set icon_bg = 'rgba(23,35,63,.1)' %}
+      {% set icon_color = '#2563eb' %}{% set icon_bg = 'rgba(37,99,235,.1)' %}
       {% set icon_svg %}
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{ icon_color }}" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
       {% endset %}
@@ -249,7 +249,7 @@
     {% if current_month_pacing.pace_full %}
     <div style="border-left:1px solid var(--border);padding:0 28px;">
       <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">On Pace For</div>
-      <div style="font-size:36px;font-weight:700;color:#17233F;line-height:1;">{{ current_month_pacing.pace_full }}</div>
+      <div style="font-size:36px;font-weight:700;color:#6366f1;line-height:1;">{{ current_month_pacing.pace_full }}</div>
       <div style="font-size:11px;color:var(--muted);margin-top:5px;">full-month projection</div>
     </div>
     {% endif %}
@@ -276,7 +276,7 @@
         <span>{{ ((current_month_pacing.day_of_month / current_month_pacing.days_in_month) * 100) | round | int }}% through month</span>
       </div>
       <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
-        <div style="height:100%;width:{{ ((current_month_pacing.day_of_month / current_month_pacing.days_in_month) * 100) | round | int }}%;background:#17233F;border-radius:3px;"></div>
+        <div style="height:100%;width:{{ ((current_month_pacing.day_of_month / current_month_pacing.days_in_month) * 100) | round | int }}%;background:#6366f1;border-radius:3px;"></div>
       </div>
       <div style="font-size:10px;color:var(--muted);margin-top:6px;">Refreshes every 2 hours from Google Calendar</div>
     </div>
@@ -313,9 +313,9 @@
     <div style="margin-top:6px;font-size:12px;color:var(--muted);">{{ ytd_period }} 2026</div>
   </div>
 
-  <div class="card" style="padding:18px 20px;border-color:var(--accent-border,rgba(23,35,63,.25));">
+  <div class="card" style="padding:18px 20px;border-color:var(--accent-border,rgba(99,102,241,.3));">
     <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Combined — 2026 YTD</div>
-    <div style="font-size:28px;font-weight:700;color:var(--accent,#17233F);line-height:1;">{{ combined_2026_ytd }}</div>
+    <div style="font-size:28px;font-weight:700;color:var(--accent,#6366f1);line-height:1;">{{ combined_2026_ytd }}</div>
     <div style="margin-top:6px;font-size:12px;color:var(--muted);">{{ ytd_period }} 2026</div>
     {% if combined_yoy_pct is not none %}
     <div style="margin-top:4px;display:flex;align-items:center;gap:5px;">
@@ -522,9 +522,9 @@
     <div style="margin-top:6px;font-size:12px;color:var(--muted);">{{ ytd_period }} 2026</div>
   </div>
 
-  <div class="card" style="padding:18px 20px;border-color:var(--accent-border,rgba(23,35,63,.25));">
+  <div class="card" style="padding:18px 20px;border-color:var(--accent-border,rgba(99,102,241,.3));">
     <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Combined — 2026 YTD</div>
-    <div style="font-size:28px;font-weight:700;color:var(--accent,#17233F);line-height:1;">{{ sign_combined_ytd }}</div>
+    <div style="font-size:28px;font-weight:700;color:var(--accent,#6366f1);line-height:1;">{{ sign_combined_ytd }}</div>
     <div style="margin-top:6px;font-size:12px;color:var(--muted);">{{ ytd_period }} 2026</div>
   </div>
 
@@ -754,7 +754,7 @@
     data: {
       labels,
       datasets: [
-        { label: 'Damon', data: damonVals, backgroundColor: 'rgba(23,35,63,0.85)',  borderRadius: 3, stack: 'total' },
+        { label: 'Damon', data: damonVals, backgroundColor: 'rgba(99,102,241,0.85)',  borderRadius: 3, stack: 'total' },
         { label: 'Anne',  data: anneVals,  backgroundColor: 'rgba(20,184,166,0.82)',  borderRadius: 3, stack: 'total' },
       ],
     },
