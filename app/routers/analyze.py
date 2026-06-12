@@ -202,15 +202,21 @@ def _rankings_context(db: Session) -> str:
     else:
         lines.append("  No rankings found yet.")
 
-    # Top competitors for comparison
+    # Top competitors for comparison — fetch all competitor names in one query
+    rival_ids = {r.competitor_id for r in latest if r.competitor_id != own.id and r.rank and r.rank <= 3}
+    comp_by_id = {}
+    if rival_ids:
+        for c in db.query(Competitor).filter(Competitor.id.in_(rival_ids)).all():
+            comp_by_id[c.id] = c
+
     comp_ranks = {}
     for r in latest:
         if r.competitor_id != own.id and r.rank and r.rank <= 3:
-            key = (r.city, r.keyword)
-            if key not in comp_ranks:
-                comp_ranks[key] = []
-            comp = db.query(Competitor).filter(Competitor.id == r.competitor_id).first()
+            comp = comp_by_id.get(r.competitor_id)
             if comp:
+                key = (r.city, r.keyword)
+                if key not in comp_ranks:
+                    comp_ranks[key] = []
                 comp_ranks[key].append(f"{comp.name} #{r.rank}")
 
     if comp_ranks:

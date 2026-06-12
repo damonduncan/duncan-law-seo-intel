@@ -759,6 +759,28 @@ def connect_google_sheets(
     }
     oauth_url = f"{_GOOGLE_AUTH_URL}?{urlencode(oauth_params)}"
 
+    # Pre-compute conditional blocks to avoid nested f-strings (Python < 3.12)
+    success_div = (
+        f"<div class='ok'>&#10003; {message} "
+        "<a href='/ppc' style='color:#065f46;font-weight:600;'>Go to PPC &rarr;</a></div>"
+    ) if success else ""
+    error_div = f"<div class='err'>&#10007; {message}</div>" if message and not success else ""
+    back_btn = "<br><a href='/ppc' class='btn btn-green'>Back to Lead Intelligence &rarr;</a>" if success else ""
+    oauth_block = "" if success else (
+        f"<div class=\"info\"><strong>Before clicking Authorize:</strong> add the following"
+        f" redirect URI to your <a href=\"https://console.cloud.google.com/apis/credentials\""
+        f" target=\"_blank\" style=\"color:#1d4ed8;\">Google Cloud Console &rarr; OAuth 2.0 Client</a>"
+        f" authorized redirect URIs:<br><br><code>{redirect_uri}</code></div>"
+        f"<ol>"
+        f"<li>Go to <strong>Google Cloud Console &rarr; APIs &amp; Services &rarr; Credentials</strong></li>"
+        f"<li>Edit your OAuth 2.0 Client ID (the same one used for app login)</li>"
+        f"<li>Under <em>Authorized redirect URIs</em>, add the URI shown above</li>"
+        f"<li>Click Save, then come back here and click Authorize below</li>"
+        f"</ol>"
+        f"<a href=\"{oauth_url}\" class=\"btn\">Authorize Spreadsheet Access &rarr;</a>"
+        f"<br><br><a href='/ppc' style='font-size:13px;color:#6b7280;'>&larr; Back to Lead Intelligence</a>"
+    )
+
     html = f"""
     <!DOCTYPE html><html lang="en"><head>
     <meta charset="UTF-8"><title>Connect PPC Spreadsheet</title>
@@ -779,28 +801,10 @@ def connect_google_sheets(
     <div class="card">
       <h2>Connect PPC Spreadsheet</h2>
       <p>This one-time authorization lets Market Pulse automatically pull new months from the PPC reporting spreadsheet whenever your team adds a new tab. No more manual uploads.</p>
-
-      {"<div class='ok'>✓ " + message + " <a href='/ppc' style='color:#065f46;font-weight:600;'>Go to PPC →</a></div>" if success else ""}
-      {"<div class='err'>✗ " + message + "</div>" if message and not success else ""}
-
-      {"" if success else f"""
-      <div class="info">
-        <strong>Before clicking Authorize:</strong> add the following redirect URI to your
-        <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:#1d4ed8;">Google Cloud Console → OAuth 2.0 Client</a>
-        authorized redirect URIs:<br><br>
-        <code>{redirect_uri}</code>
-      </div>
-      <ol>
-        <li>Go to <strong>Google Cloud Console → APIs &amp; Services → Credentials</strong></li>
-        <li>Edit your OAuth 2.0 Client ID (the same one used for app login)</li>
-        <li>Under <em>Authorized redirect URIs</em>, add the URI shown above</li>
-        <li>Click Save, then come back here and click Authorize below</li>
-      </ol>
-      <a href="{oauth_url}" class="btn">Authorize Spreadsheet Access →</a>
-      <br><br><a href='/ppc' style='font-size:13px;color:#6b7280;'>← Back to Lead Intelligence</a>
-      """}
-
-      {"<br><a href='/ppc' class='btn btn-green'>Back to Lead Intelligence →</a>" if success else ""}
+      {success_div}
+      {error_div}
+      {oauth_block}
+      {back_btn}
     </div>
     </body></html>
     """
