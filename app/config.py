@@ -62,6 +62,10 @@ class Settings(BaseSettings):
     google_ads_developer_token: str = ""   # from Google Ads → Tools → API Center
     google_ads_customer_id:     str = ""   # 10-digit account ID (hyphens optional)
 
+    # Formstack (intake form referral source sync)
+    formstack_token:   str = ""  # FORMSTACK_TOKEN — v2 API access token
+    formstack_form_id: str = "3908223"  # Consultation Intake Sheet
+
     # Briefing
     briefing_token: str = ""   # set BRIEFING_TOKEN env var to share /briefing without OAuth
 

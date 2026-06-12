@@ -736,6 +736,77 @@
 </div>
 {% endif %}
 
+<!-- ── How Clients Find You (Formstack referral sources) ──────────────────── -->
+{% if referral_sources %}
+{% set rs_all = referral_sources.all_time %}
+{% set rs_total = rs_all.values() | sum %}
+{% set rs_colors = ["#2563eb", "#16a34a", "#7c3aed", "#94a3b8", "#f59e0b", "#64748b"] %}
+{% set rs_bgs = ["rgba(37,99,235,.1)", "rgba(22,163,74,.1)", "rgba(124,58,237,.1)", "rgba(148,163,184,.15)"] %}
+{% set rs_label_map = {
+  "Online Search": "Online Search",
+  "Referral (Someone told me about you)": "Referral",
+  "Other / Returning": "Other / Returning",
+  "Other": "Other"
+} %}
+<div style="margin-bottom:10px;">
+  <h2 style="font-size:15px;font-weight:600;margin:0 0 14px;">Lead Sources</h2>
+</div>
+<div class="card" style="margin-bottom:28px;">
+  <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <div>
+      <div style="font-size:14px;font-weight:600;color:var(--text);">How Clients Find You</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+        {{ rs_total }} intake form submissions{% if referral_sources.synced_at %} · synced {{ referral_sources.synced_at[:10] }}{% endif %}
+      </div>
+    </div>
+    <button id="fs-sync-btn" onclick="syncFormstack()" style="font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:5px;padding:4px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Sync
+    </button>
+  </div>
+  <div style="padding:16px 20px;">
+    <!-- Stat chips — top 3 sources -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+      {% for source, count in rs_all.items() %}
+      {% if loop.index <= 3 %}
+      {% set pct = (count / rs_total * 100) | round(1) if rs_total > 0 else 0 %}
+      {% set lbl = rs_label_map.get(source, source) %}
+      {% set chip_color = rs_colors[loop.index0] if loop.index0 < 6 else "#64748b" %}
+      {% set chip_bg    = rs_bgs[loop.index0]    if loop.index0 < 4 else "rgba(148,163,184,.15)" %}
+      <div style="flex:1;min-width:140px;background:{{ chip_bg }};border-radius:10px;padding:14px 16px;">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:{{ chip_color }};margin-bottom:4px;">{{ lbl }}</div>
+        <div style="font-size:26px;font-weight:700;color:var(--text);line-height:1;">{{ pct }}%</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px;">{{ count }} submissions</div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    <!-- Proportion bars -->
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
+      {% for source, count in rs_all.items() %}
+      {% set pct = (count / rs_total * 100) | round(1) if rs_total > 0 else 0 %}
+      {% set lbl = rs_label_map.get(source, source) %}
+      {% set bar_color = rs_colors[loop.index0] if loop.index0 < 6 else "#64748b" %}
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+          <span style="font-size:12px;font-weight:500;color:var(--text);">{{ lbl }}</span>
+          <span style="font-size:12px;color:var(--muted);">{{ pct }}% &middot; {{ count }}</span>
+        </div>
+        <div style="height:6px;background:var(--border);border-radius:99px;overflow:hidden;">
+          <div style="height:100%;width:{{ pct }}%;background:{{ bar_color }};border-radius:99px;"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <!-- Monthly stacked chart -->
+    <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Monthly Breakdown</div>
+    <div style="position:relative;height:220px;">
+      <canvas id="referralChart"></canvas>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 (function() {
@@ -948,6 +1019,79 @@ function toggleYear(year) {
   let opened = 0;
   rows.forEach(r => { if (opened < 2) { toggleYear(parseInt(r.dataset.year)); opened++; } });
 })();
+
+{% if referral_sources %}
+// Referral sources monthly chart
+(function() {
+  const monthly  = {{ referral_sources.monthly | tojson }};
+  const allTime  = {{ referral_sources.all_time | tojson }};
+  const COLORS   = ["#2563eb","#16a34a","#7c3aed","#94a3b8","#f59e0b","#64748b"];
+  const LBL_MAP  = {
+    "Online Search": "Online Search",
+    "Referral (Someone told me about you)": "Referral",
+    "Other / Returning": "Other / Returning",
+    "Other": "Other"
+  };
+  const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  const sortedSrcs = Object.keys(allTime);
+  const monthKeys  = Object.keys(monthly).sort().slice(-6);
+  const monthLabels = monthKeys.map(m => {
+    const [y, mo] = m.split('-');
+    return MONTH_NAMES[parseInt(mo) - 1] + " '" + y.slice(2);
+  });
+
+  const datasets = sortedSrcs.map((src, i) => ({
+    label: LBL_MAP[src] || src,
+    data:  monthKeys.map(m => (monthly[m] || {})[src] || 0),
+    backgroundColor: COLORS[i] || COLORS[5],
+    borderRadius: 3,
+    borderSkipped: false,
+  }));
+
+  const cs = getComputedStyle(document.documentElement);
+  const textMuted = cs.getPropertyValue('--muted').trim() || '#888';
+  const borderClr = cs.getPropertyValue('--border').trim() || 'rgba(0,0,0,0.1)';
+
+  const canvas = document.getElementById('referralChart');
+  if (!canvas) return;
+  new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: { labels: monthLabels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', align: 'end',
+          labels: { color: textMuted, boxWidth: 10, padding: 12, font: { size: 11 } } },
+        tooltip: { mode: 'index', intersect: false },
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false },
+             ticks: { color: textMuted, font: { size: 11 } },
+             border: { color: borderClr } },
+        y: { stacked: true, beginAtZero: true, grid: { color: borderClr },
+             ticks: { color: textMuted, font: { size: 11 }, precision: 0 },
+             border: { color: borderClr } },
+      },
+    },
+  });
+})();
+{% endif %}
+
+function syncFormstack() {
+  const btn = document.getElementById('fs-sync-btn');
+  if (!btn) return;
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 1s linear infinite"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Syncing…';
+  fetch('/formstack/sync', { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) { btn.innerHTML = 'Synced ✓'; setTimeout(() => location.reload(), 800); }
+      else { btn.innerHTML = 'Error — retry'; btn.disabled = false; }
+    })
+    .catch(() => { btn.innerHTML = 'Error — retry'; btn.disabled = false; });
+}
 </script>
 
 {% endblock %}

@@ -11,6 +11,7 @@ from app.dependencies import RedirectIfNotAuthenticated
 from app.database import get_db
 from app.models.discovery import DiscoveryCache
 from app.models.base import new_uuid
+from app.routers.formstack import load_referral_sources
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -628,6 +629,7 @@ def consult_data_page(
         db, damon_months, anne_months, funnel_data=funnel_data
     )
     funnel_snapshot, funnel_snapshot_updated = _get_or_refresh_funnel_snapshot(db, funnel_data)
+    referral_sources = load_referral_sources(db)
 
     return templates.TemplateResponse("consult_data.html", {
         "request":               request,
@@ -697,4 +699,5 @@ def consult_data_page(
         "insights_updated":      insights_updated,
         "notes":                 damon_data.get("notes", []) + anne_data.get("notes", []),
         "updated_at":         damon_data.get("updated_at", ""),
+        "referral_sources":      referral_sources,
     })
