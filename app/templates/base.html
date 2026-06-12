@@ -1712,29 +1712,37 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ── Section Analysis ────────────────────────────────────────────────────────
+var REFRESH_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>';
+var SPINNER_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
+
 window.runAnalysis = async function(section, btn) {
-  const panel   = document.getElementById('analysis-panel-' + section);
-  const textEl  = document.getElementById('analysis-text-' + section);
-  const updEl   = document.getElementById('analysis-updated-' + section);
+  var panel   = document.getElementById('analysis-panel-' + section);
+  var textEl  = document.getElementById('analysis-text-' + section);
+  var updEl   = document.getElementById('analysis-updated-' + section);
   if (!panel || !textEl) return;
 
-  const prevHtml = btn.innerHTML;
+  var prevHtml = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Analyzing…';
+  btn.innerHTML = SPINNER_SVG + ' Analyzing…';
 
   panel.style.display = 'block';
   textEl.style.opacity = '0.4';
   textEl.textContent = textEl.textContent || 'Generating analysis…';
 
   try {
-    const resp = await fetch('/analyze/' + section, { method: 'POST' });
+    var resp = await fetch('/analyze/' + section, { method: 'POST' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const data = await resp.json();
+    var data = await resp.json();
     if (data.error) throw new Error(data.error);
     textEl.style.opacity = '1';
     textEl.textContent = data.text;
     if (updEl) updEl.textContent = data.updated;
-    btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg> Refresh';
+    btn.innerHTML = REFRESH_SVG + ' Refresh';
+    // Refresh history panel if it's open
+    var histPanel = document.getElementById('history-panel-' + section);
+    if (histPanel && histPanel.style.display !== 'none') {
+      _loadHistory(section, histPanel);
+    }
   } catch (e) {
     textEl.style.opacity = '1';
     if (!textEl.textContent || textEl.textContent === 'Generating analysis…') {
@@ -1746,10 +1754,120 @@ window.runAnalysis = async function(section, btn) {
   btn.disabled = false;
 };
 
+// ── Analysis History ────────────────────────────────────────────────────────
+function _escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function _metricsPills(section, metrics) {
+  if (!metrics) return '';
+  var pills = [];
+  var pill = function(val, label) {
+    return '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:99px;background:rgba(23,35,63,.06);border:1px solid rgba(23,35,63,.12);font-size:10.5px;color:#5a6272;">'
+         + '<strong style="color:#243B63;">' + _escHtml(val) + '</strong>&thinsp;' + _escHtml(label) + '</span>';
+  };
+  if (section === 'ppc') {
+    if (metrics.leads_3mo != null) pills.push(pill(metrics.leads_3mo, 'leads (3 mo)'));
+    if (metrics.avg_cpl_3mo != null) pills.push(pill('$' + metrics.avg_cpl_3mo, 'avg CPL'));
+    if (metrics.period) pills.push(pill(metrics.period, ''));
+  } else if (section === 'rankings') {
+    var pos = metrics.positions || {};
+    Object.keys(pos).forEach(function(k) { pills.push(pill('#' + pos[k], k)); });
+  } else if (section === 'reviews') {
+    if (metrics.total_google != null) pills.push(pill(metrics.total_google, 'Google reviews'));
+    var mkts = metrics.markets || {};
+    Object.keys(mkts).forEach(function(m) { pills.push(pill(mkts[m], m)); });
+  } else if (section === 'filings') {
+    if (metrics.ytd_cases != null) pills.push(pill(metrics.ytd_cases, 'cases ' + (metrics.year || '')));
+    var mo = metrics.monthly || {};
+    Object.keys(mo).forEach(function(m) { pills.push(pill(mo[m], m)); });
+  } else if (section === 'overview') {
+    if (metrics.reviews_total != null) pills.push(pill(metrics.reviews_total, 'total reviews'));
+    if (metrics.ppc_leads_last_month != null) pills.push(pill(metrics.ppc_leads_last_month, 'PPC leads'));
+    if (metrics.ppc_cpl_last_month != null) pills.push(pill('$' + (+(metrics.ppc_cpl_last_month||0)).toFixed(2), 'CPL'));
+  }
+  return pills.join(' ');
+}
+
+function _renderHistoryTimeline(section, entries) {
+  var html = '<div style="border:1px solid rgba(23,35,63,.12);border-radius:10px;overflow:hidden;margin-top:10px;">';
+  entries.forEach(function(entry, i) {
+    var pills = _metricsPills(section, entry.metrics || {});
+    html += '<div style="padding:14px 18px;' + (i < entries.length - 1 ? 'border-bottom:1px solid rgba(23,35,63,.09);' : '') + '">';
+    html += '<div style="font-size:10.5px;font-weight:700;color:#9a7a33;letter-spacing:.06em;text-transform:uppercase;margin-bottom:' + (pills ? '6px' : '7px') + ';">'
+         + _escHtml(entry.generated_at_label || '') + '</div>';
+    if (pills) {
+      html += '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">' + pills + '</div>';
+    }
+    html += '<p style="font-size:13px;line-height:1.65;color:var(--text);margin:0;">' + _escHtml(entry.text || '') + '</p>';
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function _loadHistory(section, panel) {
+  panel.innerHTML = '<div style="padding:14px 18px;font-size:13px;color:var(--muted);">Loading…</div>';
+  fetch('/analyze/' + section + '/history')
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data || !data.entries || !data.entries.length) {
+        panel.innerHTML = '<div style="padding:14px 18px;font-size:13px;color:var(--muted);">No history yet — click Analyze to generate the first entry.</div>';
+      } else {
+        panel.innerHTML = _renderHistoryTimeline(section, data.entries);
+      }
+    })
+    .catch(function() {
+      panel.innerHTML = '<div style="padding:14px 18px;font-size:13px;color:#c0392b;">Could not load history.</div>';
+    });
+}
+
+window.toggleHistory = function(section, btn) {
+  var panel = document.getElementById('history-panel-' + section);
+  if (!panel) return;
+  var isOpen = panel.style.display !== 'none';
+  if (isOpen) {
+    panel.style.display = 'none';
+    btn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> History';
+  } else {
+    panel.style.display = 'block';
+    _loadHistory(section, panel);
+    btn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Close';
+  }
+};
+
+var HIST_BTN_HTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> History';
+var HIST_BTN_STYLE = 'display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:8px;border:1.5px solid rgba(23,35,63,.18);background:rgba(23,35,63,.04);color:#5a6272;font-size:12px;font-weight:700;letter-spacing:.03em;cursor:pointer;font-family:inherit;';
+
 // Auto-load cached analysis for any [data-analyze] element on the page
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('[data-analyze]').forEach(function(el) {
     var section = el.dataset.analyze;
+
+    // Inject History button (left of Analyze button) + hidden history panel
+    var analyzeBtn = document.getElementById('analyze-btn-' + section);
+    if (analyzeBtn) {
+      var btnRow = analyzeBtn.parentNode;
+
+      // History button
+      var histBtn = document.createElement('button');
+      histBtn.id = 'history-btn-' + section;
+      histBtn.setAttribute('style', HIST_BTN_STYLE);
+      histBtn.setAttribute('onmouseenter', "this.style.background='rgba(23,35,63,.09)'");
+      histBtn.setAttribute('onmouseleave', "this.style.background='rgba(23,35,63,.04)'");
+      histBtn.setAttribute('onclick', "toggleHistory('" + section + "', this)");
+      histBtn.innerHTML = HIST_BTN_HTML;
+      btnRow.insertBefore(histBtn, analyzeBtn);
+
+      // History panel (injected after the button row, inside [data-analyze])
+      var histPanel = document.createElement('div');
+      histPanel.id = 'history-panel-' + section;
+      histPanel.style.display = 'none';
+      var btnRowParent = btnRow.parentNode;
+      btnRowParent.insertBefore(histPanel, btnRow.nextSibling);
+    }
+
+    // Load cached analysis text
     fetch('/analyze/' + section + '/cached')
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
@@ -1758,10 +1876,10 @@ document.addEventListener('DOMContentLoaded', function() {
         var textEl = document.getElementById('analysis-text-' + section);
         var updEl  = document.getElementById('analysis-updated-' + section);
         var btn    = document.getElementById('analyze-btn-' + section);
-        if (panel)  panel.style.display  = 'block';
-        if (textEl) textEl.textContent   = data.text;
-        if (updEl)  updEl.textContent    = data.updated;
-        if (btn)    btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg> Refresh';
+        if (panel)  panel.style.display = 'block';
+        if (textEl) textEl.textContent  = data.text;
+        if (updEl)  updEl.textContent   = data.updated;
+        if (btn)    btn.innerHTML = REFRESH_SVG + ' Refresh';
       })
       .catch(function() {});
   });

@@ -452,6 +452,173 @@ SECTION_FETCHERS = {
 }
 
 
+# ── Metrics snapshots (recorded alongside each history entry) ──────────────────
+
+def _snap_ppc(db: Session) -> dict:
+    row = db.query(DiscoveryCache).filter(DiscoveryCache.key == "ppc_monthly_data").first()
+    data = row.value if row else []
+    if isinstance(data, str):
+        data = json.loads(data)
+    if not data:
+        return {}
+    recent = sorted(data, key=lambda x: (x.get("year", 0), x.get("month", 0)))[-3:]
+    total_leads = sum(m.get("total", {}).get("leads", 0) or 0 for m in recent)
+    total_spend = sum(m.get("total", {}).get("spend", 0) or 0 for m in recent)
+    avg_cpl = round(total_spend / total_leads, 2) if total_leads else None
+    latest = recent[-1] if recent else {}
+    mo, yr = latest.get("month"), latest.get("year")
+    period = f"{MONTH_NAMES[mo - 1]} {yr}" if mo else str(yr or "")
+    return {"period": f"Last 3 mo through {period}", "leads_3mo": total_leads, "avg_cpl_3mo": avg_cpl}
+
+
+def _snap_rankings(db: Session) -> dict:
+    own = db.query(Competitor).filter(Competitor.is_own_firm == True).first()
+    if not own:
+        return {}
+    subq = (
+        db.query(LocalPackRanking.keyword, LocalPackRanking.city,
+                 func.max(LocalPackRanking.scraped_at).label("max_dt"))
+        .group_by(LocalPackRanking.keyword, LocalPackRanking.city).subquery()
+    )
+    rows = (
+        db.query(LocalPackRanking)
+        .join(subq, (LocalPackRanking.keyword == subq.c.keyword)
+              & (LocalPackRanking.city == subq.c.city)
+              & (LocalPackRanking.scraped_at == subq.c.max_dt))
+        .filter(LocalPackRanking.competitor_id == own.id).all()
+    )
+    return {"positions": {f"{r.city}/{r.keyword}": r.rank for r in rows if r.rank}}
+
+
+def _snap_reviews(db: Session) -> dict:
+    own = db.query(Competitor).filter(Competitor.is_own_firm == True).first()
+    if not own:
+        return {}
+    subq = (
+        db.query(ReviewSnapshot.market, ReviewSnapshot.source,
+                 func.max(ReviewSnapshot.scraped_at).label("max_dt"))
+        .filter(ReviewSnapshot.competitor_id == own.id)
+        .group_by(ReviewSnapshot.market, ReviewSnapshot.source).subquery()
+    )
+    snaps = (
+        db.query(ReviewSnapshot)
+        .join(subq, (ReviewSnapshot.competitor_id == own.id)
+              & (ReviewSnapshot.market == subq.c.market)
+              & (ReviewSnapshot.source == subq.c.source)
+              & (ReviewSnapshot.scraped_at == subq.c.max_dt)).all()
+    )
+    markets = {s.market: s.total_reviews for s in snaps
+               if s.source and s.source.lower() == "google" and s.total_reviews}
+    return {"markets": markets, "total_google": sum(markets.values())}
+
+
+def _snap_filings(db: Session) -> dict:
+    row = db.query(DiscoveryCache).filter(
+        DiscoveryCache.key == "duncan_law_filing_history"
+    ).first()
+    data = row.value if row else {}
+    if isinstance(data, str):
+        data = json.loads(data)
+    annual = data.get("annual", [])
+    if not annual:
+        return {}
+    latest = max(annual, key=lambda x: x.get("year", 0))
+    monthly = {MONTH_NAMES[i]: v for i, v in enumerate(latest.get("monthly") or [])
+               if v is not None and v > 0}
+    return {"year": latest.get("year"), "ytd_cases": latest.get("total", 0), "monthly": monthly}
+
+
+def _snap_overview(db: Session) -> dict:
+    snap: dict = {}
+    own = db.query(Competitor).filter(Competitor.is_own_firm == True).first()
+    if own:
+        subq = (
+            db.query(LocalPackRanking.keyword, LocalPackRanking.city,
+                     func.max(LocalPackRanking.scraped_at).label("max_dt"))
+            .filter(LocalPackRanking.competitor_id == own.id)
+            .group_by(LocalPackRanking.keyword, LocalPackRanking.city).subquery()
+        )
+        ranks = (
+            db.query(LocalPackRanking)
+            .join(subq, (LocalPackRanking.keyword == subq.c.keyword)
+                  & (LocalPackRanking.city == subq.c.city)
+                  & (LocalPackRanking.scraped_at == subq.c.max_dt)).all()
+        )
+        snap["rankings"] = {f"{r.city}/{r.keyword}": r.rank for r in ranks if r.rank}
+        rev_subq = (
+            db.query(ReviewSnapshot.market, ReviewSnapshot.source,
+                     func.max(ReviewSnapshot.scraped_at).label("max_dt"))
+            .filter(ReviewSnapshot.competitor_id == own.id)
+            .group_by(ReviewSnapshot.market, ReviewSnapshot.source).subquery()
+        )
+        rev_snaps = (
+            db.query(ReviewSnapshot)
+            .join(rev_subq, (ReviewSnapshot.competitor_id == own.id)
+                  & (ReviewSnapshot.market == rev_subq.c.market)
+                  & (ReviewSnapshot.source == rev_subq.c.source)
+                  & (ReviewSnapshot.scraped_at == rev_subq.c.max_dt)).all()
+        )
+        snap["reviews_total"] = sum(s.total_reviews or 0 for s in rev_snaps)
+    ppc_row = db.query(DiscoveryCache).filter(DiscoveryCache.key == "ppc_monthly_data").first()
+    ppc_data = ppc_row.value if ppc_row else []
+    if isinstance(ppc_data, str):
+        ppc_data = json.loads(ppc_data)
+    if ppc_data:
+        lp = sorted(ppc_data, key=lambda x: (x.get("year", 0), x.get("month", 0)))[-1]
+        snap["ppc_leads_last_month"] = lp.get("total", {}).get("leads")
+        snap["ppc_cpl_last_month"] = lp.get("total", {}).get("cpl")
+    return snap
+
+
+SECTION_SNAPSHOTS = {
+    "ppc":      _snap_ppc,
+    "rankings": _snap_rankings,
+    "reviews":  _snap_reviews,
+    "filings":  _snap_filings,
+    "overview": _snap_overview,
+}
+
+HISTORY_CAP = 52  # ~1 year of weekly entries
+
+
+def _history_key(section: str) -> str:
+    return f"analysis_history_{section}"
+
+
+def _append_history(db: Session, section: str, text: str, metrics: dict) -> None:
+    """Prepend new entry to the history list (newest first), capped at HISTORY_CAP."""
+    now = datetime.now(timezone.utc)
+    entry = {
+        "text": text,
+        "generated_at": now.isoformat(),
+        "generated_at_label": now.strftime("%b %d, %Y"),
+        "metrics": metrics,
+    }
+    hist_row = db.query(DiscoveryCache).filter(
+        DiscoveryCache.key == _history_key(section)
+    ).first()
+    existing: list = []
+    if hist_row:
+        v = hist_row.value
+        if isinstance(v, str):
+            try:
+                v = json.loads(v)
+            except Exception:
+                v = []
+        existing = v if isinstance(v, list) else []
+
+    entries = ([entry] + existing)[:HISTORY_CAP]
+
+    if hist_row:
+        hist_row.value = entries
+        hist_row.updated_at = now
+    else:
+        db.add(DiscoveryCache(
+            id=new_uuid(), key=_history_key(section), value=entries, updated_at=now
+        ))
+    db.commit()
+
+
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
 @router.get("/analyze/{section}/cached")
@@ -464,6 +631,26 @@ async def get_cached(
         return {"text": "", "updated": ""}
     text, updated = _read_row(_get_cache_row(db, section))
     return {"text": text, "updated": updated}
+
+
+@router.get("/analyze/{section}/history")
+async def get_history(
+    section: str,
+    db: Session = Depends(get_db),
+    user: dict = Depends(auth_required),
+):
+    hist_row = db.query(DiscoveryCache).filter(
+        DiscoveryCache.key == _history_key(section)
+    ).first()
+    if not hist_row or not hist_row.value:
+        return {"entries": []}
+    entries = hist_row.value
+    if isinstance(entries, str):
+        try:
+            entries = json.loads(entries)
+        except Exception:
+            entries = []
+    return {"entries": entries if isinstance(entries, list) else []}
 
 
 @router.post("/analyze/{section}")
@@ -480,6 +667,15 @@ async def analyze_section(
         context = SECTION_FETCHERS[section](db)
         text = _call_claude(context, SECTION_TASKS[section])
         text, updated = _save(db, section, text, row)
+
+        # Snapshot current metrics and persist to history
+        try:
+            metrics = SECTION_SNAPSHOTS[section](db)
+        except Exception as snap_err:
+            logger.warning(f"Metrics snapshot failed [{section}]: {snap_err}")
+            metrics = {}
+        _append_history(db, section, text, metrics)
+
         return {"text": text, "updated": updated}
     except Exception as e:
         logger.error(f"Analysis failed [{section}]: {e}", exc_info=True)
