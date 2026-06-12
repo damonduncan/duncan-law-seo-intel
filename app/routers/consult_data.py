@@ -174,6 +174,81 @@ def _get_or_refresh_insights(db: Session, damon_months: dict, anne_months: dict,
         return [], ""
 
 
+def _generate_funnel_snapshot(funnel_data: dict) -> str:
+    """Call Claude to produce a 3–4 sentence funnel summary paragraph."""
+    from app.config import settings
+    import anthropic
+
+    if not settings.anthropic_api_key or not funnel_data:
+        return ""
+
+    fd = funnel_data
+    prompt = f"""You are a practice management analyst for Duncan Law LLP, a consumer bankruptcy firm in Charlotte, NC.
+Damon Duncan is the founding attorney; Anne Salter joined in October 2025 to handle consultations so Damon can focus on signing appointments and filings.
+
+CRITICAL CONTEXT:
+- Damon deliberately shifted FROM doing consultations TO doing signing appointments as Anne ramped up.
+  His declining individual consult count is a sign of healthy delegation, NOT a problem.
+- The right measure of intake health is COMBINED consultation volume (Damon + Anne).
+- Contracts Signed = attorney-client agreements via DocuSign (prospect becomes a paying client).
+- Cases Filed = bankruptcy petitions filed with the court, sourced from PACER.
+- Est. revenue uses a conservative blended average of ${fd.get('avg_case_fee', 1500)}/case; it is not actual billed revenue.
+
+INTAKE FUNNEL DATA — {fd.get('ytd_period', '')} 2026 vs same period 2025:
+  Consultations:       2026={fd.get('combined_2026_ytd','?')}, 2025={fd.get('combined_2025_ytd','?')}
+  Contracts Signed:    2026={fd.get('contracts_2026_ytd','?')}, 2025={fd.get('contracts_2025_ytd','?')}
+    Consult→Contract:  2026={fd.get('contract_conv_rate_2026','?')}%, 2025={fd.get('contract_conv_rate_2025_ytd','?')}%
+  Cases Filed (PACER): 2026={fd.get('pacer_filed_ytd','?')}, 2025={fd.get('pacer_2025_ytd','?')}
+    Contract→Filed:    2026={fd.get('contract_to_filed_2026','?')}%, 2025={fd.get('contract_to_filed_2025','?')}%
+    Overall rate:      2026={fd.get('pacer_consult_rate_2026','?')}%, 2025={fd.get('pacer_consult_rate_2025','?')}%
+  Est. Revenue:        2026={fd.get('est_revenue_2026_ytd','?')}, 2025={fd.get('est_revenue_2025_ytd','?')}
+
+Write exactly 3–4 sentences that give Damon a clear, honest picture of intake funnel health right now.
+Reference specific numbers. Highlight what's working, flag any meaningful conversion gap worth watching,
+and close with one forward-looking observation or recommendation.
+Do NOT mention Damon's individual consult decline as a concern. Write in plain, direct prose — no bullet points,
+no headers, no markdown. Output only the paragraph, nothing else."""
+
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    resp = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=300,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return resp.content[0].text.strip()
+
+
+def _get_or_refresh_funnel_snapshot(db: Session, funnel_data: dict) -> tuple[str, str]:
+    """Return (snapshot_text, updated_label). Regenerates if stale (>7 days)."""
+    row = db.query(DiscoveryCache).filter(
+        DiscoveryCache.key == "funnel_snapshot"
+    ).first()
+
+    if row and row.updated_at:
+        age = datetime.now(timezone.utc) - row.updated_at.replace(tzinfo=timezone.utc)
+        if age < timedelta(days=7):
+            text = row.value if isinstance(row.value, str) else (row.value or {}).get("text", "")
+            return text, row.updated_at.strftime("%b %d, %Y")
+
+    try:
+        text = _generate_funnel_snapshot(funnel_data)
+        now = datetime.now(timezone.utc)
+        if row:
+            row.value      = text
+            row.updated_at = now
+        else:
+            db.add(DiscoveryCache(id=new_uuid(), key="funnel_snapshot",
+                                  value=text, updated_at=now))
+        db.commit()
+        return text, now.strftime("%b %d, %Y")
+    except Exception as e:
+        logger.error(f"Failed to generate funnel snapshot: {e}", exc_info=True)
+        if row:
+            text = row.value if isinstance(row.value, str) else ""
+            return text, row.updated_at.strftime("%b %d, %Y") if row.updated_at else ""
+        return "", ""
+
+
 def _bg_refresh_insights() -> None:
     """Background task — loads all data from its own DB session."""
     import json as _json
@@ -552,6 +627,7 @@ def consult_data_page(
     insights, insights_updated = _get_or_refresh_insights(
         db, damon_months, anne_months, funnel_data=funnel_data
     )
+    funnel_snapshot, funnel_snapshot_updated = _get_or_refresh_funnel_snapshot(db, funnel_data)
 
     return templates.TemplateResponse("consult_data.html", {
         "request":               request,
@@ -615,6 +691,8 @@ def consult_data_page(
         "filings_full_year_pace":    filings_full_year_pace,
         "est_revenue_annual_pace":   est_revenue_annual_pace,
         # Shared
+        "funnel_snapshot":       funnel_snapshot,
+        "funnel_snapshot_updated": funnel_snapshot_updated,
         "insights":              insights,
         "insights_updated":      insights_updated,
         "notes":                 damon_data.get("notes", []) + anne_data.get("notes", []),

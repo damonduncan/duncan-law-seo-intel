@@ -221,6 +221,17 @@
 
 </div>
 
+<!-- ── Funnel Snapshot ───────────────────────────────────────────────────── -->
+{% if funnel_snapshot %}
+<div style="background:rgba(23,35,63,.03);border:1px solid rgba(23,35,63,.1);border-left:3px solid #C9A24A;border-radius:10px;padding:18px 22px;margin-bottom:28px;display:flex;gap:14px;align-items:flex-start;">
+  <svg style="flex-shrink:0;margin-top:2px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C9A24A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  <div style="flex:1;min-width:0;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9a7a33;margin-bottom:7px;">AI Snapshot · {{ funnel_snapshot_updated }}</div>
+    <p style="font-size:14px;line-height:1.65;color:var(--text);margin:0;">{{ funnel_snapshot }}</p>
+  </div>
+</div>
+{% endif %}
+
 <!-- ── Current Month Pacing ───────────────────────────────────────────────── -->
 {% if current_month_pacing %}
 <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 28px;margin-bottom:28px;">
