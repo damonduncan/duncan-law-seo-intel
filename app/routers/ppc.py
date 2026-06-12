@@ -67,6 +67,11 @@ def ppc(
     ppc_cache: list = _raw.get("months", []) if isinstance(_raw, dict) else _raw
 
     if not ppc_cache:
+        try:
+            from app.services.sheets_ppc_service import is_configured as _sc
+            _sh_conn = _sc()
+        except Exception:
+            _sh_conn = False
         return templates.TemplateResponse("ppc.html", {
             "request":       request,
             "user":          user,
@@ -85,6 +90,12 @@ def ppc(
             "ga_summary":    None,
             "ga_trend_chart": {"labels": [], "organic": [], "paid": [], "direct": []},
             "total_monthly_spend": "0",
+            "ads_connected":    False,
+            "ads_has_dev_token": False,
+            "ads_has_customer": False,
+            "latest_data_label": None,
+            "sheets_connected": _sh_conn,
+            "sheets_last_sync": None,
         })
 
     # ── Sort months oldest → newest, add label ────────────────────────────────
@@ -307,6 +318,22 @@ def ppc(
     except Exception:
         ads_connected = ads_has_dev_token = ads_has_customer = False
 
+    # ── Google Sheets PPC sync status ─────────────────────────────────────────
+    try:
+        from app.services.sheets_ppc_service import is_configured as _sheets_ok
+        sheets_connected = _sheets_ok()
+        sheets_last_sync_row = db.query(DiscoveryCache).filter(
+            DiscoveryCache.key == "ppc_sheets_last_sync"
+        ).first()
+        if sheets_last_sync_row and isinstance(sheets_last_sync_row.value, dict):
+            _sd = sheets_last_sync_row.value
+            sheets_last_sync = _sd.get("synced_at", "")[:10]
+        else:
+            sheets_last_sync = None
+    except Exception:
+        sheets_connected = False
+        sheets_last_sync = None
+
     # Latest data point label
     latest_data_label = months[-1]["label"] if months else None
 
@@ -332,6 +359,8 @@ def ppc(
         "ads_has_dev_token":    ads_has_dev_token,
         "ads_has_customer":     ads_has_customer,
         "latest_data_label":    latest_data_label,
+        "sheets_connected":     sheets_connected,
+        "sheets_last_sync":     sheets_last_sync,
     })
 
 
@@ -646,3 +675,153 @@ def sync_google_ads_now(
 
     threading.Thread(target=_bg, daemon=True).start()
     return RedirectResponse(url="/ppc?msg=ads_sync_started", status_code=303)
+
+
+# ── Google Sheets PPC connect / sync ─────────────────────────────────────────
+
+_GOOGLE_SHEETS_SCOPE = "https://www.googleapis.com/auth/drive.readonly"
+
+
+@router.get("/ppc/connect-google-sheets", response_class=HTMLResponse)
+def connect_google_sheets(
+    request: Request,
+    user:    dict = Depends(auth_required),
+    code:    str  = "",
+    error:   str  = "",
+):
+    """OAuth flow to authorize Google Drive read access for Sheets PPC sync.
+
+    Step 1 (GET, no params): show setup page with authorize button.
+    Step 2 (GET, ?code=...): exchange code, save refresh token, run initial sync.
+    """
+    from app.config import settings
+    from app.services.sheets_ppc_service import save_sheets_refresh_token
+
+    base_url     = settings.app_base_url.rstrip("/")
+    redirect_uri = f"{base_url}/ppc/connect-google-sheets"
+    client_id    = settings.google_client_id
+    client_secret = settings.google_client_secret
+
+    message = ""
+    success = False
+    imported_count = 0
+
+    if error:
+        message = f"Google returned an error: {error}"
+
+    elif code:
+        try:
+            import httpx
+            resp = httpx.post(
+                _GOOGLE_TOKEN_URL,
+                data={
+                    "grant_type":    "authorization_code",
+                    "code":          code,
+                    "client_id":     client_id,
+                    "client_secret": client_secret,
+                    "redirect_uri":  redirect_uri,
+                },
+                timeout=15,
+            )
+            resp.raise_for_status()
+            tokens = resp.json()
+            refresh_token = tokens.get("refresh_token", "")
+            if refresh_token:
+                save_sheets_refresh_token(refresh_token)
+                # Run initial sync immediately
+                try:
+                    from app.services.sheets_ppc_service import sync_new_months
+                    result = sync_new_months()
+                    imported_count = len(result.get("imported", []))
+                    message = (
+                        f"Connected successfully. "
+                        f"Imported {imported_count} new month(s) from the spreadsheet."
+                    )
+                except Exception as se:
+                    message = f"Connected successfully (initial sync failed: {se})"
+                success = True
+            else:
+                message = (
+                    "Google returned tokens but no refresh_token. "
+                    "Try revoking app access at myaccount.google.com/permissions and reconnecting."
+                )
+        except Exception as e:
+            message = f"Token exchange failed: {e}"
+
+    from urllib.parse import urlencode
+    oauth_params = {
+        "client_id":     client_id,
+        "redirect_uri":  redirect_uri,
+        "response_type": "code",
+        "scope":         _GOOGLE_SHEETS_SCOPE,
+        "access_type":   "offline",
+        "prompt":        "consent",
+    }
+    oauth_url = f"{_GOOGLE_AUTH_URL}?{urlencode(oauth_params)}"
+
+    html = f"""
+    <!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8"><title>Connect PPC Spreadsheet</title>
+    <style>
+      body {{font-family:-apple-system,Arial,sans-serif;background:#f3f4f6;padding:40px 24px;}}
+      .card {{max-width:620px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;box-shadow:0 1px 3px rgba(0,0,0,.1);}}
+      h2 {{margin:0 0 8px;font-size:20px;color:#111827;}}
+      p,li {{color:#374151;font-size:14px;line-height:1.6;}}
+      .btn {{display:inline-block;background:#2563eb;color:#fff;padding:10px 22px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600;margin-top:16px;}}
+      .btn-green {{background:#059669;}}
+      .ok {{background:#d1fae5;color:#065f46;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:14px;}}
+      .err {{background:#fee2e2;color:#991b1b;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:14px;}}
+      .info {{background:#eff6ff;color:#1e40af;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:14px;}}
+      code {{background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:12px;word-break:break-all;}}
+      ol {{padding-left:20px;}}
+    </style>
+    </head><body>
+    <div class="card">
+      <h2>Connect PPC Spreadsheet</h2>
+      <p>This one-time authorization lets Market Pulse automatically pull new months from the PPC reporting spreadsheet whenever your team adds a new tab. No more manual uploads.</p>
+
+      {"<div class='ok'>✓ " + message + " <a href='/ppc' style='color:#065f46;font-weight:600;'>Go to PPC →</a></div>" if success else ""}
+      {"<div class='err'>✗ " + message + "</div>" if message and not success else ""}
+
+      {"" if success else f"""
+      <div class="info">
+        <strong>Before clicking Authorize:</strong> add the following redirect URI to your
+        <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:#1d4ed8;">Google Cloud Console → OAuth 2.0 Client</a>
+        authorized redirect URIs:<br><br>
+        <code>{redirect_uri}</code>
+      </div>
+      <ol>
+        <li>Go to <strong>Google Cloud Console → APIs &amp; Services → Credentials</strong></li>
+        <li>Edit your OAuth 2.0 Client ID (the same one used for app login)</li>
+        <li>Under <em>Authorized redirect URIs</em>, add the URI shown above</li>
+        <li>Click Save, then come back here and click Authorize below</li>
+      </ol>
+      <a href="{oauth_url}" class="btn">Authorize Spreadsheet Access →</a>
+      <br><br><a href='/ppc' style='font-size:13px;color:#6b7280;'>← Back to Lead Intelligence</a>
+      """}
+
+      {"<br><a href='/ppc' class='btn btn-green'>Back to Lead Intelligence →</a>" if success else ""}
+    </div>
+    </body></html>
+    """
+    return HTMLResponse(content=html)
+
+
+@router.post("/ppc/sync-from-sheet")
+def sync_from_sheet_now(
+    request: Request,
+    user:    dict = Depends(auth_required),
+):
+    """Manually trigger a Sheets PPC sync — runs in background."""
+    from app.services.sheets_ppc_service import is_configured, sync_new_months
+
+    if not is_configured():
+        return RedirectResponse(url="/ppc/connect-google-sheets", status_code=303)
+
+    def _bg():
+        result = sync_new_months()
+        import logging
+        logging.getLogger(__name__).info(f"Sheets PPC manual sync: {result}")
+
+    threading.Thread(target=_bg, daemon=True).start()
+    return RedirectResponse(url="/ppc?msg=sheets_sync_started", status_code=303)

@@ -105,9 +105,25 @@ def run_monthly_consult_job() -> None:
                     f"= {ppc_entry.get('total', {}).get('leads', '?')} leads"
                 )
             else:
-                logger.info("Google Ads not configured — skipping PPC sync")
+                logger.info("Google Ads not configured — skipping direct API sync")
         except Exception as e:
             logger.error(f"Google Ads PPC pull failed: {e}", exc_info=True)
+
+        # ── Google Sheets PPC sync (picks up any new month tabs) ─────────────
+        try:
+            from app.services.sheets_ppc_service import is_configured as _sheets_ok, sync_new_months
+            if _sheets_ok():
+                result = sync_new_months(db=db)
+                imported = result.get("imported", [])
+                if imported:
+                    labels = [f"{y}-{m:02d}" for y, m in imported]
+                    logger.info(f"Sheets PPC sync: imported {labels}")
+                else:
+                    logger.info("Sheets PPC sync: no new months found")
+            else:
+                logger.info("Sheets PPC not configured — skipping")
+        except Exception as e:
+            logger.error(f"Sheets PPC sync failed: {e}", exc_info=True)
 
     finally:
         db.close()

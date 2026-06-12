@@ -19,41 +19,63 @@
 </div>
 {% endif %}
 
-{# ─── Google Ads connection status ────────────────────────────────────────── #}
-{% if ads_connected %}
-<div style="display:flex;align-items:center;gap:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 16px;margin-bottom:20px;flex-wrap:wrap;">
+{% if request.query_params.get('msg') == 'sheets_sync_started' %}
+<div class="status-bar green" style="margin-bottom:24px;">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>
+  <strong>Spreadsheet sync started.</strong> Refresh in a moment to see any new months.
+</div>
+{% endif %}
+
+{# ─── Primary sync status: Sheets (works now) ─────────────────────────────── #}
+{% if sheets_connected %}
+<div style="display:flex;align-items:center;gap:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 16px;margin-bottom:8px;flex-wrap:wrap;">
   <span style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--success,#059669);font-weight:600;">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-    Google Ads connected · auto-syncs monthly
+    Auto-sync from PPC spreadsheet · checks for new months automatically
   </span>
+  {% if sheets_last_sync %}
+  <span style="font-size:12px;color:var(--muted);border-left:1px solid var(--border);padding-left:12px;">Last synced: {{ sheets_last_sync }}</span>
+  {% endif %}
   {% if latest_data_label %}
   <span style="font-size:12px;color:var(--muted);border-left:1px solid var(--border);padding-left:12px;">Latest data: {{ latest_data_label }}</span>
   {% endif %}
-  <form method="post" action="/ppc/sync-google-ads" style="margin-left:auto;">
-    <input type="hidden" name="months" value="3">
+  <form method="post" action="/ppc/sync-from-sheet" style="margin-left:auto;">
     <button type="submit" style="background:var(--accent,#2563eb);color:#fff;border:none;padding:6px 14px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;">
-      Sync Last 3 Months
+      Sync Now
     </button>
   </form>
 </div>
-{% elif ads_has_dev_token and ads_has_customer %}
-<div style="display:flex;align-items:center;gap:12px;background:#fef3c7;border:1px solid #fcd34d;border-radius:var(--r-sm);padding:12px 16px;margin-bottom:20px;flex-wrap:wrap;">
-  <span style="font-size:13px;color:#78350f;font-weight:600;">⚠ Google Ads credentials configured but not authorized yet.</span>
-  <a href="/ppc/connect-google-ads" style="margin-left:auto;background:#d97706;color:#fff;padding:6px 14px;border-radius:5px;font-size:12px;font-weight:600;text-decoration:none;">
-    Authorize Access →
-  </a>
-</div>
 {% else %}
-<div style="display:flex;align-items:center;gap:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 16px;margin-bottom:20px;flex-wrap:wrap;">
+<div style="display:flex;align-items:center;gap:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 16px;margin-bottom:8px;flex-wrap:wrap;">
   <span style="font-size:13px;color:var(--muted);">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-    Google Ads not connected — data is updated manually.
+    Auto-sync not set up — new months must be entered manually.
   </span>
-  <a href="/ppc/connect-google-ads" style="margin-left:auto;background:var(--accent,#2563eb);color:#fff;padding:6px 14px;border-radius:5px;font-size:12px;font-weight:600;text-decoration:none;">
+  <a href="/ppc/connect-google-sheets" style="margin-left:auto;background:var(--accent,#2563eb);color:#fff;padding:6px 14px;border-radius:5px;font-size:12px;font-weight:600;text-decoration:none;">
     Set Up Auto-Sync →
   </a>
 </div>
 {% endif %}
+
+{# ─── Secondary: Google Ads API status (requires Developer Token from manager) #}
+{% if ads_connected %}
+<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--success,#059669);padding:6px 16px;margin-bottom:16px;">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+  Google Ads API also connected · live data available
+  <form method="post" action="/ppc/sync-google-ads" style="margin-left:auto;">
+    <input type="hidden" name="months" value="3">
+    <button type="submit" style="background:none;border:1px solid var(--border);color:var(--text-2);padding:3px 10px;border-radius:4px;font-size:11px;cursor:pointer;">
+      Sync Ads API
+    </button>
+  </form>
+</div>
+{% elif ads_has_dev_token and ads_has_customer %}
+<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#78350f;padding:6px 16px;margin-bottom:16px;">
+  ⚠ Google Ads credentials set but not yet authorized —
+  <a href="/ppc/connect-google-ads" style="color:#d97706;font-weight:600;">complete OAuth →</a>
+</div>
+{% endif %}
+{# No secondary banner shown when Ads is unconfigured — Sheets banner covers it #}
 
 {% if not has_data %}
 <div class="card">
