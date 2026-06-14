@@ -1127,3 +1127,35 @@ def debug_pack(
         "items": items,
         "full_raw_response": raw,
     })
+
+
+@router.get("/admin/debug/docusign")
+def debug_docusign(
+    request: Request,
+    user: dict = Depends(auth_required),
+):
+    """Test DocuSign JWT connection — fetches contract count for last complete month."""
+    from datetime import date
+    from app.services.docusign_service import fetch_contracts_count
+    from app.config import settings
+
+    if not settings.docusign_integration_key or not settings.docusign_private_key:
+        return JSONResponse({"error": "DOCUSIGN_INTEGRATION_KEY or DOCUSIGN_PRIVATE_KEY not set"}, status_code=503)
+
+    today = date.today()
+    # Test against last complete month
+    if today.month == 1:
+        year, month = today.year - 1, 12
+    else:
+        year, month = today.year, today.month - 1
+
+    try:
+        count = fetch_contracts_count(year, month)
+        return JSONResponse({
+            "ok": True,
+            "period": f"{year}-{month:02d}",
+            "contracts_count": count,
+            "integration_key": settings.docusign_integration_key[:8] + "…",
+        })
+    except Exception as exc:
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
