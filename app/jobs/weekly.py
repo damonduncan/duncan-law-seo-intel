@@ -22,10 +22,15 @@ def run_weekly_job() -> None:
     try:
         records = 0
 
-        from app.services.config_loader import get_keywords
-        from app.services.dataforseo import collect_rankings_for_keywords, build_place_maps
+        from app.services.config_loader import get_keywords, get_own_firm_keywords
+        from app.services.dataforseo import (
+            collect_rankings_for_keywords, build_place_maps,
+            collect_organic_landscape,
+        )
+        from app.models.competitor import Competitor
 
         keywords = get_keywords()
+        own_firm_keywords = get_own_firm_keywords()
         own_firm_id, own_place_ids, competitor_place_map = build_place_maps(db)
 
         if not own_firm_id:
@@ -38,6 +43,15 @@ def run_weekly_job() -> None:
                 db=db,
                 own_firm_id=own_firm_id,
                 only_own_firm=False,
+            )
+
+            # Organic landscape — top 5 organic results per keyword/market (own-firm markets only)
+            own_firm = db.query(Competitor).filter(Competitor.id == own_firm_id).first()
+            own_domain = own_firm.domain if own_firm and own_firm.domain else "duncanlawonline.com"
+            records += collect_organic_landscape(
+                keywords=own_firm_keywords,
+                own_domain=own_domain,
+                db=db,
             )
 
         # Phase 3: Competitor reviews + sentiment analysis

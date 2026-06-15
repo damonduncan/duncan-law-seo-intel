@@ -1,6 +1,6 @@
 from typing import Optional, Any, Dict
 from datetime import datetime
-from sqlalchemy import String, Boolean, SmallInteger, DateTime, JSON
+from sqlalchemy import String, Boolean, SmallInteger, DateTime, JSON, Text
 from sqlalchemy.orm import mapped_column, Mapped
 from app.models.base import Base, new_uuid, utcnow
 
@@ -19,6 +19,23 @@ class LocalPackRanking(Base):
     in_pack: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_own_firm: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     result_data: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    scraped_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False, index=True
+    )
+
+
+class OrganicRanking(Base):
+    __tablename__ = "organic_rankings"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    keyword: Mapped[str] = mapped_column(String(200), nullable=False)
+    city: Mapped[str] = mapped_column(String(100), nullable=False)
+    market: Mapped[str] = mapped_column(String(50), nullable=False)
+    domain: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    title: Mapped[Optional[str]] = mapped_column(String(400), nullable=True)
+    rank_position: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
+    is_own_firm: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     scraped_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False, index=True
     )

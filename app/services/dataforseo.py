@@ -269,6 +269,241 @@ def _extract_city(keyword_city: str) -> Optional[str]:
     return None
 
 
+def _extract_domain(url: str) -> str:
+    from urllib.parse import urlparse
+    try:
+        netloc = urlparse(url).netloc.lower()
+        return netloc[4:] if netloc.startswith("www.") else netloc
+    except Exception:
+        return ""
+
+
+def fetch_organic(keyword: str, city: str, depth: int = 10) -> List[Dict[str, Any]]:
+    """
+    Fetch Google organic results for a keyword/city combo.
+    Returns list of organic items with keys: rank_position, title, url, domain.
+    Filters out non-organic item types (ads, featured snippets, local pack, etc.).
+    """
+    location_name = CITY_TO_LOCATION.get(city)
+    if not location_name:
+        logger.warning(f"No DataForSEO location mapping for city: {city}")
+        return []
+
+    payload = [{
+        "keyword": keyword,
+        "location_name": location_name,
+        "language_name": "English",
+        "device": "desktop",
+        "os": "windows",
+        "depth": depth,
+    }]
+
+    try:
+        response = requests.post(
+            f"{DATAFORSEO_BASE}/serp/google/organic/live/advanced",
+            headers=_auth_header(),
+            json=payload,
+            timeout=30,
+        )
+        response.raise_for_status()
+        data = response.json()
+    except Exception as e:
+        logger.error(f"DataForSEO organic API error for '{keyword}' in {city}: {e}")
+        return []
+
+    results = []
+    try:
+        tasks = data.get("tasks", [])
+        if not tasks:
+            return []
+        task = tasks[0]
+        if task.get("status_code") != 20000:
+            logger.warning(
+                f"DataForSEO organic task error for '{keyword}' in {city}: "
+                f"{task.get('status_message')}"
+            )
+            return []
+
+        items = (
+            task.get("result", [{}])[0].get("items", [])
+        ) if task.get("result") else []
+
+        for item in items:
+            if item.get("type") != "organic":
+                continue
+            url = item.get("url", "") or ""
+            results.append({
+                "rank_position": item.get("rank_group") or item.get("rank_absolute"),
+                "title": item.get("title", ""),
+                "url": url,
+                "domain": _extract_domain(url),
+            })
+    except Exception as e:
+        logger.error(f"Failed to parse organic response for '{keyword}' in {city}: {e}")
+
+    return results
+
+
+def collect_own_organic_rankings(
+    keywords: List[str],
+    own_domain: str,
+    db,
+    delay_seconds: float = 0.5,
+) -> int:
+    """
+    Fetch organic results for own-firm keywords, upsert own-firm position.
+    Called daily. Returns count of rows stored/updated.
+    """
+    from datetime import datetime, timezone, date
+    from app.models.rankings import OrganicRanking
+    from app.models.base import new_uuid
+    from sqlalchemy import cast
+    from sqlalchemy.types import Date
+
+    rows_stored = 0
+    today = date.today()
+
+    for keyword_city in keywords:
+        city = _extract_city(keyword_city)
+        if not city:
+            continue
+        market = CITY_TO_MARKET.get(city, "")
+        results = fetch_organic(keyword_city, city)
+
+        own_result = next((r for r in results if r["domain"] == own_domain), None)
+
+        existing = (
+            db.query(OrganicRanking)
+            .filter(
+                OrganicRanking.keyword == keyword_city,
+                OrganicRanking.city == city,
+                OrganicRanking.is_own_firm == True,
+                cast(OrganicRanking.scraped_at, Date) == today,
+            )
+            .first()
+        )
+
+        now = datetime.now(timezone.utc)
+        if existing:
+            existing.rank_position = own_result["rank_position"] if own_result else None
+            existing.url = own_result["url"] if own_result else None
+            existing.title = own_result["title"] if own_result else None
+            existing.domain = own_domain
+            existing.scraped_at = now
+        else:
+            db.add(OrganicRanking(
+                id=new_uuid(),
+                keyword=keyword_city,
+                city=city,
+                market=market,
+                domain=own_domain,
+                url=own_result["url"] if own_result else None,
+                title=own_result["title"] if own_result else None,
+                rank_position=own_result["rank_position"] if own_result else None,
+                is_own_firm=True,
+                scraped_at=now,
+            ))
+
+        rows_stored += 1
+        db.commit()
+        time.sleep(delay_seconds)
+
+    return rows_stored
+
+
+def collect_organic_landscape(
+    keywords: List[str],
+    own_domain: str,
+    db,
+    top_n: int = 5,
+    delay_seconds: float = 0.5,
+) -> int:
+    """
+    Fetch top organic results for own-firm keywords and store landscape snapshot.
+    Called weekly. Clears today's non-own-firm rows before inserting fresh data.
+    Returns count of rows stored.
+    """
+    from datetime import datetime, timezone, date
+    from app.models.rankings import OrganicRanking
+    from app.models.base import new_uuid
+    from sqlalchemy import cast
+    from sqlalchemy.types import Date
+
+    rows_stored = 0
+    today = date.today()
+
+    for keyword_city in keywords:
+        city = _extract_city(keyword_city)
+        if not city:
+            continue
+        market = CITY_TO_MARKET.get(city, "")
+        results = fetch_organic(keyword_city, city, depth=max(10, top_n))
+
+        now = datetime.now(timezone.utc)
+
+        # Clear today's landscape rows for this keyword/city
+        db.query(OrganicRanking).filter(
+            OrganicRanking.keyword == keyword_city,
+            OrganicRanking.city == city,
+            OrganicRanking.is_own_firm == False,
+            cast(OrganicRanking.scraped_at, Date) == today,
+        ).delete(synchronize_session=False)
+
+        # Store top_n competitor landscape rows (skip own firm)
+        landscape = [r for r in results if r["domain"] != own_domain][:top_n]
+        for r in landscape:
+            db.add(OrganicRanking(
+                id=new_uuid(),
+                keyword=keyword_city,
+                city=city,
+                market=market,
+                domain=r["domain"],
+                url=r["url"],
+                title=r["title"],
+                rank_position=r["rank_position"],
+                is_own_firm=False,
+                scraped_at=now,
+            ))
+            rows_stored += 1
+
+        # Upsert own-firm row for today
+        own_result = next((r for r in results if r["domain"] == own_domain), None)
+        existing_own = (
+            db.query(OrganicRanking)
+            .filter(
+                OrganicRanking.keyword == keyword_city,
+                OrganicRanking.city == city,
+                OrganicRanking.is_own_firm == True,
+                cast(OrganicRanking.scraped_at, Date) == today,
+            )
+            .first()
+        )
+        if existing_own:
+            existing_own.rank_position = own_result["rank_position"] if own_result else None
+            existing_own.url = own_result["url"] if own_result else None
+            existing_own.title = own_result["title"] if own_result else None
+            existing_own.scraped_at = now
+        else:
+            db.add(OrganicRanking(
+                id=new_uuid(),
+                keyword=keyword_city,
+                city=city,
+                market=market,
+                domain=own_domain,
+                url=own_result["url"] if own_result else None,
+                title=own_result["title"] if own_result else None,
+                rank_position=own_result["rank_position"] if own_result else None,
+                is_own_firm=True,
+                scraped_at=now,
+            ))
+        rows_stored += 1
+
+        db.commit()
+        time.sleep(delay_seconds)
+
+    return rows_stored
+
+
 def build_place_maps(db):
     """
     Returns:

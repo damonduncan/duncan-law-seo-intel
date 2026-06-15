@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import cast, Date
 from app.dependencies import RedirectIfNotAuthenticated
 from app.database import get_db
-from app.models.rankings import LocalPackRanking
+from app.models.rankings import LocalPackRanking, OrganicRanking
 from app.models.competitor import Competitor
 from app.models.reviews import ReviewSnapshot
 
@@ -454,6 +454,98 @@ def rankings(
     total_keywords = len(latest_by_keyword)
     has_data = total_keywords > 0
 
+    # ── Organic rankings ──────────────────────────────────────────────────────
+    since_90 = date.today() - timedelta(days=90)
+    own_organic = (
+        db.query(OrganicRanking)
+        .filter(
+            OrganicRanking.is_own_firm == True,
+            OrganicRanking.market.in_(OWN_FIRM_MARKETS),
+            cast(OrganicRanking.scraped_at, Date) >= since_90,
+        )
+        .order_by(OrganicRanking.scraped_at.asc())
+        .all()
+    ) if own_firm_id else []
+
+    # Trend: market → kw_short → {date_str: rank_position | None}
+    organic_trend_raw: dict = defaultdict(lambda: defaultdict(dict))
+    organic_all_dates: set = set()
+    for r in own_organic:
+        day_str = r.scraped_at.strftime("%Y-%m-%d")
+        organic_all_dates.add(day_str)
+        kw = _strip_city(r.keyword or "", r.market)
+        organic_trend_raw[r.market][kw][day_str] = r.rank_position
+
+    organic_sorted_dates = sorted(organic_all_dates)
+    organic_date_labels = [d[5:].replace("-", "/") for d in organic_sorted_dates]
+
+    organic_chart_data: dict = {}
+    for market in MARKET_ORDER:
+        if market not in organic_trend_raw:
+            continue
+        series = []
+        for i, (kw, day_ranks) in enumerate(sorted(organic_trend_raw[market].items())):
+            series.append({
+                "label": kw,
+                "color": kw_colors[i % len(kw_colors)],
+                "data": [day_ranks.get(d) for d in organic_sorted_dates],
+            })
+        if series:
+            organic_chart_data[market] = {"labels": organic_date_labels, "series": series}
+
+    # Current organic position grid: market → kw_short → {rank_position, scraped_at}
+    organic_grid: dict = {}
+    seen_org: set = set()
+    for r in reversed(own_organic):
+        key = (r.keyword, r.city)
+        if key in seen_org:
+            continue
+        seen_org.add(key)
+        kw = _strip_city(r.keyword or "", r.market)
+        organic_grid.setdefault(r.market, {})[kw] = {
+            "rank_position": r.rank_position,
+            "scraped_at": r.scraped_at,
+        }
+
+    # Latest landscape snapshot date
+    _org_landscape_latest = (
+        db.query(cast(OrganicRanking.scraped_at, Date))
+        .filter(
+            OrganicRanking.is_own_firm == False,
+            OrganicRanking.market.in_(OWN_FIRM_MARKETS),
+        )
+        .order_by(OrganicRanking.scraped_at.desc())
+        .first()
+    )
+    organic_landscape_date = _org_landscape_latest[0] if _org_landscape_latest else None
+
+    # Landscape: market → kw_short → [{rank, title, domain}]
+    organic_landscape: dict = {}
+    if organic_landscape_date:
+        landscape_rows = (
+            db.query(OrganicRanking)
+            .filter(
+                OrganicRanking.is_own_firm == False,
+                OrganicRanking.market.in_(OWN_FIRM_MARKETS),
+                cast(OrganicRanking.scraped_at, Date) == organic_landscape_date,
+            )
+            .order_by(
+                OrganicRanking.market,
+                OrganicRanking.keyword,
+                OrganicRanking.rank_position,
+            )
+            .all()
+        )
+        for r in landscape_rows:
+            kw = _strip_city(r.keyword or "", r.market)
+            organic_landscape.setdefault(r.market, {}).setdefault(kw, []).append({
+                "rank": r.rank_position,
+                "title": r.title or r.domain or "—",
+                "domain": r.domain or "",
+            })
+
+    organic_has_data = len(seen_org) > 0
+
     return templates.TemplateResponse("rankings.html", {
         "request": request,
         "user": user,
@@ -480,7 +572,12 @@ def rankings(
         "position_grid":      position_grid,
         "kw_order":           kw_order,
         "top_opportunities":  top_opportunities,
-        "own_pack_date":      own_pack_date,
-        "ednc_pack_date":     ednc_pack_date,
-        "volatility":         volatility,
+        "own_pack_date":          own_pack_date,
+        "ednc_pack_date":         ednc_pack_date,
+        "volatility":             volatility,
+        "organic_has_data":       organic_has_data,
+        "organic_grid":           organic_grid,
+        "organic_chart_data":     organic_chart_data,
+        "organic_landscape":      organic_landscape,
+        "organic_landscape_date": organic_landscape_date,
     })
