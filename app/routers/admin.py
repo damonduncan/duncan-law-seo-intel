@@ -1,9 +1,12 @@
+import re
 import threading
 from datetime import date
+from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 from app.dependencies import RedirectIfNotAuthenticated
 from app.database import get_db
@@ -164,6 +167,88 @@ def discover_district(
         url=f"/filings?msg=discovery_running_{district.lower()}",
         status_code=303,
     )
+
+
+class _AddCompetitorPayload(BaseModel):
+    attorney_name: str
+    district: str
+    firm_name: str = ""
+    market: str = ""
+
+
+@router.post("/admin/competitor/add")
+def add_competitor_from_discovery(
+    payload: _AddCompetitorPayload,
+    request: Request,
+    user: dict = Depends(auth_required),
+    db: Session = Depends(get_db),
+):
+    """Add a skeleton competitor entry to competitors.yaml from a PACER discovery result."""
+    import yaml as _yaml
+
+    attorney_name = payload.attorney_name.strip()
+    district = payload.district.upper().strip()
+    firm_name = payload.firm_name.strip()
+    market = payload.market.strip()
+
+    if not attorney_name:
+        return JSONResponse({"error": "attorney_name is required"}, status_code=400)
+    if district not in ("MDNC", "WDNC", "EDNC"):
+        return JSONResponse({"error": f"Invalid district: {district}"}, status_code=400)
+
+    if not firm_name:
+        firm_name = f"Law Office of {attorney_name}"
+    if not market:
+        market = {"MDNC": "greensboro", "WDNC": "charlotte", "EDNC": "ednc"}[district]
+
+    yaml_path = Path(__file__).parent.parent.parent / "config" / "competitors.yaml"
+    yaml_text = yaml_path.read_text()
+
+    # Next available comp ID
+    existing_ids = [int(m.group(1)) for m in re.finditer(r"id: comp_(\d+)", yaml_text)]
+    next_num = max(existing_ids) + 1 if existing_ids else 1
+    comp_id = f"comp_{next_num:03d}"
+
+    # Build aliases: "F LastName" and a clean version without generational suffix
+    clean_name = re.sub(r",?\s+(Jr\.?|Sr\.?|III|II|IV|V)$", "", attorney_name, flags=re.IGNORECASE).strip()
+    parts = clean_name.split()
+    first_initial = parts[0][0] if parts else ""
+    last_name = parts[-1] if len(parts) > 1 else clean_name
+    aliases = [f'          - "{first_initial} {last_name}"']
+    if clean_name != attorney_name:
+        aliases.append(f'          - "{clean_name}"')
+
+    entry = (
+        f"\n  - id: {comp_id}\n"
+        f'    name: "{firm_name}"\n'
+        f'    google_place_id: ""   # TODO: find Place ID\n'
+        f'    bbb_url: ""\n'
+        f"    markets:\n"
+        f"      - {market}   # {district}\n"
+        f"    attorneys:\n"
+        f'      - name: "{attorney_name}"\n'
+        f"        aliases:\n"
+        + "\n".join(aliases) + "\n"
+    )
+
+    # Insert before the `markets:` config block (end of competitors list)
+    insertion_point = yaml_text.rfind("\nmarkets:")
+    if insertion_point == -1:
+        return JSONResponse({"error": "Could not find insertion point in YAML"}, status_code=500)
+
+    new_yaml = yaml_text[:insertion_point] + entry + yaml_text[insertion_point:]
+
+    try:
+        _yaml.safe_load(new_yaml)
+    except Exception as exc:
+        return JSONResponse({"error": f"YAML validation failed: {exc}"}, status_code=500)
+
+    yaml_path.write_text(new_yaml)
+
+    from app.services.config_loader import sync_competitors
+    sync_competitors(db)
+
+    return JSONResponse({"success": True, "comp_id": comp_id, "name": firm_name})
 
 
 @router.get("/admin/debug/casefiled")

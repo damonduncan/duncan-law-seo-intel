@@ -338,9 +338,20 @@
         {% if is_tracked %}
         <td><span class="chip chip-green">✓ Tracked</span></td>
         {% elif is_hot %}
-        <td><span class="chip chip-orange" style="font-size:11px;">⚠ Not tracked</span></td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="chip chip-orange" style="font-size:11px;">⚠ Not tracked</span>
+            <button class="btn btn-primary btn-sm"
+                    onclick="addDiscoveredCompetitor(this,'{{ filer.attorney | e }}','{{ district }}')"
+                    style="font-size:11px;padding:3px 10px;height:auto;line-height:1.5;">+ Add</button>
+          </div>
+        </td>
         {% else %}
-        <td style="color:var(--muted-2);font-size:14px;">—</td>
+        <td>
+          <button class="btn btn-ghost btn-sm"
+                  onclick="addDiscoveredCompetitor(this,'{{ filer.attorney | e }}','{{ district }}')"
+                  style="font-size:11px;padding:2px 8px;height:auto;line-height:1.5;color:var(--muted);">+ Add</button>
+        </td>
         {% endif %}
       </tr>
       {% endfor %}
@@ -900,6 +911,34 @@
 </script>
 {% endif %}
 {{ district_table(mdnc_rows, "MDNC — Middle District of NC") }}
+
+<script>
+function addDiscoveredCompetitor(btn, attorneyName, district) {
+  var td = btn.closest('td');
+  var original = td.innerHTML;
+  btn.disabled = true;
+  btn.textContent = '…';
+  fetch('/admin/competitor/add', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({attorney_name: attorneyName, district: district})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      td.innerHTML = '<span class="chip chip-green" title="' + data.name + '">✓ Added (' + data.comp_id + ')</span>';
+    } else {
+      td.innerHTML = original;
+      alert('Could not add: ' + (data.error || 'Unknown error'));
+    }
+  })
+  .catch(function(e) {
+    td.innerHTML = original;
+    alert('Network error: ' + e.message);
+  });
+}
+</script>
+
 {{ discovery_section(mdnc_discovery, "MDNC", "MDNC", mdnc_tracked) }}
 
 <!-- ── WDNC ─────────────────────────────────────────────────────────────── -->
