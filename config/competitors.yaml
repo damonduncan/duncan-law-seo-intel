@@ -341,6 +341,30 @@ competitors:
           - "Julie Hatchel"
           - "J Hatchel"
 
+  - id: comp_055
+    name: "Law Office of Robert A. Lefkowitz"
+    google_place_id: ""   # TODO: find Place ID — 4 MDNC cases/mo, Greensboro area
+    bbb_url: ""
+    markets:
+      - greensboro
+    attorneys:
+      - name: "Robert A. Lefkowitz"
+        aliases:
+          - "Robert Lefkowitz"
+          - "R Lefkowitz"
+
+  - id: comp_056
+    name: "Law Office of Jeffrey S. Nowak"
+    google_place_id: ""   # TODO: find Place ID — 4 MDNC cases/mo
+    bbb_url: ""
+    markets:
+      - greensboro
+    attorneys:
+      - name: "Jeffrey S. Nowak"
+        aliases:
+          - "Jeffrey Nowak"
+          - "J Nowak"
+
   # ── HIGH POINT ────────────────────────────────────────────────────────────
 
   - id: comp_010
@@ -518,6 +542,30 @@ competitors:
         aliases:
           - "Ann Charlotte Dowless"
           - "A Dowless"
+
+  - id: comp_053
+    name: "Law Office of Jimmy R. Summerlin, Jr."
+    google_place_id: ""   # TODO: find Place ID — 8 WDNC cases/mo, Charlotte area
+    bbb_url: ""
+    markets:
+      - charlotte
+    attorneys:
+      - name: "Jimmy R. Summerlin, Jr."
+        aliases:
+          - "Jimmy Summerlin"
+          - "J Summerlin"
+
+  - id: comp_054
+    name: "Law Office of Rod A. Vujovic"
+    google_place_id: ""   # TODO: find Place ID — 4 WDNC cases/mo
+    bbb_url: ""
+    markets:
+      - charlotte
+    attorneys:
+      - name: "Rod A. Vujovic"
+        aliases:
+          - "Rod Vujovic"
+          - "R Vujovic"
 
   - id: comp_048
     name: "Law Offices of Thomas C. Flippin, P.C."
@@ -795,6 +843,52 @@ competitors:
         aliases:
           - "Mark Harris"
           - "M Harris"
+
+  - id: comp_057
+    name: "Law Office of James S. Price"
+    google_place_id: ""   # TODO: find Place ID — 3 EDNC cases/mo
+    bbb_url: ""
+    markets:
+      - ednc
+    attorneys:
+      - name: "James S. Price"
+        aliases:
+          - "James Price"
+          - "J Price"
+
+  - id: comp_058
+    name: "Law Office of Steven P. Richards"
+    google_place_id: ""   # TODO: find Place ID — 3 EDNC cases/mo
+    bbb_url: ""
+    markets:
+      - ednc
+    attorneys:
+      - name: "Steven P. Richards"
+        aliases:
+          - "Steven Richards"
+          - "S Richards"
+
+  - id: comp_059
+    name: "Law Office of Bruce Allen"
+    google_place_id: ""   # TODO: find Place ID — 3 EDNC cases/mo
+    bbb_url: ""
+    markets:
+      - ednc
+    attorneys:
+      - name: "Bruce Allen"
+        aliases:
+          - "B Allen"
+
+  - id: comp_060
+    name: "Law Office of Laurie Biggs"
+    google_place_id: ""   # TODO: find Place ID — 3 EDNC cases/mo
+    bbb_url: ""
+    markets:
+      - ednc
+    attorneys:
+      - name: "Laurie Biggs"
+        aliases:
+          - "L Biggs"
 
 markets:
   # ── MDNC — Middle District of North Carolina ──────────────────────────────
