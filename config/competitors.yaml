@@ -343,10 +343,10 @@ competitors:
 
   - id: comp_055
     name: "Law Office of Robert A. Lefkowitz"
-    google_place_id: ""   # TODO: find Place ID — 4 MDNC cases/mo, Greensboro area
+    google_place_id: ""   # TODO: find Place ID — Winston-Salem, NC
     bbb_url: ""
     markets:
-      - greensboro
+      - winston_salem  # corrected from greensboro — Lefkowitz is in Winston-Salem (27104)
     attorneys:
       - name: "Robert A. Lefkowitz"
         aliases:
@@ -354,11 +354,11 @@ competitors:
           - "R Lefkowitz"
 
   - id: comp_056
-    name: "Law Office of Jeffrey S. Nowak"
-    google_place_id: ""   # TODO: find Place ID — 4 MDNC cases/mo
+    name: "Law Offices of Jeffrey S. Nowak"
+    google_place_id: ""   # TODO: find Place ID — 555 Fayetteville St Suite 201, Raleigh NC 27610
     bbb_url: ""
     markets:
-      - greensboro
+      - raleigh  # office in downtown Raleigh; files in MDNC (Durham connections)
     attorneys:
       - name: "Jeffrey S. Nowak"
         aliases:
@@ -544,11 +544,11 @@ competitors:
           - "A Dowless"
 
   - id: comp_053
-    name: "Law Office of Jimmy R. Summerlin, Jr."
-    google_place_id: ""   # TODO: find Place ID — 8 WDNC cases/mo, Charlotte area
+    name: "Young, Morphis, Bach, and Taylor, LLP"
+    google_place_id: "ChIJb87ms9QvUYgR0j5zY-AHe0Q"   # 400 2nd Ave NW, Hickory NC
     bbb_url: ""
     markets:
-      - charlotte
+      - hickory  # Catawba Co, WDNC; NOTE: Jimmy Summerlin is also Ch.7/Ch.12 Trustee WDNC — PACER appearances may be as trustee, not debtor's counsel
     attorneys:
       - name: "Jimmy R. Summerlin, Jr."
         aliases:
@@ -556,11 +556,11 @@ competitors:
           - "J Summerlin"
 
   - id: comp_054
-    name: "Law Office of Rod A. Vujovic"
-    google_place_id: ""   # TODO: find Place ID — 4 WDNC cases/mo
+    name: "Vujovic Law"
+    google_place_id: "ChIJi-UntUsuUYgRhqc-uNfoFT0"   # 118 Hwy 321 SW, Hickory NC
     bbb_url: ""
     markets:
-      - charlotte
+      - hickory  # Catawba Co, WDNC
     attorneys:
       - name: "Rod A. Vujovic"
         aliases:
@@ -845,11 +845,11 @@ competitors:
           - "M Harris"
 
   - id: comp_057
-    name: "Law Office of James S. Price"
-    google_place_id: ""   # TODO: find Place ID — 3 EDNC cases/mo
+    name: "James S. Price, Attorney at Law"
+    google_place_id: "ChIJCcsQxWL0qYkR9EM9P9l2qVo"   # 5725 Oleander Dr Suite C-3, Wilmington NC 28403
     bbb_url: ""
     markets:
-      - ednc
+      - wilmington
     attorneys:
       - name: "James S. Price"
         aliases:
@@ -857,11 +857,11 @@ competitors:
           - "J Price"
 
   - id: comp_058
-    name: "Law Office of Steven P. Richards"
-    google_place_id: ""   # TODO: find Place ID — 3 EDNC cases/mo
+    name: "Steven P. Richards, Attorney & Counselor at Law"
+    google_place_id: "ChIJl5lOO8cfqokRgMuDcqqEEdU"   # 107 Chestnut St, Wilmington NC
     bbb_url: ""
     markets:
-      - ednc
+      - wilmington
     attorneys:
       - name: "Steven P. Richards"
         aliases:
@@ -869,25 +869,27 @@ competitors:
           - "S Richards"
 
   - id: comp_059
-    name: "Law Office of Bruce Allen"
-    google_place_id: ""   # TODO: find Place ID — 3 EDNC cases/mo
+    name: "Bruce Allen, Attorney"
+    google_place_id: "ChIJszxcNCIVq4kRac3SV11fT8k"   # 1000 Wildwood Dr, Fayetteville NC 28304
     bbb_url: ""
     markets:
-      - ednc
+      - fayetteville
     attorneys:
       - name: "Bruce Allen"
         aliases:
+          - "Bruce K. Allen"
           - "B Allen"
 
   - id: comp_060
-    name: "Law Office of Laurie Biggs"
-    google_place_id: ""   # TODO: find Place ID — 3 EDNC cases/mo
+    name: "Biggs Law Firm, PLLC"
+    google_place_id: "ChIJu96Az6lXrIkRTuCky1tqg3w"   # 9208 Falls of Neuse Rd Suite 120, Raleigh NC 27615
     bbb_url: ""
     markets:
-      - ednc
+      - raleigh
     attorneys:
       - name: "Laurie Biggs"
         aliases:
+          - "Laurie B. Biggs"
           - "L Biggs"
 
 markets:
@@ -959,6 +961,10 @@ markets:
     state: NC
   morganton:
     display_name: "Morganton"
+    district: WDNC
+    state: NC
+  hickory:
+    display_name: "Hickory"
     district: WDNC
     state: NC
   # ── EDNC — Eastern District of North Carolina ─────────────────────────────
