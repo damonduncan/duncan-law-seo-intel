@@ -902,7 +902,7 @@ def trigger_ednc_rankings(request: Request, user: dict = Depends(auth_required))
             templates = data.get("templates", [])
             ednc_cities = ["Raleigh", "Fayetteville", "Wilmington", "Wilson"]
             keywords = [t.format(city=city) for t in templates for city in ednc_cities]
-            own_firm_id, own_place_ids, competitor_place_map = build_place_maps(db)
+            own_firm_id, own_place_ids, competitor_place_map, own_firm_name = build_place_maps(db)
             n = collect_rankings_for_keywords(
                 keywords=keywords,
                 own_place_ids=own_place_ids,
@@ -910,6 +910,7 @@ def trigger_ednc_rankings(request: Request, user: dict = Depends(auth_required))
                 db=db,
                 own_firm_id=own_firm_id,
                 only_own_firm=False,
+                own_firm_name=own_firm_name,
             )
             import logging
             logging.getLogger(__name__).info(f"EDNC rankings run: {n} rows stored")

@@ -31,7 +31,7 @@ def run_weekly_job() -> None:
 
         keywords = get_keywords()
         own_firm_keywords = get_own_firm_keywords()
-        own_firm_id, own_place_ids, competitor_place_map = build_place_maps(db)
+        own_firm_id, own_place_ids, competitor_place_map, own_firm_name = build_place_maps(db)
 
         if not own_firm_id:
             logger.warning("Weekly job: own firm not found in DB")
@@ -43,6 +43,7 @@ def run_weekly_job() -> None:
                 db=db,
                 own_firm_id=own_firm_id,
                 only_own_firm=False,
+                own_firm_name=own_firm_name,
             )
 
             # Organic landscape — top 5 organic results per keyword/market (own-firm markets only)

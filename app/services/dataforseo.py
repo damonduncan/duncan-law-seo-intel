@@ -83,12 +83,14 @@ def fetch_local_pack(keyword: str, city: str) -> List[Dict[str, Any]]:
     try:
         tasks = data.get("tasks", [])
         if not tasks:
+            logger.warning(f"DataForSEO returned no tasks for '{keyword}' in {city}")
             return []
         task = tasks[0]
-        if task.get("status_code") != 20000:
+        status_code = task.get("status_code")
+        if status_code != 20000:
             logger.warning(
                 f"DataForSEO task error for '{keyword}' in {city}: "
-                f"{task.get('status_message')}"
+                f"status={status_code} msg={task.get('status_message')}"
             )
             return []
 
@@ -97,11 +99,14 @@ def fetch_local_pack(keyword: str, city: str) -> List[Dict[str, Any]]:
             .get("items", [])
         ) if task.get("result") else []
 
+        all_types = [item.get("type", "") for item in items]
+        matched_items = []
         for item in items:
             item_type = item.get("type", "")
             # Google Maps endpoint returns "maps_search" items for business listings
             if item_type not in ("maps_search", "local_pack"):
                 continue
+            matched_items.append(item)
             place_id = (
                 item.get("place_id")
                 or item.get("cid", "")
@@ -115,6 +120,20 @@ def fetch_local_pack(keyword: str, city: str) -> List[Dict[str, Any]]:
                 "address": item.get("address", ""),
                 "raw": item,
             })
+
+        if not results and items:
+            # Log so Railway logs capture the actual item types returned — helps diagnose API format changes
+            logger.warning(
+                f"DataForSEO returned {len(items)} items for '{keyword}' in {city} "
+                f"but none matched expected types. Actual types: {all_types[:10]}. "
+                f"First item keys: {list(items[0].keys())[:15] if items else []}"
+            )
+        elif not items:
+            logger.warning(
+                f"DataForSEO returned 0 items for '{keyword}' in {city}. "
+                f"Task status: {status_code}. Check account credits at app.dataforseo.com"
+            )
+
     except Exception as e:
         logger.error(f"Failed to parse DataForSEO response for '{keyword}' in {city}: {e}")
 
@@ -129,6 +148,7 @@ def collect_rankings_for_keywords(
     own_firm_id: str,
     only_own_firm: bool = False,
     delay_seconds: float = 0.5,
+    own_firm_name: str = "",
 ) -> int:
     """
     Fetch local pack results for a list of expanded keyword strings
@@ -137,11 +157,15 @@ def collect_rankings_for_keywords(
     own_place_ids: list of own firm's place IDs across all markets
     competitor_place_map: {place_id: competitor_id}
     only_own_firm: if True, only store rows for own firm (daily job)
+    own_firm_name: used as a fallback title match if place_id format changes
     Returns count of rows stored.
     """
     from datetime import datetime, timezone, date
     from app.models.rankings import LocalPackRanking
     from app.models.base import new_uuid
+
+    # Build lowercase name fragment for fallback title matching
+    _name_fragment = own_firm_name.lower().split(",")[0].strip() if own_firm_name else ""
 
     rows_stored = 0
     today = date.today()
@@ -178,6 +202,20 @@ def collect_rankings_for_keywords(
         own_result = next(
             (r for r in results if r["place_id"] in own_place_ids), None
         )
+
+        # Fallback: match by title when place_id doesn't match (handles API format changes)
+        if own_result is None and _name_fragment and results:
+            own_result = next(
+                (r for r in results if _name_fragment in (r.get("title") or "").lower()),
+                None,
+            )
+            if own_result:
+                logger.info(
+                    f"Own firm matched by title (place_id fallback) for '{keyword_city}': "
+                    f"title={own_result['title']!r} place_id={own_result['place_id']!r} "
+                    f"(stored place_ids: {own_place_ids})"
+                )
+
         own_in_pack = own_result is not None and own_result.get("rank_position", 99) <= 3
 
         _upsert_ranking(
@@ -510,11 +548,13 @@ def build_place_maps(db):
       own_firm_id: str
       own_place_ids: List[str]  — all place IDs across own firm's 6 locations
       competitor_place_map: Dict[place_id, competitor_id]
+      own_firm_name: str  — own firm's display name (for fallback title matching)
     """
     from app.models.competitor import Competitor, CompetitorLocation
 
     own_firm = db.query(Competitor).filter(Competitor.is_own_firm == True).first()
     own_firm_id = own_firm.id if own_firm else None
+    own_firm_name = own_firm.name if own_firm else ""
 
     own_place_ids = []
     if own_firm:
@@ -537,4 +577,4 @@ def build_place_maps(db):
             if loc.google_place_id:
                 competitor_place_map[loc.google_place_id] = comp.id
 
-    return own_firm_id, own_place_ids, competitor_place_map
+    return own_firm_id, own_place_ids, competitor_place_map, own_firm_name

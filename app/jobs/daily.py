@@ -31,7 +31,7 @@ def run_daily_job() -> None:
         from app.models.competitor import Competitor
 
         keywords = get_own_firm_keywords()
-        own_firm_id, own_place_ids, competitor_place_map = build_place_maps(db)
+        own_firm_id, own_place_ids, competitor_place_map, own_firm_name = build_place_maps(db)
 
         if not own_firm_id:
             logger.warning("Daily job: own firm not found in DB — skipping rankings")
@@ -45,6 +45,7 @@ def run_daily_job() -> None:
                 db=db,
                 own_firm_id=own_firm_id,
                 only_own_firm=True,
+                own_firm_name=own_firm_name,
             )
             check_pack_alerts(db, own_firm_id)
             check_convergence_alerts(db, own_firm_id)
