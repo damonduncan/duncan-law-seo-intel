@@ -272,14 +272,14 @@ def _reviews_context(db: Session) -> str:
     for s in old_snaps:
         key = (s.market, s.source)
         if key not in old_by_key:
-            old_by_key[key] = s.total_reviews
+            old_by_key[key] = s.review_count
 
     lines = ["DUNCAN LAW REVIEW COUNTS (current vs. ~30 days ago):"]
     for s in sorted(current, key=lambda x: x.market or ""):
         key = (s.market, s.source)
         old = old_by_key.get(key)
-        delta = f" (+{s.total_reviews - old} in ~30d)" if old is not None and s.total_reviews > old else ""
-        lines.append(f"  {s.market or '?'} / {s.source}: {s.total_reviews}{delta}")
+        delta = f" (+{s.review_count - old} in ~30d)" if old is not None and s.review_count > old else ""
+        lines.append(f"  {s.market or '?'} / {s.source}: {s.review_count}{delta}")
 
     # Top competitor totals
     comps = (
@@ -298,10 +298,10 @@ def _reviews_context(db: Session) -> str:
     )
     comp_totals = {}
     for s in comp_snaps:
-        if s.competitor_id not in comp_totals and s.total_reviews:
+        if s.competitor_id not in comp_totals and s.review_count:
             comp = next((c for c in comps if c.id == s.competitor_id), None)
             if comp:
-                comp_totals[s.competitor_id] = {"name": comp.name, "count": s.total_reviews}
+                comp_totals[s.competitor_id] = {"name": comp.name, "count": s.review_count}
 
     if comp_totals:
         lines.append("\nCOMPETITOR REVIEW COUNTS (most recent snapshot):")
@@ -411,7 +411,7 @@ def _overview_context(db: Session) -> str:
         if own_snaps:
             lines.append("\nREVIEW COUNTS (own firm):")
             for s in sorted(own_snaps, key=lambda x: x.market or ""):
-                lines.append(f"  {s.market} / {s.source}: {s.total_reviews}")
+                lines.append(f"  {s.market} / {s.source}: {s.review_count}")
 
     # PPC summary (last month)
     ppc_row = db.query(DiscoveryCache).filter(
@@ -519,8 +519,8 @@ def _snap_reviews(db: Session) -> dict:
               & (ReviewSnapshot.source == subq.c.source)
               & (ReviewSnapshot.snapped_at == subq.c.max_dt)).all()
     )
-    markets = {s.market: s.total_reviews for s in snaps
-               if s.source and s.source.lower() == "google" and s.total_reviews}
+    markets = {s.market: s.review_count for s in snaps
+               if s.source and s.source.lower() == "google" and s.review_count}
     return {"markets": markets, "total_google": sum(markets.values())}
 
 
@@ -570,7 +570,7 @@ def _snap_overview(db: Session) -> dict:
                   & (ReviewSnapshot.source == rev_subq.c.source)
                   & (ReviewSnapshot.snapped_at == rev_subq.c.max_dt)).all()
         )
-        snap["reviews_total"] = sum(s.total_reviews or 0 for s in rev_snaps)
+        snap["reviews_total"] = sum(s.review_count or 0 for s in rev_snaps)
     ppc_row = db.query(DiscoveryCache).filter(DiscoveryCache.key == "ppc_monthly_data").first()
     ppc_data = ppc_row.value if ppc_row else []
     if isinstance(ppc_data, str):
