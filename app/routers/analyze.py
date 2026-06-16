@@ -636,7 +636,7 @@ def _append_history(db: Session, section: str, text: str, metrics: dict) -> None
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
 @router.get("/analyze/{section}/cached")
-async def get_cached(
+def get_cached(
     section: str,
     db: Session = Depends(get_db),
     user: dict = Depends(auth_required),
@@ -648,7 +648,7 @@ async def get_cached(
 
 
 @router.get("/analyze/{section}/history")
-async def get_history(
+def get_history(
     section: str,
     db: Session = Depends(get_db),
     user: dict = Depends(auth_required),
@@ -668,7 +668,7 @@ async def get_history(
 
 
 @router.post("/analyze/{section}")
-async def analyze_section(
+def analyze_section(
     section: str,
     db: Session = Depends(get_db),
     user: dict = Depends(auth_required),
