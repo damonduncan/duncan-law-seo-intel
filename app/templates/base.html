@@ -1719,8 +1719,8 @@ window.runAnalysis = async function(section, btn) {
 
   try {
     var resp = await fetch('/analyze/' + section, { method: 'POST' });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    var data = await resp.json();
+    var data = await resp.json().catch(function() { return {}; });
+    if (!resp.ok) throw new Error(data.error || ('HTTP ' + resp.status));
     if (data.error) throw new Error(data.error);
     textEl.style.opacity = '1';
     textEl.textContent = data.text;
