@@ -199,7 +199,7 @@ def _rankings_context(db: Session) -> str:
     lines = ["CURRENT LOCAL PACK POSITIONS (Duncan Law):"]
     if own_ranks:
         for r in own_ranks:
-            rank_str = f"#{r.rank_position_position}" if r.rank_position_position else "not in pack"
+            rank_str = f"#{r.rank_position}" if r.rank_position else "not in pack"
             lines.append(f"  {r.city} / {r.keyword}: {rank_str}")
     else:
         lines.append("  No rankings found yet.")
@@ -384,7 +384,7 @@ def _overview_context(db: Session) -> str:
         if recent_ranks:
             lines.append("\nCURRENT RANKINGS:")
             for r in sorted(recent_ranks, key=lambda x: (x.city or "", x.keyword or "")):
-                lines.append(f"  {r.city} / {r.keyword}: #{r.rank_position_position}")
+                lines.append(f"  {r.city} / {r.keyword}: #{r.rank_position}")
 
         # Review totals
         rev_subq = (
