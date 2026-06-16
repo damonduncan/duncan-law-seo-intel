@@ -1245,3 +1245,26 @@ def debug_docusign(
         })
     except Exception as exc:
         return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
+
+
+@router.get("/admin/debug/analyze/{section}")
+def debug_analyze_section(
+    section: str,
+    request: Request,
+    user: dict = Depends(auth_required),
+    db: Session = Depends(get_db),
+):
+    """Debug endpoint — runs the context fetcher for a section and returns the error."""
+    import traceback
+    from app.routers.analyze import SECTION_FETCHERS
+    if section not in SECTION_FETCHERS:
+        return JSONResponse({"error": f"Unknown section: {section}"}, status_code=404)
+    try:
+        context = SECTION_FETCHERS[section](db)
+        return JSONResponse({"ok": True, "context_preview": context[:500]})
+    except Exception as exc:
+        return JSONResponse({
+            "ok": False,
+            "error": str(exc),
+            "traceback": traceback.format_exc(),
+        }, status_code=200)
