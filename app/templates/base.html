@@ -1736,7 +1736,7 @@ window.runAnalysis = async function(section, btn) {
     if (!textEl.textContent || textEl.textContent === 'Generating analysis…') {
       panel.style.display = 'none';
     }
-    showToast('Analysis failed — please try again.', 'error');
+    showToast('Analysis failed: ' + (e.message || 'unknown error'), 'error');
     btn.innerHTML = prevHtml;
   }
   btn.disabled = false;
