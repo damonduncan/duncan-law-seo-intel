@@ -238,7 +238,7 @@ def _reviews_context(db: Session) -> str:
         db.query(
             ReviewSnapshot.market,
             ReviewSnapshot.source,
-            func.max(ReviewSnapshot.scraped_at).label("max_dt"),
+            func.max(ReviewSnapshot.snapped_at).label("max_dt"),
         )
         .filter(ReviewSnapshot.competitor_id == own.id)
         .group_by(ReviewSnapshot.market, ReviewSnapshot.source)
@@ -252,7 +252,7 @@ def _reviews_context(db: Session) -> str:
             (ReviewSnapshot.competitor_id == own.id)
             & (ReviewSnapshot.market == subq.c.market)
             & (ReviewSnapshot.source == subq.c.source)
-            & (ReviewSnapshot.scraped_at == subq.c.max_dt),
+            & (ReviewSnapshot.snapped_at == subq.c.max_dt),
         )
         .all()
     )
@@ -262,9 +262,9 @@ def _reviews_context(db: Session) -> str:
         db.query(ReviewSnapshot)
         .filter(
             ReviewSnapshot.competitor_id == own.id,
-            ReviewSnapshot.scraped_at < thirty_ago,
+            ReviewSnapshot.snapped_at < thirty_ago,
         )
-        .order_by(ReviewSnapshot.scraped_at.desc())
+        .order_by(ReviewSnapshot.snapped_at.desc())
         .limit(30)
         .all()
     )
@@ -292,7 +292,7 @@ def _reviews_context(db: Session) -> str:
     comp_snaps = (
         db.query(ReviewSnapshot)
         .filter(ReviewSnapshot.competitor_id.in_(comp_ids))
-        .order_by(ReviewSnapshot.scraped_at.desc())
+        .order_by(ReviewSnapshot.snapped_at.desc())
         .limit(60)
         .all()
     )
@@ -391,7 +391,7 @@ def _overview_context(db: Session) -> str:
             db.query(
                 ReviewSnapshot.market,
                 ReviewSnapshot.source,
-                func.max(ReviewSnapshot.scraped_at).label("max_dt"),
+                func.max(ReviewSnapshot.snapped_at).label("max_dt"),
             )
             .filter(ReviewSnapshot.competitor_id == own.id)
             .group_by(ReviewSnapshot.market, ReviewSnapshot.source)
@@ -404,7 +404,7 @@ def _overview_context(db: Session) -> str:
                 (ReviewSnapshot.competitor_id == own.id)
                 & (ReviewSnapshot.market == rev_subq.c.market)
                 & (ReviewSnapshot.source == rev_subq.c.source)
-                & (ReviewSnapshot.scraped_at == rev_subq.c.max_dt),
+                & (ReviewSnapshot.snapped_at == rev_subq.c.max_dt),
             )
             .all()
         )
@@ -508,7 +508,7 @@ def _snap_reviews(db: Session) -> dict:
         return {}
     subq = (
         db.query(ReviewSnapshot.market, ReviewSnapshot.source,
-                 func.max(ReviewSnapshot.scraped_at).label("max_dt"))
+                 func.max(ReviewSnapshot.snapped_at).label("max_dt"))
         .filter(ReviewSnapshot.competitor_id == own.id)
         .group_by(ReviewSnapshot.market, ReviewSnapshot.source).subquery()
     )
@@ -517,7 +517,7 @@ def _snap_reviews(db: Session) -> dict:
         .join(subq, (ReviewSnapshot.competitor_id == own.id)
               & (ReviewSnapshot.market == subq.c.market)
               & (ReviewSnapshot.source == subq.c.source)
-              & (ReviewSnapshot.scraped_at == subq.c.max_dt)).all()
+              & (ReviewSnapshot.snapped_at == subq.c.max_dt)).all()
     )
     markets = {s.market: s.total_reviews for s in snaps
                if s.source and s.source.lower() == "google" and s.total_reviews}
@@ -559,7 +559,7 @@ def _snap_overview(db: Session) -> dict:
         snap["rankings"] = {f"{r.city}/{r.keyword}": r.rank_position for r in ranks if r.rank_position}
         rev_subq = (
             db.query(ReviewSnapshot.market, ReviewSnapshot.source,
-                     func.max(ReviewSnapshot.scraped_at).label("max_dt"))
+                     func.max(ReviewSnapshot.snapped_at).label("max_dt"))
             .filter(ReviewSnapshot.competitor_id == own.id)
             .group_by(ReviewSnapshot.market, ReviewSnapshot.source).subquery()
         )
@@ -568,7 +568,7 @@ def _snap_overview(db: Session) -> dict:
             .join(rev_subq, (ReviewSnapshot.competitor_id == own.id)
                   & (ReviewSnapshot.market == rev_subq.c.market)
                   & (ReviewSnapshot.source == rev_subq.c.source)
-                  & (ReviewSnapshot.scraped_at == rev_subq.c.max_dt)).all()
+                  & (ReviewSnapshot.snapped_at == rev_subq.c.max_dt)).all()
         )
         snap["reviews_total"] = sum(s.total_reviews or 0 for s in rev_snaps)
     ppc_row = db.query(DiscoveryCache).filter(DiscoveryCache.key == "ppc_monthly_data").first()
