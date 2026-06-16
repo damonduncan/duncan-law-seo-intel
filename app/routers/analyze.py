@@ -692,10 +692,8 @@ def analyze_section(
 
         return {"text": text, "updated": updated}
     except Exception as e:
-        import traceback
-        tb = traceback.format_exc()
-        logger.error(f"Analysis failed [{section}]: {e}\n{tb}")
+        logger.error(f"Analysis failed [{section}]: {e}", exc_info=True)
         cached_text, cached_updated = _read_row(row)
         if cached_text:
             return {"text": cached_text, "updated": cached_updated, "cached": True}
-        return JSONResponse({"error": f"Analysis failed: {type(e).__name__}: {e}"}, status_code=500)
+        return JSONResponse({"error": "Analysis failed — please try again."}, status_code=500)
