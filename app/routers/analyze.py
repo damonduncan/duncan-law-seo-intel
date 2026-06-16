@@ -197,13 +197,13 @@ def _rankings_context(db: Session) -> str:
     lines = ["CURRENT LOCAL PACK POSITIONS (Duncan Law):"]
     if own_ranks:
         for r in own_ranks:
-            rank_str = f"#{r.rank}" if r.rank else "not in pack"
+            rank_str = f"#{r.rank_position_position}" if r.rank_position_position else "not in pack"
             lines.append(f"  {r.city} / {r.keyword}: {rank_str}")
     else:
         lines.append("  No rankings found yet.")
 
     # Top competitors for comparison — fetch all competitor names in one query
-    rival_ids = {r.competitor_id for r in latest if r.competitor_id != own.id and r.rank and r.rank <= 3}
+    rival_ids = {r.competitor_id for r in latest if r.competitor_id != own.id and r.rank_position and r.rank_position <= 3}
     comp_by_id = {}
     if rival_ids:
         for c in db.query(Competitor).filter(Competitor.id.in_(rival_ids)).all():
@@ -211,13 +211,13 @@ def _rankings_context(db: Session) -> str:
 
     comp_ranks = {}
     for r in latest:
-        if r.competitor_id != own.id and r.rank and r.rank <= 3:
+        if r.competitor_id != own.id and r.rank_position and r.rank_position <= 3:
             comp = comp_by_id.get(r.competitor_id)
             if comp:
                 key = (r.city, r.keyword)
                 if key not in comp_ranks:
                     comp_ranks[key] = []
-                comp_ranks[key].append(f"{comp.name} #{r.rank}")
+                comp_ranks[key].append(f"{comp.name} #{r.rank_position}")
 
     if comp_ranks:
         lines.append("\nTOP-3 COMPETITORS BY MARKET/KEYWORD (sample):")
@@ -382,7 +382,7 @@ def _overview_context(db: Session) -> str:
         if recent_ranks:
             lines.append("\nCURRENT RANKINGS:")
             for r in sorted(recent_ranks, key=lambda x: (x.city or "", x.keyword or "")):
-                lines.append(f"  {r.city} / {r.keyword}: #{r.rank}")
+                lines.append(f"  {r.city} / {r.keyword}: #{r.rank_position_position}")
 
         # Review totals
         rev_subq = (
@@ -493,7 +493,7 @@ def _snap_rankings(db: Session) -> dict:
               & (LocalPackRanking.scraped_at == subq.c.max_dt))
         .filter(LocalPackRanking.competitor_id == own.id).all()
     )
-    return {"positions": {f"{r.city}/{r.keyword}": r.rank for r in rows if r.rank}}
+    return {"positions": {f"{r.city}/{r.keyword}": r.rank_position for r in rows if r.rank_position}}
 
 
 def _snap_reviews(db: Session) -> dict:
@@ -550,7 +550,7 @@ def _snap_overview(db: Session) -> dict:
                   & (LocalPackRanking.city == subq.c.city)
                   & (LocalPackRanking.scraped_at == subq.c.max_dt)).all()
         )
-        snap["rankings"] = {f"{r.city}/{r.keyword}": r.rank for r in ranks if r.rank}
+        snap["rankings"] = {f"{r.city}/{r.keyword}": r.rank_position for r in ranks if r.rank_position}
         rev_subq = (
             db.query(ReviewSnapshot.market, ReviewSnapshot.source,
                      func.max(ReviewSnapshot.scraped_at).label("max_dt"))
