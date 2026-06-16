@@ -1254,17 +1254,34 @@ def debug_analyze_section(
     user: dict = Depends(auth_required),
     db: Session = Depends(get_db),
 ):
-    """Debug endpoint — runs the context fetcher for a section and returns the error."""
+    """Debug endpoint — runs the full analyze pipeline and returns any error."""
     import traceback
-    from app.routers.analyze import SECTION_FETCHERS
+    from app.routers.analyze import SECTION_FETCHERS, SECTION_TASKS, _call_claude, SECTION_SNAPSHOTS, _append_history
     if section not in SECTION_FETCHERS:
         return JSONResponse({"error": f"Unknown section: {section}"}, status_code=404)
+    result: dict = {}
     try:
         context = SECTION_FETCHERS[section](db)
-        return JSONResponse({"ok": True, "context_preview": context[:500]})
+        result["context_ok"] = True
+        result["context_preview"] = context[:300]
     except Exception as exc:
-        return JSONResponse({
-            "ok": False,
-            "error": str(exc),
-            "traceback": traceback.format_exc(),
-        }, status_code=200)
+        return JSONResponse({"step": "context", "ok": False, "error": str(exc), "traceback": traceback.format_exc()})
+    try:
+        text = _call_claude(context, SECTION_TASKS[section])
+        result["claude_ok"] = True
+        result["text_preview"] = text[:200]
+    except Exception as exc:
+        return JSONResponse({"step": "claude", "ok": False, "error": str(exc), "traceback": traceback.format_exc()})
+    try:
+        metrics = SECTION_SNAPSHOTS[section](db)
+        result["snapshot_ok"] = True
+    except Exception as exc:
+        result["snapshot_ok"] = False
+        result["snapshot_error"] = str(exc)
+    try:
+        _append_history(db, section, text, metrics if result.get("snapshot_ok") else {})
+        result["history_ok"] = True
+    except Exception as exc:
+        return JSONResponse({"step": "history", "ok": False, "error": str(exc), "traceback": traceback.format_exc()})
+    result["ok"] = True
+    return JSONResponse(result)
