@@ -393,6 +393,46 @@ def _build_monthly_by_year_single(c_months, all_years):
     return by_year
 
 
+def _build_conversion_rate_trend(
+    d_months: dict, a_months: dict, c_months: dict,
+    filing_hist: dict, last_year: int, last_month: int, n: int = 18,
+) -> list:
+    """Return monthly conversion rates (rolling 3-month sums) for the last N months."""
+    filing_map: dict = {}
+    for annual in filing_hist.get("annual", []):
+        year = annual["year"]
+        for i, cnt in enumerate(annual.get("monthly") or []):
+            if cnt is not None:
+                filing_map[(year, i + 1)] = cnt
+
+    ref_total = last_year * 12 + (last_month - 1)
+    rows = []
+    for offset in range(n - 1, -1, -1):
+        t = ref_total - offset
+        y, rem = divmod(t, 12)
+        m = rem + 1
+        consult  = (d_months.get((y, m), 0) or 0) + (a_months.get((y, m), 0) or 0)
+        contract = c_months.get((y, m), 0) or 0
+        filed    = filing_map.get((y, m), 0) or 0
+        rows.append({
+            "label":    f"{MONTH_NAMES[m - 1]} '{str(y)[-2:]}",
+            "consult":  consult,
+            "contract": contract,
+            "filed":    filed,
+        })
+
+    for i, row in enumerate(rows):
+        window     = rows[max(0, i - 2): i + 1]
+        w_consult  = sum(w["consult"]  for w in window)
+        w_contract = sum(w["contract"] for w in window)
+        w_filed    = sum(w["filed"]    for w in window)
+        row["contract_rate_r3"] = round(w_contract / w_consult  * 100, 1) if w_consult  else None
+        row["filed_rate_r3"]    = round(w_filed    / w_contract * 100, 1) if w_contract else None
+        row["overall_rate_r3"]  = round(w_filed    / w_consult  * 100, 1) if w_consult  else None
+
+    return rows
+
+
 def _build_pacer_trend(filing_hist: dict, last_year: int, last_month: int, n: int = 24):
     monthly_map = {}
     for annual in filing_hist.get("annual", []):
@@ -601,6 +641,10 @@ def consult_data_page(
     for _item in pacer_trend_data:
         _item["revenue"] = _item["count"] * AVG_CASE_FEE
 
+    conv_rate_trend = _build_conversion_rate_trend(
+        damon_months, anne_months, contract_months, _filing_hist, 2026, last_2026_month
+    )
+
     # Annual pace projection
     filings_monthly_avg    = pacer_filed_ytd / last_2026_month if last_2026_month else 0
     filings_full_year_pace = round(filings_monthly_avg * 12)
@@ -700,4 +744,5 @@ def consult_data_page(
         "notes":                 damon_data.get("notes", []) + anne_data.get("notes", []),
         "updated_at":         damon_data.get("updated_at", ""),
         "referral_sources":      referral_sources,
+        "conv_rate_trend":       conv_rate_trend,
     })

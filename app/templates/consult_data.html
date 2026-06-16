@@ -232,6 +232,69 @@
 </div>
 {% endif %}
 
+<!-- ── Conversion Rate Trends ────────────────────────────────────────────── -->
+{% if conv_rate_trend %}
+<div class="card" style="padding:22px 28px;margin-bottom:28px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+    <div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);">Funnel Performance</div>
+      <div style="font-size:16px;font-weight:700;color:var(--navy);margin-top:2px;">Conversion Rate Trends · {{ ytd_period }} 2026</div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);">3-month rolling average · month-over-month</div>
+  </div>
+
+  <!-- Rate chips -->
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px;">
+
+    <div style="flex:1;min-width:160px;background:rgba(37,99,235,.05);border:1.5px solid rgba(37,99,235,.18);border-radius:10px;padding:14px 18px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;">Consult → Contract</div>
+      <div style="font-size:32px;font-weight:800;color:var(--navy);line-height:1;letter-spacing:-.03em;">
+        {% if contract_conv_rate_2026 %}{{ contract_conv_rate_2026 }}%{% else %}—{% endif %}
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:5px;">
+        {% if contract_conv_rate_2025_ytd %}vs {{ contract_conv_rate_2025_ytd }}% same period 2025{% endif %}
+      </div>
+    </div>
+
+    <div style="flex:1;min-width:160px;background:rgba(234,88,12,.05);border:1.5px solid rgba(234,88,12,.2);border-radius:10px;padding:14px 18px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#ea580c;margin-bottom:6px;">Contract → Filed</div>
+      <div style="font-size:32px;font-weight:800;color:var(--navy);line-height:1;letter-spacing:-.03em;">
+        {% if contract_to_filed_2026 %}{{ contract_to_filed_2026 }}%{% else %}—{% endif %}
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:5px;">
+        {% if contract_to_filed_2025 %}vs {{ contract_to_filed_2025 }}% same period 2025{% endif %}
+      </div>
+    </div>
+
+    <div style="flex:1;min-width:160px;background:rgba(5,150,105,.05);border:1.5px solid rgba(5,150,105,.2);border-radius:10px;padding:14px 18px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#059669;margin-bottom:6px;">Consult → Filed</div>
+      <div style="font-size:32px;font-weight:800;color:var(--navy);line-height:1;letter-spacing:-.03em;">
+        {% if pacer_consult_rate_2026 %}{{ pacer_consult_rate_2026 }}%{% else %}—{% endif %}
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:5px;">
+        {% if pacer_consult_rate_2025 %}vs {{ pacer_consult_rate_2025 }}% same period 2025{% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Trend chart -->
+  <canvas id="convRateChart" style="max-height:220px;"></canvas>
+  <div style="margin-top:10px;display:flex;gap:18px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);">
+      <div style="width:20px;height:3px;background:var(--accent);border-radius:2px;"></div>Consult→Contract
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);">
+      <div style="width:20px;height:3px;background:#ea580c;border-radius:2px;"></div>Contract→Filed
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);">
+      <div style="width:20px;height:3px;background:#059669;border-radius:2px;"></div>Consult→Filed
+    </div>
+    <div style="margin-left:auto;font-size:10px;color:var(--muted);font-style:italic;">3-month rolling average to reduce month-to-month noise</div>
+  </div>
+</div>
+{% endif %}
+
 <!-- ── Current Month Pacing ───────────────────────────────────────────────── -->
 {% if current_month_pacing %}
 <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 28px;margin-bottom:28px;">
@@ -1020,6 +1083,91 @@ function toggleYear(year) {
   let opened = 0;
   rows.forEach(r => { if (opened < 2) { toggleYear(parseInt(r.dataset.year)); opened++; } });
 })();
+
+{% if conv_rate_trend %}
+// Conversion rate trend chart
+(function() {
+  const cvData  = {{ conv_rate_trend | tojson }};
+  const labels  = cvData.map(d => d.label);
+  const ctrData = cvData.map(d => d.contract_rate_r3);
+  const ftrData = cvData.map(d => d.filed_rate_r3);
+  const otrData = cvData.map(d => d.overall_rate_r3);
+  const ctx     = document.getElementById('convRateChart');
+  if (!ctx) return;
+  new Chart(ctx.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Consult → Contract',
+          data: ctrData,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37,99,235,.07)',
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          fill: false,
+          tension: 0.35,
+          spanGaps: true,
+        },
+        {
+          label: 'Contract → Filed',
+          data: ftrData,
+          borderColor: '#ea580c',
+          backgroundColor: 'rgba(234,88,12,.07)',
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          fill: false,
+          tension: 0.35,
+          spanGaps: true,
+        },
+        {
+          label: 'Consult → Filed',
+          data: otrData,
+          borderColor: '#059669',
+          backgroundColor: 'rgba(5,150,105,.07)',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          borderDash: [5, 4],
+          fill: false,
+          tension: 0.35,
+          spanGaps: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.dataset.label + ': ' + (ctx.parsed.y !== null ? ctx.parsed.y + '%' : '—'),
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { size: 10 }, maxRotation: 45 },
+        },
+        y: {
+          min: 0,
+          ticks: {
+            font: { size: 10 },
+            callback: v => v + '%',
+          },
+          grid: { color: 'rgba(0,0,0,0.05)' },
+        },
+      },
+    },
+  });
+})();
+{% endif %}
 
 {% if referral_sources %}
 // Referral sources monthly chart
