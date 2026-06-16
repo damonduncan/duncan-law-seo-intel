@@ -126,6 +126,8 @@ def _ppc_context(db: Session) -> str:
     data = row.value if row else []
     if isinstance(data, str):
         data = json.loads(data)
+    if isinstance(data, dict):
+        data = data.get("months", [])
     if not data:
         return "No PPC data available yet."
 
@@ -418,6 +420,8 @@ def _overview_context(db: Session) -> str:
     ppc_data = ppc_row.value if ppc_row else []
     if isinstance(ppc_data, str):
         ppc_data = json.loads(ppc_data)
+    if isinstance(ppc_data, dict):
+        ppc_data = ppc_data.get("months", [])
     if ppc_data:
         latest_ppc = sorted(
             ppc_data, key=lambda x: (x.get("year", 0), x.get("month", 0))
@@ -465,6 +469,8 @@ def _snap_ppc(db: Session) -> dict:
     data = row.value if row else []
     if isinstance(data, str):
         data = json.loads(data)
+    if isinstance(data, dict):
+        data = data.get("months", [])
     if not data:
         return {}
     recent = sorted(data, key=lambda x: (x.get("year", 0), x.get("month", 0)))[-3:]
@@ -569,6 +575,8 @@ def _snap_overview(db: Session) -> dict:
     ppc_data = ppc_row.value if ppc_row else []
     if isinstance(ppc_data, str):
         ppc_data = json.loads(ppc_data)
+    if isinstance(ppc_data, dict):
+        ppc_data = ppc_data.get("months", [])
     if ppc_data:
         lp = sorted(ppc_data, key=lambda x: (x.get("year", 0), x.get("month", 0)))[-1]
         snap["ppc_leads_last_month"] = lp.get("total", {}).get("leads")
