@@ -13,6 +13,7 @@ class Competitor(Base, TimestampMixin):
     google_place_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     bbb_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     domain: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    website: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
     is_own_firm: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 

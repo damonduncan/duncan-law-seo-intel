@@ -176,6 +176,29 @@ class _AddCompetitorPayload(BaseModel):
     market: str = ""
 
 
+class _UpdateWebsitePayload(BaseModel):
+    website: str = ""
+
+
+@router.post("/admin/competitor/{competitor_id}/website")
+def update_competitor_website(
+    competitor_id: str,
+    payload: _UpdateWebsitePayload,
+    user: dict = Depends(auth_required),
+    db: Session = Depends(get_db),
+):
+    from app.models.competitor import Competitor
+    comp = db.query(Competitor).filter(Competitor.id == competitor_id).first()
+    if not comp:
+        return JSONResponse({"error": "Competitor not found"}, status_code=404)
+    url = payload.website.strip()
+    if url and not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    comp.website = url or None
+    db.commit()
+    return JSONResponse({"success": True, "website": comp.website})
+
+
 @router.post("/admin/competitor/add")
 def add_competitor_from_discovery(
     payload: _AddCompetitorPayload,

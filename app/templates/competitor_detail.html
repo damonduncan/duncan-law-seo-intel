@@ -54,6 +54,71 @@
       {% endif %}
     </div>
   </div>
+  <!-- Website row -->
+  <div style="border-top:1px solid var(--border);padding-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);flex-shrink:0;">Website</span>
+    <div id="website-display" style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;">
+      {% if comp.website %}
+      <a id="website-link" href="{{ comp.website }}" target="_blank" rel="noopener"
+         style="font-size:14px;color:var(--accent);text-decoration:none;word-break:break-all;">{{ comp.website }}</a>
+      {% else %}
+      <span id="website-link" style="font-size:14px;color:var(--muted-2);">—</span>
+      {% endif %}
+      <button onclick="startEditWebsite()" title="Edit website"
+        style="background:none;border:none;cursor:pointer;padding:2px;color:var(--muted);display:flex;align-items:center;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+    </div>
+    <div id="website-edit" style="display:none;flex:1;min-width:0;display:flex;align-items:center;gap:8px;">
+      <input id="website-input" type="url" placeholder="https://example.com"
+        value="{{ comp.website or '' }}"
+        style="flex:1;padding:5px 10px;border:1px solid var(--accent);border-radius:var(--r-sm);font-size:13px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;min-width:200px;">
+      <button onclick="saveWebsite()" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:var(--r-sm);font-size:13px;font-weight:600;cursor:pointer;">Save</button>
+      <button onclick="cancelEditWebsite()" style="padding:5px 10px;background:none;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;color:var(--muted);cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+  <script>
+  var _compId = "{{ comp.id }}";
+  function startEditWebsite() {
+    document.getElementById('website-display').style.display = 'none';
+    var ed = document.getElementById('website-edit');
+    ed.style.display = 'flex';
+    document.getElementById('website-input').focus();
+  }
+  function cancelEditWebsite() {
+    document.getElementById('website-edit').style.display = 'none';
+    document.getElementById('website-display').style.display = 'flex';
+  }
+  async function saveWebsite() {
+    var url = document.getElementById('website-input').value.trim();
+    try {
+      var resp = await fetch('/admin/competitor/' + _compId + '/website', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({website: url})
+      });
+      var data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Save failed');
+      var link = document.getElementById('website-link');
+      if (data.website) {
+        link.href = data.website;
+        link.textContent = data.website;
+        link.style.color = 'var(--accent)';
+      } else {
+        link.removeAttribute('href');
+        link.textContent = '—';
+        link.style.color = 'var(--muted-2)';
+      }
+      cancelEditWebsite();
+    } catch(e) {
+      alert('Could not save: ' + e.message);
+    }
+  }
+  document.getElementById('website-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') saveWebsite();
+    if (e.key === 'Escape') cancelEditWebsite();
+  });
+  </script>
   {% if comp.attorneys %}
   <div style="border-top:1px solid var(--border);padding-top:14px;">
     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px;">Attorneys</div>
