@@ -192,8 +192,6 @@ def update_competitor_website(
     if not comp:
         return JSONResponse({"error": "Competitor not found"}, status_code=404)
     url = payload.website.strip()
-    if url and not url.startswith(("http://", "https://")):
-        url = "https://" + url
     comp.website = url or None
     db.commit()
     return JSONResponse({"success": True, "website": comp.website})
